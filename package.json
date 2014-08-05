@@ -1,0 +1,27 @@
+{
+  "name": "basic-platform",
+  "version": "0.0.0",
+  "description": "",
+  "main": "platformer.js",
+  "scripts": {
+    "watchify": "watchify ./platformer.coffee -v --extension .coffee -o platformer.js"
+  },
+  "dependencies": {
+    "brfs": "^1.2.0",
+    "browserify": "^4.2.3",
+    "browserify-shim": "^3.4.1",
+    "coffeeify": "^0.7.0",
+    "raf": "^2.0.1",
+    "watchify": "^0.10.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mreinstein/basic-platform.git"
+  },
+  "browserify": {
+    "transform": [
+      "coffeeify",
+      "brfs"
+    ]
+  }
+}
