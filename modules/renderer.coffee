@@ -15,6 +15,6 @@ module.exports = (ctx, me, level) ->
   renderLevel ctx, level
 
   ctx.fillStyle = c.COLORS.YELLOW
-  # for now a tile is subtracted because the physics engine represents the entity
-  # as one tile, though it's actually drawn as 2
-  ctx.fillRect(me.x + c.TILE, me.y - c.TILE, c.TILE, c.TILE*2)
+  # x and y always store the top left co-ord of the bounding box.
+  # Here the player is one tile wide and two tiles tall.
+  ctx.fillRect(me.x, me.y, c.TILE, c.TILE*2)

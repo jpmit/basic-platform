@@ -26,9 +26,17 @@ onkey = (ev, key, down) ->
       ev.preventDefault()
       player.right = down
       return false
-    when c.KEY.SPACE or c.KEY.UP
+    when c.KEY.SPACE
       ev.preventDefault()
       player.jump = down
+      return false
+    when c.KEY.UP
+      ev.preventDefault()
+      player.up = down
+      return false
+    when c.KEY.DOWN
+      ev.preventDefault()
+      player.down = down
       return false
 
 

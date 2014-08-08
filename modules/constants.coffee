@@ -17,8 +17,8 @@ FPS  = 60
 module.exports =
   TILE: TILE         # the size of each tile (in game pixels)
   METER    : TILE    # abitrary choice for 1m
-  GRAVITY  : 9.8 * 6 # default (exagerated) gravity
-  MAXDX    : 15      # default max horizontal speed (15 tiles per second)
+  GRAVITY  : 9.8 * 1 # default (exagerated) gravity
+  MAXDX    : 3       # default max horizontal speed (15 tiles per second)
   MAXDY    : 60      # default max vertical speed   (60 tiles per second)
   ACCEL    : 1 / 2   # default take 1/2 second to reach maxdx (horizontal acceleration)
   FRICTION : 1 / 6   # default take 1/6 second to stop from maxdx (horizontal friction)

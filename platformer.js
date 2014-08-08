@@ -29,8 +29,8 @@ FPS = 60;
 module.exports = {
   TILE: TILE,
   METER: TILE,
-  GRAVITY: 9.8 * 6,
-  MAXDX: 15,
+  GRAVITY: 9.8 * 1,
+  MAXDX: 3,
   MAXDY: 60,
   ACCEL: 1 / 2,
   FRICTION: 1 / 6,
@@ -144,6 +144,8 @@ module.exports.setupEntity = function(obj) {
     },
     left: obj.properties.left,
     right: obj.properties.right,
+    up: obj.properties.up,
+    down: obj.properties.down,
     jump: null
   };
 };
@@ -196,72 +198,58 @@ module.exports.rayCollide = function(x, y, targetX, targetY, level, entities) {
 };
 
 module.exports.updateEntity = function(entity, level, dt) {
-  var accel, cell, celldiag, celldown, cellright, falling, friction, nx, ny, tx, ty, wasleft, wasright;
-  wasleft = entity.dx < 0;
-  wasright = entity.dx > 0;
+  var accel, cellbottom, cellbottomleft, cellbottomright, cellmiddle, celltop, falling, friction, newx, newy, ontilex, ontiley, tx, txleft, txright, ty, tybottom, tymiddle, tytop;
   falling = entity.falling;
   friction = entity.friction * (falling ? 0.5 : 1);
   accel = entity.accel * (falling ? 0.5 : 1);
   entity.ddx = 0;
-  entity.ddy = entity.gravity;
-  if (entity.left) {
+  if (entity.left && !entity.right) {
     entity.ddx = entity.ddx - accel;
-  } else if (wasleft) {
-    entity.ddx = entity.ddx + friction;
-  }
-  if (entity.right) {
+  } else if (entity.right && !entity.left) {
     entity.ddx = entity.ddx + accel;
-  } else if (wasright) {
-    entity.ddx = entity.ddx - friction;
   }
-  if (entity.jump && !entity.jumping && !falling) {
-    entity.ddy = entity.ddy - entity.impulse;
-    entity.jumping = true;
+  newx = entity.x + entity.ddx * dt;
+  ontilex = entity.x % c.TILE === 0;
+  ontiley = entity.y % c.TILE === 0;
+  tx = level.pixelToTile(newx);
+  if (entity.right && !entity.left) {
+    tx = tx + 1;
   }
-  entity.x = entity.x + (dt * entity.dx);
-  entity.y = entity.y + (dt * entity.dy);
-  entity.dx = clamp(entity.dx + (dt * entity.ddx), -entity.maxdx, entity.maxdx);
-  entity.dy = clamp(entity.dy + (dt * entity.ddy), -entity.maxdy, entity.maxdy);
-  if ((wasleft && (entity.dx > 0)) || (wasright && (entity.dx < 0))) {
-    entity.dx = 0;
+  tytop = level.pixelToTile(entity.y);
+  tymiddle = tytop + 1;
+  tybottom = tymiddle + 1;
+  celltop = level.tileToValue(tx, tytop, 'collision');
+  cellmiddle = level.tileToValue(tx, tymiddle, 'collision');
+  if (ontiley) {
+    cellbottom = 0;
+  } else {
+    cellbottom = level.tileToValue(tx, tybottom, 'collision');
   }
-  tx = level.pixelToTile(entity.x);
-  ty = level.pixelToTile(entity.y);
-  nx = entity.x % c.TILE;
-  ny = entity.y % c.TILE;
-  cell = level.tileToValue(tx, ty, 'collision');
-  cellright = level.tileToValue(tx + 1, ty, 'collision');
-  celldown = level.tileToValue(tx, ty + 1, 'collision');
-  celldiag = level.tileToValue(tx + 1, ty + 1, 'collision');
-  if (entity.dy > 0) {
-    if ((celldown && !cell) || (celldiag && !cellright && nx)) {
-      entity.y = level.tileToPixel(ty);
-      entity.dy = 0;
-      entity.falling = false;
-      entity.jumping = false;
-      ny = 0;
-    }
-  } else if (entity.dy < 0) {
-    if ((cell && !celldown) || (cellright && !celldiag && nx)) {
-      entity.y = level.tileToPixel(ty + 1);
-      entity.dy = 0;
-      cell = celldown;
-      cellright = celldiag;
-      ny = 0;
+  if (celltop || cellmiddle || cellbottom) {
+    if (entity.left) {
+      newx = (tx + 1) * c.TILE;
+    } else if (entity.right) {
+      newx = (tx - 1) * c.TILE;
     }
   }
-  if (entity.dx > 0) {
-    if ((cellright && !cell) || (celldiag && !celldown && ny)) {
-      entity.x = level.tileToPixel(tx);
-      entity.dx = 0;
-    }
-  } else if (entity.dx < 0) {
-    if ((cell && !cellright) || (celldown && !celldiag && ny)) {
-      entity.x = level.tileToPixel(tx + 1);
-      entity.dx = 0;
-    }
+  entity.x = newx;
+  entity.ddy = entity.gravity;
+  newy = entity.y + dt * entity.ddy;
+  ontilex = entity.x % c.TILE === 0;
+  txleft = level.pixelToTile(newx);
+  txright = txleft + 1;
+  ty = level.pixelToTile(newy);
+  tybottom = ty + 2;
+  cellbottomleft = level.tileToValue(txleft, tybottom, 'collision');
+  if (ontilex) {
+    cellbottomright = 0;
+  } else {
+    cellbottomright = level.tileToValue(txright, tybottom, 'collision');
   }
-  return entity.falling = !(celldown || (nx && celldiag));
+  if (cellbottomleft || cellbottomright) {
+    newy = (tybottom - 2) * c.TILE;
+  }
+  return entity.y = newy;
 };
 
 
@@ -297,7 +285,7 @@ module.exports = function(ctx, me, level) {
   ctx.clearRect(0, 0, level.width, level.height);
   renderLevel(ctx, level);
   ctx.fillStyle = c.COLORS.YELLOW;
-  return ctx.fillRect(me.x + c.TILE, me.y - c.TILE, c.TILE, c.TILE * 2);
+  return ctx.fillRect(me.x, me.y, c.TILE, c.TILE * 2);
 };
 
 
@@ -328,71 +316,6 @@ module.exports = unitVector = function(v) {
 
 
 },{}],8:[function(require,module,exports){
-// shim for using process in browser
-
-var process = module.exports = {};
-
-process.nextTick = (function () {
-    var canSetImmediate = typeof window !== 'undefined'
-    && window.setImmediate;
-    var canPost = typeof window !== 'undefined'
-    && window.postMessage && window.addEventListener
-    ;
-
-    if (canSetImmediate) {
-        return function (f) { return window.setImmediate(f) };
-    }
-
-    if (canPost) {
-        var queue = [];
-        window.addEventListener('message', function (ev) {
-            var source = ev.source;
-            if ((source === window || source === null) && ev.data === 'process-tick') {
-                ev.stopPropagation();
-                if (queue.length > 0) {
-                    var fn = queue.shift();
-                    fn();
-                }
-            }
-        }, true);
-
-        return function nextTick(fn) {
-            queue.push(fn);
-            window.postMessage('process-tick', '*');
-        };
-    }
-
-    return function nextTick(fn) {
-        setTimeout(fn, 0);
-    };
-})();
-
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-}
-
-// TODO(shtylman)
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-
-},{}],9:[function(require,module,exports){
 var now = require('performance-now')
   , global = typeof window === 'undefined' ? {} : window
   , vendors = ['moz', 'webkit']
@@ -474,7 +397,7 @@ module.exports.cancel = function() {
   caf.apply(global, arguments)
 }
 
-},{"performance-now":10}],10:[function(require,module,exports){
+},{"performance-now":9}],9:[function(require,module,exports){
 (function (process){
 // Generated by CoffeeScript 1.6.3
 (function() {
@@ -513,8 +436,73 @@ module.exports.cancel = function() {
 //@ sourceMappingURL=performance-now.map
 */
 
-}).call(this,require("FWaASH"))
-},{"FWaASH":8}],11:[function(require,module,exports){
+}).call(this,require("qvMYcC"))
+},{"qvMYcC":10}],10:[function(require,module,exports){
+// shim for using process in browser
+
+var process = module.exports = {};
+
+process.nextTick = (function () {
+    var canSetImmediate = typeof window !== 'undefined'
+    && window.setImmediate;
+    var canPost = typeof window !== 'undefined'
+    && window.postMessage && window.addEventListener
+    ;
+
+    if (canSetImmediate) {
+        return function (f) { return window.setImmediate(f) };
+    }
+
+    if (canPost) {
+        var queue = [];
+        window.addEventListener('message', function (ev) {
+            var source = ev.source;
+            if ((source === window || source === null) && ev.data === 'process-tick') {
+                ev.stopPropagation();
+                if (queue.length > 0) {
+                    var fn = queue.shift();
+                    fn();
+                }
+            }
+        }, true);
+
+        return function nextTick(fn) {
+            queue.push(fn);
+            window.postMessage('process-tick', '*');
+        };
+    }
+
+    return function nextTick(fn) {
+        setTimeout(fn, 0);
+    };
+})();
+
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+}
+
+// TODO(shtylman)
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+
+},{}],11:[function(require,module,exports){
 var Level, c, canvas, ctx, dt, frame, fs, last, level, now, onkey, physics, player, raf, render, setup, time;
 
 Level = require('./modules/level');
@@ -555,9 +543,17 @@ onkey = function(ev, key, down) {
       ev.preventDefault();
       player.right = down;
       return false;
-    case c.KEY.SPACE || c.KEY.UP:
+    case c.KEY.SPACE:
       ev.preventDefault();
       player.jump = down;
+      return false;
+    case c.KEY.UP:
+      ev.preventDefault();
+      player.up = down;
+      return false;
+    case c.KEY.DOWN:
+      ev.preventDefault();
+      player.down = down;
       return false;
   }
 };
@@ -597,4 +593,4 @@ frame();
 
 
 
-},{"./modules/constants":2,"./modules/level":3,"./modules/physics":4,"./modules/renderer":5,"./modules/time":6,"raf":9}]},{},[11])
+},{"./modules/constants":2,"./modules/level":3,"./modules/physics":4,"./modules/renderer":5,"./modules/time":6,"raf":8}]},{},[11])
