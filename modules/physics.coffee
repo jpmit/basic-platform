@@ -1,7 +1,7 @@
 c          = require './constants'
 clamp      = require './clamp'
 unitVector = require './v2-unit'
-
+collide    = require './collide'
 
 # r is an angle in radians. returns a unit vector representing the direction
 angleToVector = (r) ->
@@ -10,14 +10,25 @@ angleToVector = (r) ->
   x = Math.sin(r) * UP.x + Math.cos(r) * UP.y
   unitVector { x: -x, y: y }
 
+
 # create a new physics object using some initial settings
 module.exports.setupEntity = (obj) ->
   obj.properties = obj.properties or {}
   maxdx = c.METER * (obj.properties.maxdx or c.MAXDX)
 
   entity =
-    x: obj.x
-    y: obj.y
+    # rect is the AABB of the entity, and the x, y co-ordinate is the
+    # top left of the AABB (stored in pixels). The 'hitbox' can be
+    # offset from this point by any amount in whole pixels.
+    rect:
+      x: obj.x
+      y: obj.y
+      height: 137#c.TILE * 2
+      width: 34#c.TILE * 4
+    hitbox:
+      # offsets from the top left in pixels
+      xoff: 5
+      yoff: 20
     dx: 0
     dy: 0
     gravity : c.METER * (obj.properties.gravity or c.GRAVITY)
@@ -35,6 +46,11 @@ module.exports.setupEntity = (obj) ->
     up      : obj.properties.up
     down    : obj.properties.down 
     jump    : null
+
+  entity.hitbox.height = entity.rect.height - 2 * entity.hitbox.yoff
+  entity.hitbox.width = entity.rect.width - 2 * entity.hitbox.xoff
+
+  return entity
 
 
 # determine if 2 axially aligned bounding boxes overlap
@@ -78,105 +94,6 @@ module.exports.rayCollide = (x, y, targetX, targetY, level, entities={}) ->
 # run a physics update step on an entity
 module.exports.updateEntity = (entity, level, dt) ->
 
-  friction = entity.friction * ((if entity.falling then 0.5 else 1))
-  accel = entity.accel * ((if entity.falling then 0.5 else 1))
+  collide.stepX entity, level, dt
 
-  # x movement
-  entity.ddx = 0
-
-  # handle x movement first
-  if entity.left and not entity.right
-    entity.ddx = entity.ddx - accel
-  #else if wasleft
-  #  entity.ddx = entity.ddx + friction
-  else if entity.right and not entity.left
-    entity.ddx = entity.ddx + accel
-
-  # check for collisions with possible new tile(s) in x direction
-  newx = entity.x + entity.ddx*dt
-
-  # are we currently exactly on a tile in the x or y direction (before moving)?
-  ontilex = (entity.x % c.TILE == 0)
-  ontiley = (entity.y % c.TILE == 0)
-
-  # if the player is n tiles tall, we need to check with either n or n
-  # + 1 collision tiles.  If ontiley is true, we only need to check
-  # with n tiles; otherwise we need to check with n + 1 tiles.  The
-  # exact tiles we need to check depend on whether we are moving left
-  # or moving right.
-  tx = level.pixelToTile newx
-  if entity.right and not entity.left
-    tx = tx + 1 # +1 since width is 1 tile
-  tytop = level.pixelToTile entity.y
-  tymiddle = tytop + 1 # +1 since height is 2 tiles
-  tybottom = tymiddle + 1
-  celltop = level.tileToValue tx, tytop, 'collision'
-  cellmiddle = level.tileToValue tx, tymiddle, 'collision'
-  if ontiley
-    cellbottom = 0
-  else
-    cellbottom = level.tileToValue tx, tybottom, 'collision'  
-
-  if celltop or cellmiddle or cellbottom
-    if entity.left
-      newx = (tx + 1) * c.TILE
-    else if entity.right
-      console.log 'collide!', celltop, cellmiddle, cellbottom, ontiley, entity.y
-      newx = (tx - 1) * c.TILE
-
-  oldx = entity.x
-  entity.x = newx
-
-  # y movement
-  # check bottom for collisions
-  if entity.jumping
-    entity.ddy = -entity.gravity
-  else
-    entity.ddy = entity.gravity
-
-  newy = entity.y + dt*entity.ddy
-
-  ontilex = (entity.x % c.TILE == 0)
-  txleft = level.pixelToTile entity.x
-  txright = txleft + 1
-  ty = level.pixelToTile newy
-  tybottom = ty + 2 # +2 since we are 2 tiles high
-  cellbottomleft = level.tileToValue txleft, tybottom, 'collision'
-  if ontilex
-    cellbottomright = 0
-  else
-    cellbottomright = level.tileToValue txright, tybottom, 'collision'
-  celltopleft = level.tileToValue txleft, ty, 'collision'
-  if ontilex
-    celltopright = 0
-  else
-    celltopright = level.tileToValue txright, ty, 'collision'
-
-  if entity.jumping
-    entity.jumpdt = entity.jumpdt + dt
-#    console.log entity.jumpdt
-    if entity.jumpdt > 1
-      entity.jumping = false
-  else
-    entity.falling = true
-
-  if entity.jumping
-    if celltopleft or celltopright
-      newy = (ty + 1)*c.TILE
-      entity.jumping = false
-  else if entity.falling
-    if cellbottomleft or cellbottomright
-      console.log 'on floor'
-      newy = (tybottom - 2)*c.TILE
-      console.log(newy)
-    else
-      console.log 'not on floor'
-
-  # are we jumping?
-  if entity.jump and ontiley and (cellbottomleft or cellbottomright)
-    entity.jumping = true
-    entity.falling = false
-    entity.jumpdt = 0
-
-  entity.y = newy
-#  console.log entity.x
+  collide.stepY entity, level, dt

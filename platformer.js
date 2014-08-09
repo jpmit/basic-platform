@@ -6,12 +6,135 @@ module.exports = function(x, min, max) {
 
 
 },{}],2:[function(require,module,exports){
+var c;
+
+c = require('./constants');
+
+module.exports.stepX = function(entity, level, dt) {
+  var accel, cell, friction, wasleft, wasright, xnew, xold, xtilenew, xtileold, yold, ytile, ytilebottom, ytiletop, _i, _j;
+  wasleft = entity.dx < 0;
+  wasright = entity.dx > 0;
+  friction = entity.friction * (entity.falling ? 0.5 : 1);
+  accel = entity.accel * (entity.falling ? 0.5 : 1);
+  entity.ddx = 0;
+  if (entity.left) {
+    entity.ddx = entity.ddx - accel;
+  } else if (wasleft) {
+    entity.ddx = entity.ddx + friction;
+  }
+  if (entity.right) {
+    entity.ddx = entity.ddx + accel;
+  } else if (wasright) {
+    entity.ddx = entity.ddx - friction;
+  }
+  entity.dx = entity.dx + entity.ddx * dt;
+  if ((wasleft && (entity.dx > 0)) || (wasright && (entity.dx < 0))) {
+    entity.dx = 0;
+  }
+  xold = entity.rect.x + entity.hitbox.xoff;
+  yold = entity.rect.y + entity.hitbox.yoff;
+  xnew = Math.floor(xold + entity.dx * dt);
+  if (entity.dx > 0) {
+    xtileold = level.pixelToTile(xold + entity.hitbox.width - 1);
+    xtilenew = level.pixelToTile(xnew + entity.hitbox.width - 1);
+    if (xtileold !== xtilenew) {
+      ytiletop = level.pixelToTile(yold);
+      ytilebottom = level.pixelToTile(yold + entity.hitbox.height - 1);
+      for (ytile = _i = ytilebottom; ytilebottom <= ytiletop ? _i <= ytiletop : _i >= ytiletop; ytile = ytilebottom <= ytiletop ? ++_i : --_i) {
+        cell = level.tileToValue(xtilenew, ytile);
+        if (cell) {
+          xnew = xtilenew * c.TILE - entity.hitbox.width;
+          entity.ddx = 0;
+          entity.dx = 0;
+          break;
+        }
+      }
+    }
+  } else if (entity.dx < 0) {
+    xtileold = level.pixelToTile(xold);
+    xtilenew = level.pixelToTile(xnew);
+    if (xtileold !== xtilenew) {
+      ytiletop = level.pixelToTile(yold);
+      ytilebottom = level.pixelToTile(yold + entity.hitbox.height - 1);
+      for (ytile = _j = ytilebottom; ytilebottom <= ytiletop ? _j <= ytiletop : _j >= ytiletop; ytile = ytilebottom <= ytiletop ? ++_j : --_j) {
+        cell = level.tileToValue(xtilenew, ytile);
+        if (cell) {
+          xnew = (xtilenew + 1) * c.TILE;
+          entity.ddx = 0;
+          entity.dx = 0;
+          break;
+        }
+      }
+    }
+  }
+  return entity.rect.x = xnew - entity.hitbox.xoff;
+};
+
+module.exports.stepY = function(entity, level, dt) {
+  var cell, xold, xtile, xtileleft, xtileright, ynew, yold, ytilenew, ytileold, _i, _j;
+  entity.ddy = entity.gravity;
+  if (entity.jump && !entity.jumping && entity.onfloor) {
+    entity.ddy = entity.ddy - entity.impulse;
+    entity.jumping = true;
+    entity.onfloor = false;
+  }
+  entity.dy = entity.dy + dt * entity.ddy;
+  if (entity.dy > 0) {
+    entity.jumping = false;
+    entity.falling = true;
+  }
+  xold = entity.rect.x + entity.hitbox.xoff;
+  yold = entity.rect.y + entity.hitbox.yoff;
+  ynew = Math.floor(yold + dt * entity.dy);
+  if (entity.jumping) {
+    ytileold = level.pixelToTile(yold);
+    ytilenew = level.pixelToTile(ynew);
+    if (ytileold !== ytilenew) {
+      xtileleft = level.pixelToTile(xold);
+      xtileright = level.pixelToTile(xold + entity.hitbox.width - 1);
+      for (xtile = _i = xtileleft; xtileleft <= xtileright ? _i <= xtileright : _i >= xtileright; xtile = xtileleft <= xtileright ? ++_i : --_i) {
+        cell = level.tileToValue(xtile, ytilenew);
+        if (cell) {
+          ynew = (ytilenew + 1) * c.TILE;
+          entity.jumping = false;
+          entity.dy = 0;
+          entity.ddy = 0;
+          break;
+        }
+      }
+    }
+  } else if (entity.falling) {
+    ytileold = level.pixelToTile(yold + entity.hitbox.height - 1);
+    ytilenew = level.pixelToTile(ynew + entity.hitbox.height - 1);
+    if (ytileold !== ytilenew) {
+      xtileleft = level.pixelToTile(xold);
+      xtileright = level.pixelToTile(xold + entity.hitbox.width - 1);
+      for (xtile = _j = xtileleft; xtileleft <= xtileright ? _j <= xtileright : _j >= xtileright; xtile = xtileleft <= xtileright ? ++_j : --_j) {
+        cell = level.tileToValue(xtile, ytilenew);
+        if (cell) {
+          ynew = ytilenew * c.TILE - entity.hitbox.height;
+          console.log('onfloor');
+          entity.onfloor = true;
+          entity.ddy = 0;
+          entity.dy = 0;
+          break;
+        }
+      }
+    }
+  }
+  return entity.rect.y = ynew - entity.hitbox.yoff;
+};
+
+
+
+},{"./constants":3}],3:[function(require,module,exports){
 var COLOR, FPS, TILE;
 
 COLOR = {
   GREEN: '#33CC66',
   BLUE: '#0066CC',
   BLACK: '#000000',
+  WHITE: '#FFFFFF',
   YELLOW: '#ECD078',
   BRICK: '#D95B43',
   HOT_PINK: '#FF3399',
@@ -29,8 +152,8 @@ FPS = 60;
 module.exports = {
   TILE: TILE,
   METER: TILE,
-  GRAVITY: 9.8 * 1,
-  MAXDX: 3,
+  GRAVITY: 9.8 * 6,
+  MAXDX: 15,
   MAXDY: 60,
   ACCEL: 1 / 2,
   FRICTION: 1 / 6,
@@ -49,7 +172,7 @@ module.exports = {
 
 
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 var Level, c;
 
 c = require('./constants');
@@ -100,14 +223,16 @@ module.exports = Level;
 
 
 
-},{"./constants":2}],4:[function(require,module,exports){
-var angleToVector, c, clamp, unitVector;
+},{"./constants":3}],5:[function(require,module,exports){
+var angleToVector, c, clamp, collide, unitVector;
 
 c = require('./constants');
 
 clamp = require('./clamp');
 
 unitVector = require('./v2-unit');
+
+collide = require('./collide');
 
 angleToVector = function(r) {
   var UP, x, y;
@@ -127,9 +252,17 @@ module.exports.setupEntity = function(obj) {
   var entity, maxdx;
   obj.properties = obj.properties || {};
   maxdx = c.METER * (obj.properties.maxdx || c.MAXDX);
-  return entity = {
-    x: obj.x,
-    y: obj.y,
+  entity = {
+    rect: {
+      x: obj.x,
+      y: obj.y,
+      height: 137,
+      width: 34
+    },
+    hitbox: {
+      xoff: 5,
+      yoff: 20
+    },
     dx: 0,
     dy: 0,
     gravity: c.METER * (obj.properties.gravity || c.GRAVITY),
@@ -148,6 +281,9 @@ module.exports.setupEntity = function(obj) {
     down: obj.properties.down,
     jump: null
   };
+  entity.hitbox.height = entity.rect.height - 2 * entity.hitbox.yoff;
+  entity.hitbox.width = entity.rect.width - 2 * entity.hitbox.xoff;
+  return entity;
 };
 
 module.exports.overlap = function(x1, y1, w1, h1, x2, y2, w2, h2) {
@@ -198,98 +334,13 @@ module.exports.rayCollide = function(x, y, targetX, targetY, level, entities) {
 };
 
 module.exports.updateEntity = function(entity, level, dt) {
-  var accel, cellbottom, cellbottomleft, cellbottomright, cellmiddle, celltop, celltopleft, celltopright, friction, newx, newy, oldx, ontilex, ontiley, tx, txleft, txright, ty, tybottom, tymiddle, tytop;
-  friction = entity.friction * (entity.falling ? 0.5 : 1);
-  accel = entity.accel * (entity.falling ? 0.5 : 1);
-  entity.ddx = 0;
-  if (entity.left && !entity.right) {
-    entity.ddx = entity.ddx - accel;
-  } else if (entity.right && !entity.left) {
-    entity.ddx = entity.ddx + accel;
-  }
-  newx = entity.x + entity.ddx * dt;
-  ontilex = entity.x % c.TILE === 0;
-  ontiley = entity.y % c.TILE === 0;
-  tx = level.pixelToTile(newx);
-  if (entity.right && !entity.left) {
-    tx = tx + 1;
-  }
-  tytop = level.pixelToTile(entity.y);
-  tymiddle = tytop + 1;
-  tybottom = tymiddle + 1;
-  celltop = level.tileToValue(tx, tytop, 'collision');
-  cellmiddle = level.tileToValue(tx, tymiddle, 'collision');
-  if (ontiley) {
-    cellbottom = 0;
-  } else {
-    cellbottom = level.tileToValue(tx, tybottom, 'collision');
-  }
-  if (celltop || cellmiddle || cellbottom) {
-    if (entity.left) {
-      newx = (tx + 1) * c.TILE;
-    } else if (entity.right) {
-      console.log('collide!', celltop, cellmiddle, cellbottom, ontiley, entity.y);
-      newx = (tx - 1) * c.TILE;
-    }
-  }
-  oldx = entity.x;
-  entity.x = newx;
-  if (entity.jumping) {
-    entity.ddy = -entity.gravity;
-  } else {
-    entity.ddy = entity.gravity;
-  }
-  newy = entity.y + dt * entity.ddy;
-  ontilex = entity.x % c.TILE === 0;
-  txleft = level.pixelToTile(entity.x);
-  txright = txleft + 1;
-  ty = level.pixelToTile(newy);
-  tybottom = ty + 2;
-  cellbottomleft = level.tileToValue(txleft, tybottom, 'collision');
-  if (ontilex) {
-    cellbottomright = 0;
-  } else {
-    cellbottomright = level.tileToValue(txright, tybottom, 'collision');
-  }
-  celltopleft = level.tileToValue(txleft, ty, 'collision');
-  if (ontilex) {
-    celltopright = 0;
-  } else {
-    celltopright = level.tileToValue(txright, ty, 'collision');
-  }
-  if (entity.jumping) {
-    entity.jumpdt = entity.jumpdt + dt;
-    if (entity.jumpdt > 1) {
-      entity.jumping = false;
-    }
-  } else {
-    entity.falling = true;
-  }
-  if (entity.jumping) {
-    if (celltopleft || celltopright) {
-      newy = (ty + 1) * c.TILE;
-      entity.jumping = false;
-    }
-  } else if (entity.falling) {
-    if (cellbottomleft || cellbottomright) {
-      console.log('on floor');
-      newy = (tybottom - 2) * c.TILE;
-      console.log(newy);
-    } else {
-      console.log('not on floor');
-    }
-  }
-  if (entity.jump && ontiley && (cellbottomleft || cellbottomright)) {
-    entity.jumping = true;
-    entity.falling = false;
-    entity.jumpdt = 0;
-  }
-  return entity.y = newy;
+  collide.stepX(entity, level, dt);
+  return collide.stepY(entity, level, dt);
 };
 
 
 
-},{"./clamp":1,"./constants":2,"./v2-unit":7}],5:[function(require,module,exports){
+},{"./clamp":1,"./collide":2,"./constants":3,"./v2-unit":8}],6:[function(require,module,exports){
 var c, renderLevel;
 
 c = require('./constants');
@@ -305,7 +356,8 @@ renderLevel = function(ctx, level) {
         cell = level.tileToValue(x, y);
         if (cell) {
           ctx.fillStyle = c.COLORS[cell - 1];
-          _results1.push(ctx.fillRect(x * c.TILE, y * c.TILE, c.TILE, c.TILE));
+          ctx.fillRect(x * c.TILE, y * c.TILE, c.TILE, c.TILE);
+          _results1.push(ctx.fillStyle = c.COLOR.WHITE);
         } else {
           _results1.push(void 0);
         }
@@ -319,13 +371,15 @@ renderLevel = function(ctx, level) {
 module.exports = function(ctx, me, level) {
   ctx.clearRect(0, 0, level.width, level.height);
   renderLevel(ctx, level);
-  ctx.fillStyle = c.COLORS.YELLOW;
-  return ctx.fillRect(me.x, me.y, c.TILE, c.TILE * 2);
+  ctx.fillStyle = c.COLOR.YELLOW;
+  ctx.fillRect(me.rect.x, me.rect.y, me.rect.width, me.rect.height);
+  ctx.fillStyle = c.COLOR.BLUE;
+  return ctx.fillRect(me.rect.x + me.hitbox.xoff, me.rect.y + me.hitbox.yoff, me.hitbox.width, me.hitbox.height);
 };
 
 
 
-},{"./constants":2}],6:[function(require,module,exports){
+},{"./constants":3}],7:[function(require,module,exports){
 module.exports = function() {
   if ((typeof window !== "undefined" && window !== null) && window.performance && window.performance.now) {
     return window.performance.now();
@@ -336,7 +390,7 @@ module.exports = function() {
 
 
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 var unitVector;
 
 module.exports = unitVector = function(v) {
@@ -350,7 +404,7 @@ module.exports = unitVector = function(v) {
 
 
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 var now = require('performance-now')
   , global = typeof window === 'undefined' ? {} : window
   , vendors = ['moz', 'webkit']
@@ -432,7 +486,7 @@ module.exports.cancel = function() {
   caf.apply(global, arguments)
 }
 
-},{"performance-now":9}],9:[function(require,module,exports){
+},{"performance-now":10}],10:[function(require,module,exports){
 (function (process){
 // Generated by CoffeeScript 1.6.3
 (function() {
@@ -472,7 +526,7 @@ module.exports.cancel = function() {
 */
 
 }).call(this,require("qvMYcC"))
-},{"qvMYcC":10}],10:[function(require,module,exports){
+},{"qvMYcC":11}],11:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -537,7 +591,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 var Level, c, canvas, ctx, dt, frame, fs, last, level, now, onkey, physics, player, raf, render, setup, time;
 
 Level = require('./modules/level');
@@ -628,4 +682,4 @@ frame();
 
 
 
-},{"./modules/constants":2,"./modules/level":3,"./modules/physics":4,"./modules/renderer":5,"./modules/time":6,"raf":8}]},{},[11])
+},{"./modules/constants":3,"./modules/level":4,"./modules/physics":5,"./modules/renderer":6,"./modules/time":7,"raf":9}]},{},[12])
