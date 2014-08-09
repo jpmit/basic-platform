@@ -77,12 +77,9 @@ module.exports.rayCollide = (x, y, targetX, targetY, level, entities={}) ->
 
 # run a physics update step on an entity
 module.exports.updateEntity = (entity, level, dt) ->
-  #wasleft = entity.dx < 0
-  #wasright = entity.dx > 0
-  falling = entity.falling
 
-  friction = entity.friction * ((if falling then 0.5 else 1))
-  accel = entity.accel * ((if falling then 0.5 else 1))
+  friction = entity.friction * ((if entity.falling then 0.5 else 1))
+  accel = entity.accel * ((if entity.falling then 0.5 else 1))
 
   # x movement
   entity.ddx = 0
@@ -98,7 +95,7 @@ module.exports.updateEntity = (entity, level, dt) ->
   # check for collisions with possible new tile(s) in x direction
   newx = entity.x + entity.ddx*dt
 
-  # are we currently exactly on a tile in the x or y direction?
+  # are we currently exactly on a tile in the x or y direction (before moving)?
   ontilex = (entity.x % c.TILE == 0)
   ontiley = (entity.y % c.TILE == 0)
 
@@ -120,37 +117,27 @@ module.exports.updateEntity = (entity, level, dt) ->
   else
     cellbottom = level.tileToValue tx, tybottom, 'collision'  
 
-#  ny = entity.y % c.TILE
-#  console.log celltop, cellmiddle, cellbottom
-
-#  console.log newx, celltop, cellbottom
-
   if celltop or cellmiddle or cellbottom
     if entity.left
       newx = (tx + 1) * c.TILE
     else if entity.right
+      console.log 'collide!', celltop, cellmiddle, cellbottom, ontiley, entity.y
       newx = (tx - 1) * c.TILE
 
+  oldx = entity.x
   entity.x = newx
 
-  #if entity.up
-  #  entity.ddy = entity.ddy - accel
-
-  #if entity.down
-  #  entity.ddy = entity.ddy + accel
-
   # y movement
-  entity.ddy = entity.gravity
+  # check bottom for collisions
+  if entity.jumping
+    entity.ddy = -entity.gravity
+  else
+    entity.ddy = entity.gravity
 
-  #if entity.jump and not entity.jumping and not falling
-  #  entity.ddy = entity.ddy - entity.impulse # an instant big force impulse
-  #  entity.jumping = true
-  
   newy = entity.y + dt*entity.ddy
 
-  # check bottom for collisions
   ontilex = (entity.x % c.TILE == 0)
-  txleft = level.pixelToTile newx
+  txleft = level.pixelToTile entity.x
   txright = txleft + 1
   ty = level.pixelToTile newy
   tybottom = ty + 2 # +2 since we are 2 tiles high
@@ -158,59 +145,38 @@ module.exports.updateEntity = (entity, level, dt) ->
   if ontilex
     cellbottomright = 0
   else
-    cellbottomright = level.tileToValue txright, tybottom, 'collision'          
+    cellbottomright = level.tileToValue txright, tybottom, 'collision'
+  celltopleft = level.tileToValue txleft, ty, 'collision'
+  if ontilex
+    celltopright = 0
+  else
+    celltopright = level.tileToValue txright, ty, 'collision'
 
-  if cellbottomleft or cellbottomright
-    newy = (tybottom - 2)*c.TILE
+  if entity.jumping
+    entity.jumpdt = entity.jumpdt + dt
+#    console.log entity.jumpdt
+    if entity.jumpdt > 1
+      entity.jumping = false
+  else
+    entity.falling = true
+
+  if entity.jumping
+    if celltopleft or celltopright
+      newy = (ty + 1)*c.TILE
+      entity.jumping = false
+  else if entity.falling
+    if cellbottomleft or cellbottomright
+      console.log 'on floor'
+      newy = (tybottom - 2)*c.TILE
+      console.log(newy)
+    else
+      console.log 'not on floor'
+
+  # are we jumping?
+  if entity.jump and ontiley and (cellbottomleft or cellbottomright)
+    entity.jumping = true
+    entity.falling = false
+    entity.jumpdt = 0
 
   entity.y = newy
-
-  #if entity.jump and not entity.jumping and not falling
-  #  entity.ddy = entity.ddy - entity.impulse # an instant big force impulse
-  #  entity.jumping = true
-  
-  #entity.x = entity.x + (dt * entity.dx)
-  #entity.y = entity.y + (dt * entity.dy)
-  #entity.dx = clamp(entity.dx + (dt * entity.ddx), -entity.maxdx, entity.maxdx)
-  #entity.dy = clamp(entity.dy + (dt * entity.ddy), -entity.maxdy, entity.maxdy)
-
-  #if (wasleft and (entity.dx > 0)) or (wasright and (entity.dx < 0))
-    # clamp at zero to prevent friction from making us jiggle side to side
-  #  entity.dx = 0 
-
-  #tx = level.pixelToTile entity.x
-  #ty = level.pixelToTile entity.y
-  #nx = entity.x % c.TILE
-  #ny = entity.y % c.TILE
-
-  #console.log entity.x, entity.y
-  
-  #cell = level.tileToValue tx, ty, 'collision'
-  #cellright = level.tileToValue(tx + 1, ty, 'collision')
-  #celldown = level.tileToValue(tx, ty + 1, 'collision')
-  #celldiag = level.tileToValue(tx + 1, ty + 1, 'collision')
-
-  #if entity.dy > 0
-  #  if (celldown and not cell) or (celldiag and not cellright and nx)
-  #    entity.y = level.tileToPixel ty
-  #    entity.dy = 0
-  #    entity.falling = false
-  #    entity.jumping = false
-  #    ny = 0
-  #else if entity.dy < 0
-  #  if (cell and not celldown) or (cellright and not celldiag and nx)
-  #    entity.y = level.tileToPixel(ty + 1)
-  #    entity.dy = 0
-  #    cell = celldown
-  #    cellright = celldiag
-  #    ny = 0
-  #if entity.dx > 0
-  #  if (cellright and not cell) or (celldiag and not celldown and ny)
-  #    entity.x = level.tileToPixel tx
-  #    entity.dx = 0
-  #else if entity.dx < 0
-  #  if (cell and not cellright) or (celldown and not celldiag and ny)
-  #    entity.x = level.tileToPixel(tx + 1)
-  #    entity.dx = 0
-
-  #entity.falling = not (celldown or (nx and celldiag))
+#  console.log entity.x

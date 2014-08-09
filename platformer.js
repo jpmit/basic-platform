@@ -198,10 +198,9 @@ module.exports.rayCollide = function(x, y, targetX, targetY, level, entities) {
 };
 
 module.exports.updateEntity = function(entity, level, dt) {
-  var accel, cellbottom, cellbottomleft, cellbottomright, cellmiddle, celltop, falling, friction, newx, newy, ontilex, ontiley, tx, txleft, txright, ty, tybottom, tymiddle, tytop;
-  falling = entity.falling;
-  friction = entity.friction * (falling ? 0.5 : 1);
-  accel = entity.accel * (falling ? 0.5 : 1);
+  var accel, cellbottom, cellbottomleft, cellbottomright, cellmiddle, celltop, celltopleft, celltopright, friction, newx, newy, oldx, ontilex, ontiley, tx, txleft, txright, ty, tybottom, tymiddle, tytop;
+  friction = entity.friction * (entity.falling ? 0.5 : 1);
+  accel = entity.accel * (entity.falling ? 0.5 : 1);
   entity.ddx = 0;
   if (entity.left && !entity.right) {
     entity.ddx = entity.ddx - accel;
@@ -229,14 +228,20 @@ module.exports.updateEntity = function(entity, level, dt) {
     if (entity.left) {
       newx = (tx + 1) * c.TILE;
     } else if (entity.right) {
+      console.log('collide!', celltop, cellmiddle, cellbottom, ontiley, entity.y);
       newx = (tx - 1) * c.TILE;
     }
   }
+  oldx = entity.x;
   entity.x = newx;
-  entity.ddy = entity.gravity;
+  if (entity.jumping) {
+    entity.ddy = -entity.gravity;
+  } else {
+    entity.ddy = entity.gravity;
+  }
   newy = entity.y + dt * entity.ddy;
   ontilex = entity.x % c.TILE === 0;
-  txleft = level.pixelToTile(newx);
+  txleft = level.pixelToTile(entity.x);
   txright = txleft + 1;
   ty = level.pixelToTile(newy);
   tybottom = ty + 2;
@@ -246,8 +251,38 @@ module.exports.updateEntity = function(entity, level, dt) {
   } else {
     cellbottomright = level.tileToValue(txright, tybottom, 'collision');
   }
-  if (cellbottomleft || cellbottomright) {
-    newy = (tybottom - 2) * c.TILE;
+  celltopleft = level.tileToValue(txleft, ty, 'collision');
+  if (ontilex) {
+    celltopright = 0;
+  } else {
+    celltopright = level.tileToValue(txright, ty, 'collision');
+  }
+  if (entity.jumping) {
+    entity.jumpdt = entity.jumpdt + dt;
+    if (entity.jumpdt > 1) {
+      entity.jumping = false;
+    }
+  } else {
+    entity.falling = true;
+  }
+  if (entity.jumping) {
+    if (celltopleft || celltopright) {
+      newy = (ty + 1) * c.TILE;
+      entity.jumping = false;
+    }
+  } else if (entity.falling) {
+    if (cellbottomleft || cellbottomright) {
+      console.log('on floor');
+      newy = (tybottom - 2) * c.TILE;
+      console.log(newy);
+    } else {
+      console.log('not on floor');
+    }
+  }
+  if (entity.jump && ontiley && (cellbottomleft || cellbottomright)) {
+    entity.jumping = true;
+    entity.falling = false;
+    entity.jumpdt = 0;
   }
   return entity.y = newy;
 };
