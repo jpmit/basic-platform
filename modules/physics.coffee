@@ -2,6 +2,7 @@ c          = require './constants'
 clamp      = require './clamp'
 unitVector = require './v2-unit'
 collide    = require './collide'
+move       = require './move'
 
 # r is an angle in radians. returns a unit vector representing the direction
 angleToVector = (r) ->
@@ -47,6 +48,8 @@ module.exports.setupEntity = (obj) ->
     down    : obj.properties.down 
     jump    : null
 
+  entity.hitbox.x = entity.rect.x + entity.hitbox.xoff
+  entity.hitbox.y = entity.rect.y + entity.hitbox.yoff
   entity.hitbox.height = entity.rect.height - 2 * entity.hitbox.yoff
   entity.hitbox.width = entity.rect.width - 2 * entity.hitbox.xoff
 
@@ -91,9 +94,21 @@ module.exports.rayCollide = (x, y, targetX, targetY, level, entities={}) ->
       lastTileIdx = index
 
 
-# run a physics update step on an entity
+# run a physics update step on an entity.  We first get the x position
+# we want to move the entity to (this will update the velocity and
+# accelaration but not the position of the entity).  Then we move the
+# entity to the correct x position based on collisions with the level.
+ 
 module.exports.updateEntity = (entity, level, dt) ->
 
-  collide.stepX entity, level, dt
+  xnew = move.stepX entity, level, dt
+  collide.levelCollideX entity, level, xnew
 
-  collide.stepY entity, level, dt
+  ynew = move.stepY entity, level, dt
+  collide.levelCollideY entity, level, ynew
+
+  # handle collisions with other entities
+
+  
+  # handle collisions with ray
+

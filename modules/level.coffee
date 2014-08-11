@@ -35,7 +35,16 @@ class Level
     if type is 'render'
       @cells[tx + (ty * @tw)]
     else
-      @collision_cells[tx + (ty * @tw)] 
+      @collision_cells[tx + (ty * @tw)]
 
+  # get the tile hitbox
+  tileHitbox: (tx, ty) ->
+    val = @tileToValue tx, ty
+    if val
+      hitbox:
+        x : tx * c.TILE
+        y : ty * c.TILE
+        width : c.TILE
+        height : c.TILE
 
 module.exports = Level

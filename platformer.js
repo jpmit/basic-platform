@@ -6,86 +6,62 @@ module.exports = function(x, min, max) {
 
 
 },{}],2:[function(require,module,exports){
-var c;
+var c, collideEntity;
 
 c = require('./constants');
 
-module.exports.stepX = function(entity, level, dt) {
-  var accel, cell, friction, wasleft, wasright, xnew, xold, xtilenew, xtileold, yold, ytile, ytilebottom, ytiletop, _i, _j;
-  wasleft = entity.dx < 0;
-  wasright = entity.dx > 0;
-  friction = entity.friction * (entity.falling ? 0.5 : 1);
-  accel = entity.accel * (entity.falling ? 0.5 : 1);
-  entity.ddx = 0;
-  if (entity.left) {
-    entity.ddx = entity.ddx - accel;
-  } else if (wasleft) {
-    entity.ddx = entity.ddx + friction;
+collideEntity = function(entity1, entity2) {
+  var h1, h2, isCollision;
+  h1 = entity1.hitbox;
+  h2 = entity2.hitbox;
+  isCollision = !(((h1.x + h1.width) < h2.x) || ((h2.x + h2.width) < h1.x) || ((h1.y + h1.height) < h2.y) || ((h2.y + h2.height) < h1.y));
+  if (isCollision) {
+    if (entity1.dx > 0 && h1.x + h1.width > h2.x) {
+      console.log('hit right');
+      entity1.hitbox.x = h2.x - h1.width;
+    } else if (h1.x < h2.x + h2.width) {
+      console.log('hit left');
+      entity1.hitbox.x = h2.x + h2.width;
+    }
+    entity1.dx = 0;
+    entity1.ddx = 0;
   }
-  if (entity.right) {
-    entity.ddx = entity.ddx + accel;
-  } else if (wasright) {
-    entity.ddx = entity.ddx - friction;
-  }
-  entity.dx = entity.dx + entity.ddx * dt;
-  if ((wasleft && (entity.dx > 0)) || (wasright && (entity.dx < 0))) {
-    entity.dx = 0;
-  }
-  xold = entity.rect.x + entity.hitbox.xoff;
-  yold = entity.rect.y + entity.hitbox.yoff;
-  xnew = Math.floor(xold + entity.dx * dt);
+  return isCollision;
+};
+
+module.exports.levelCollideX = function(entity, level, xnew) {
+  var tentity, xold, xtilenew, xtileold, yold, ytile, ytilebottom, ytiletop, _i;
+  xold = entity.hitbox.x;
+  yold = entity.hitbox.y;
+  entity.hitbox.x = xnew;
   if (entity.dx > 0) {
     xtileold = level.pixelToTile(xold + entity.hitbox.width - 1);
     xtilenew = level.pixelToTile(xnew + entity.hitbox.width - 1);
-    if (xtileold !== xtilenew) {
-      ytiletop = level.pixelToTile(yold);
-      ytilebottom = level.pixelToTile(yold + entity.hitbox.height - 1);
-      for (ytile = _i = ytilebottom; ytilebottom <= ytiletop ? _i <= ytiletop : _i >= ytiletop; ytile = ytilebottom <= ytiletop ? ++_i : --_i) {
-        cell = level.tileToValue(xtilenew, ytile);
-        if (cell) {
-          xnew = xtilenew * c.TILE - entity.hitbox.width;
-          entity.ddx = 0;
-          entity.dx = 0;
-          break;
-        }
-      }
-    }
   } else if (entity.dx < 0) {
     xtileold = level.pixelToTile(xold);
     xtilenew = level.pixelToTile(xnew);
-    if (xtileold !== xtilenew) {
-      ytiletop = level.pixelToTile(yold);
-      ytilebottom = level.pixelToTile(yold + entity.hitbox.height - 1);
-      for (ytile = _j = ytilebottom; ytilebottom <= ytiletop ? _j <= ytiletop : _j >= ytiletop; ytile = ytilebottom <= ytiletop ? ++_j : --_j) {
-        cell = level.tileToValue(xtilenew, ytile);
-        if (cell) {
-          xnew = (xtilenew + 1) * c.TILE;
-          entity.ddx = 0;
-          entity.dx = 0;
+  } else {
+    xtileold = xtilenew = 0;
+  }
+  if (xtileold !== xtilenew) {
+    ytiletop = level.pixelToTile(yold);
+    ytilebottom = level.pixelToTile(yold + entity.hitbox.height - 1);
+    for (ytile = _i = ytilebottom; ytilebottom <= ytiletop ? _i <= ytiletop : _i >= ytiletop; ytile = ytilebottom <= ytiletop ? ++_i : --_i) {
+      tentity = level.tileHitbox(xtilenew, ytile);
+      if (tentity) {
+        if (collideEntity(entity, tentity)) {
           break;
         }
       }
     }
   }
-  return entity.rect.x = xnew - entity.hitbox.xoff;
+  return entity.rect.x = entity.hitbox.x - entity.hitbox.xoff;
 };
 
-module.exports.stepY = function(entity, level, dt) {
-  var cell, xold, xtile, xtileleft, xtileright, ynew, yold, ytilenew, ytileold, _i, _j;
-  entity.ddy = entity.gravity;
-  if (entity.jump && !entity.jumping && entity.onfloor) {
-    entity.ddy = entity.ddy - entity.impulse;
-    entity.jumping = true;
-    entity.onfloor = false;
-  }
-  entity.dy = entity.dy + dt * entity.ddy;
-  if (entity.dy > 0) {
-    entity.jumping = false;
-    entity.falling = true;
-  }
+module.exports.levelCollideY = function(entity, level, ynew) {
+  var cell, xold, xtile, xtileleft, xtileright, yold, ytilenew, ytileold, _i, _j;
   xold = entity.rect.x + entity.hitbox.xoff;
   yold = entity.rect.y + entity.hitbox.yoff;
-  ynew = Math.floor(yold + dt * entity.dy);
   if (entity.jumping) {
     ytileold = level.pixelToTile(yold);
     ytilenew = level.pixelToTile(ynew);
@@ -113,7 +89,6 @@ module.exports.stepY = function(entity, level, dt) {
         cell = level.tileToValue(xtile, ytilenew);
         if (cell) {
           ynew = ytilenew * c.TILE - entity.hitbox.height;
-          console.log('onfloor');
           entity.onfloor = true;
           entity.ddy = 0;
           entity.dy = 0;
@@ -122,6 +97,7 @@ module.exports.stepY = function(entity, level, dt) {
       }
     }
   }
+  entity.hitbox.y = ynew;
   return entity.rect.y = ynew - entity.hitbox.yoff;
 };
 
@@ -215,6 +191,21 @@ Level = (function() {
     }
   };
 
+  Level.prototype.tileHitbox = function(tx, ty) {
+    var val;
+    val = this.tileToValue(tx, ty);
+    if (val) {
+      return {
+        hitbox: {
+          x: tx * c.TILE,
+          y: ty * c.TILE,
+          width: c.TILE,
+          height: c.TILE
+        }
+      };
+    }
+  };
+
   return Level;
 
 })();
@@ -224,7 +215,53 @@ module.exports = Level;
 
 
 },{"./constants":3}],5:[function(require,module,exports){
-var angleToVector, c, clamp, collide, unitVector;
+var c;
+
+c = require('./constants');
+
+module.exports.stepX = function(entity, level, dt) {
+  var accel, friction, wasleft, wasright;
+  wasleft = entity.dx < 0;
+  wasright = entity.dx > 0;
+  friction = entity.friction * (entity.falling ? 0.5 : 1);
+  accel = entity.accel * (entity.falling ? 0.5 : 1);
+  entity.ddx = 0;
+  if (entity.left) {
+    entity.ddx = entity.ddx - accel;
+  } else if (wasleft) {
+    entity.ddx = entity.ddx + friction;
+  }
+  if (entity.right) {
+    entity.ddx = entity.ddx + accel;
+  } else if (wasright) {
+    entity.ddx = entity.ddx - friction;
+  }
+  entity.dx = entity.dx + entity.ddx * dt;
+  if ((wasleft && (entity.dx > 0)) || (wasright && (entity.dx < 0))) {
+    entity.dx = 0;
+  }
+  return entity.hitbox.x + Math.floor(entity.dx * dt);
+};
+
+module.exports.stepY = function(entity, level, dt) {
+  entity.ddy = entity.gravity;
+  if (entity.jump && !entity.jumping && entity.onfloor) {
+    entity.ddy = entity.ddy - entity.impulse;
+    entity.jumping = true;
+    entity.onfloor = false;
+  }
+  entity.dy = entity.dy + dt * entity.ddy;
+  if (entity.dy > 0) {
+    entity.jumping = false;
+    entity.falling = true;
+  }
+  return entity.rect.y + entity.hitbox.yoff + Math.floor(entity.dy * dt);
+};
+
+
+
+},{"./constants":3}],6:[function(require,module,exports){
+var angleToVector, c, clamp, collide, move, unitVector;
 
 c = require('./constants');
 
@@ -233,6 +270,8 @@ clamp = require('./clamp');
 unitVector = require('./v2-unit');
 
 collide = require('./collide');
+
+move = require('./move');
 
 angleToVector = function(r) {
   var UP, x, y;
@@ -281,6 +320,8 @@ module.exports.setupEntity = function(obj) {
     down: obj.properties.down,
     jump: null
   };
+  entity.hitbox.x = entity.rect.x + entity.hitbox.xoff;
+  entity.hitbox.y = entity.rect.y + entity.hitbox.yoff;
   entity.hitbox.height = entity.rect.height - 2 * entity.hitbox.yoff;
   entity.hitbox.width = entity.rect.width - 2 * entity.hitbox.xoff;
   return entity;
@@ -334,13 +375,16 @@ module.exports.rayCollide = function(x, y, targetX, targetY, level, entities) {
 };
 
 module.exports.updateEntity = function(entity, level, dt) {
-  collide.stepX(entity, level, dt);
-  return collide.stepY(entity, level, dt);
+  var xnew, ynew;
+  xnew = move.stepX(entity, level, dt);
+  collide.levelCollideX(entity, level, xnew);
+  ynew = move.stepY(entity, level, dt);
+  return collide.levelCollideY(entity, level, ynew);
 };
 
 
 
-},{"./clamp":1,"./collide":2,"./constants":3,"./v2-unit":8}],6:[function(require,module,exports){
+},{"./clamp":1,"./collide":2,"./constants":3,"./move":5,"./v2-unit":9}],7:[function(require,module,exports){
 var c, renderLevel;
 
 c = require('./constants');
@@ -379,7 +423,7 @@ module.exports = function(ctx, me, level) {
 
 
 
-},{"./constants":3}],7:[function(require,module,exports){
+},{"./constants":3}],8:[function(require,module,exports){
 module.exports = function() {
   if ((typeof window !== "undefined" && window !== null) && window.performance && window.performance.now) {
     return window.performance.now();
@@ -390,7 +434,7 @@ module.exports = function() {
 
 
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 var unitVector;
 
 module.exports = unitVector = function(v) {
@@ -404,7 +448,7 @@ module.exports = unitVector = function(v) {
 
 
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 var now = require('performance-now')
   , global = typeof window === 'undefined' ? {} : window
   , vendors = ['moz', 'webkit']
@@ -486,7 +530,7 @@ module.exports.cancel = function() {
   caf.apply(global, arguments)
 }
 
-},{"performance-now":10}],10:[function(require,module,exports){
+},{"performance-now":11}],11:[function(require,module,exports){
 (function (process){
 // Generated by CoffeeScript 1.6.3
 (function() {
@@ -526,7 +570,7 @@ module.exports.cancel = function() {
 */
 
 }).call(this,require("qvMYcC"))
-},{"qvMYcC":11}],11:[function(require,module,exports){
+},{"qvMYcC":12}],12:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -591,7 +635,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 var Level, c, canvas, ctx, dt, frame, fs, last, level, now, onkey, physics, player, raf, render, setup, time;
 
 Level = require('./modules/level');
@@ -682,4 +726,4 @@ frame();
 
 
 
-},{"./modules/constants":3,"./modules/level":4,"./modules/physics":5,"./modules/renderer":6,"./modules/time":7,"raf":9}]},{},[12])
+},{"./modules/constants":3,"./modules/level":4,"./modules/physics":6,"./modules/renderer":7,"./modules/time":8,"raf":10}]},{},[13])

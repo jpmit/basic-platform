@@ -1,36 +1,38 @@
 c = require './constants'
 
-# move an entity through the level in the x direction
-module.exports.stepX = (entity, level, dt) ->
-  wasleft = entity.dx < 0
-  wasright = entity.dx > 0
-        
-  friction = entity.friction * ((if entity.falling then 0.5 else 1))
-  accel = entity.accel * ((if entity.falling then 0.5 else 1))
+# collide two entities, each of which has a hitbox which is an AABB
+collideEntity = (entity1, entity2) ->
+  h1 = entity1.hitbox
+  h2 = entity2.hitbox
+  isCollision = not (((h1.x + h1.width) < h2.x) or
+                     ((h2.x + h2.width) < h1.x) or 
+                     ((h1.y + h1.height) < h2.y) or 
+                     ((h2.y + h2.height) < h1.y))
+  # if we have a collision, replace entity1 so that there is no longer a collision
+  if isCollision
+    if entity1.dx > 0 and h1.x + h1.width > h2.x
+      console.log 'hit right'
+      entity1.hitbox.x = h2.x - h1.width
+    else if h1.x < h2.x + h2.width
+      console.log 'hit left'
+      entity1.hitbox.x = h2.x + h2.width
+    #if h1.y + h1.height > h2.y
+    #  entity2.hitbox.y = h1.y - (h1.y + h1.height - h2.y)
+    #else if h1.y < h2.y + h2.height
+    #  entity2.hitbox.y = h1.y + (h2.y + h2.height - h1.y)
+    entity1.dx = 0
+    entity1.ddx = 0
+  
+  isCollision
 
-  entity.ddx = 0
-
-  if entity.left
-    entity.ddx = entity.ddx - accel
-  else if wasleft
-    entity.ddx = entity.ddx + friction
-    
-  if entity.right
-    entity.ddx = entity.ddx + accel
-  else if wasright
-    entity.ddx = entity.ddx - friction
-
-  entity.dx = entity.dx + entity.ddx*dt
-
-  if (wasleft and (entity.dx > 0)) or (wasright and (entity.dx < 0))
-    # clamp at zero to prevent friction from making us jiggle side to side
-    entity.dx = 0 
+module.exports.levelCollideX = (entity, level, xnew) ->
 
   # current top left position of hitbox
-  xold = entity.rect.x + entity.hitbox.xoff
-  yold = entity.rect.y + entity.hitbox.yoff
-  # the new position before correcting for collisions
-  xnew = Math.floor(xold + entity.dx * dt)
+  xold = entity.hitbox.x
+  yold = entity.hitbox.y
+
+  # set new position of hitbox
+  entity.hitbox.x = xnew
 
   if entity.dx > 0
     # check any tiles along the right edge of the hitbox if we crossed
@@ -38,59 +40,34 @@ module.exports.stepX = (entity, level, dt) ->
     # the hitbox is exactly on a tile boundary.
     xtileold = level.pixelToTile (xold + entity.hitbox.width - 1)
     xtilenew = level.pixelToTile (xnew + entity.hitbox.width - 1)
-    if xtileold != xtilenew
-      # top and bottom y tiles to check
-      ytiletop = level.pixelToTile yold
-      ytilebottom = level.pixelToTile yold + entity.hitbox.height - 1
-      for ytile in [ytilebottom..ytiletop]
-          cell = level.tileToValue xtilenew, ytile
-          if cell
-            # we hit a boundary
-            xnew = xtilenew * c.TILE - entity.hitbox.width
-            entity.ddx = 0
-            entity.dx = 0
-            break
   else if entity.dx < 0
     # check any tiles along the left edge of the hitbox if we
     # crossed a 'tile boundary'
     xtileold = level.pixelToTile xold
     xtilenew = level.pixelToTile xnew
-    if xtileold != xtilenew
-      # top and bottom y tiles to check
-      ytiletop = level.pixelToTile yold
-      ytilebottom = level.pixelToTile yold + entity.hitbox.height - 1
-      for ytile in [ytilebottom..ytiletop]
-          cell = level.tileToValue xtilenew, ytile
-          if cell
-            # we hit a boundary
-            xnew = (xtilenew + 1) * c.TILE
-            entity.ddx = 0
-            entity.dx = 0
+  else
+    xtileold = xtilenew = 0
+          
+  if xtileold != xtilenew
+    # top and bottom y tiles to check
+    ytiletop = level.pixelToTile yold
+    ytilebottom = level.pixelToTile yold + entity.hitbox.height - 1
+    for ytile in [ytilebottom..ytiletop]
+        tentity = level.tileHitbox xtilenew, ytile
+        if tentity
+          # collideEntity will move entity hitbox if necessary
+          if collideEntity entity, tentity
             break
 
-  # move the actual sprite
-  entity.rect.x = xnew - entity.hitbox.xoff
+  # sync the bounding box to the hitbox
+  entity.rect.x = entity.hitbox.x - entity.hitbox.xoff
 
 # move an entity through the level in the y direction
-module.exports.stepY = (entity, level, dt) ->
-  
-  entity.ddy = entity.gravity
-  if entity.jump and not entity.jumping and entity.onfloor
-    entity.ddy = entity.ddy - entity.impulse # an instant big force impulse
-    entity.jumping = true
-    entity.onfloor = false
-
-  entity.dy = entity.dy + dt * entity.ddy
-
-  if entity.dy > 0
-    entity.jumping = false
-    entity.falling = true
+module.exports.levelCollideY = (entity, level, ynew) ->
 
   # current top left position of hitbox
   xold = entity.rect.x + entity.hitbox.xoff
   yold = entity.rect.y + entity.hitbox.yoff
-
-  ynew = Math.floor(yold + dt*entity.dy)
 
   if entity.jumping
     # check any tiles at the top
@@ -120,10 +97,10 @@ module.exports.stepY = (entity, level, dt) ->
           cell = level.tileToValue xtile, ytilenew
           if cell
             ynew = (ytilenew) * c.TILE - entity.hitbox.height
-            console.log 'onfloor'
             entity.onfloor = true
             entity.ddy = 0
             entity.dy = 0
             break
 
+  entity.hitbox.y = ynew
   entity.rect.y = ynew - entity.hitbox.yoff

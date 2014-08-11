@@ -1,0 +1,48 @@
+c = require './constants'
+
+# move an entity through the level in the x direction, return the new
+# x position (top left co-ord of hitbox)
+module.exports.stepX = (entity, level, dt) ->
+  wasleft = entity.dx < 0
+  wasright = entity.dx > 0
+        
+  friction = entity.friction * ((if entity.falling then 0.5 else 1))
+  accel = entity.accel * ((if entity.falling then 0.5 else 1))
+
+  entity.ddx = 0
+
+  if entity.left
+    entity.ddx = entity.ddx - accel
+  else if wasleft
+    entity.ddx = entity.ddx + friction
+    
+  if entity.right
+    entity.ddx = entity.ddx + accel
+  else if wasright
+    entity.ddx = entity.ddx - friction
+
+  entity.dx = entity.dx + entity.ddx*dt
+
+  if (wasleft and (entity.dx > 0)) or (wasright and (entity.dx < 0))
+    # clamp at zero to prevent friction from making us jiggle side to side
+    entity.dx = 0
+
+  entity.hitbox.x + Math.floor(entity.dx * dt)
+
+# move an entity through the level in the y direction, return the new
+# y position (top left co-ord of hitbox)
+module.exports.stepY = (entity, level, dt) ->
+  
+  entity.ddy = entity.gravity
+  if entity.jump and not entity.jumping and entity.onfloor
+    entity.ddy = entity.ddy - entity.impulse # an instant big force impulse
+    entity.jumping = true
+    entity.onfloor = false
+
+  entity.dy = entity.dy + dt * entity.ddy
+
+  if entity.dy > 0
+    entity.jumping = false
+    entity.falling = true
+        
+  entity.rect.y + entity.hitbox.yoff + Math.floor(entity.dy * dt)
