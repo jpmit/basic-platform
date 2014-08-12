@@ -14,6 +14,7 @@ now    = null
 last   = time()
 level = null
 player = null
+monster = null
 
 
 onkey = (ev, key, down) ->
@@ -46,6 +47,7 @@ setup = ->
   canvas.width = level.width
   canvas.height = level.height
   player = physics.setupEntity level_data.layers[1].objects[0]
+  monster = physics.setupEntity level_data.layers[1].objects[1]
 
 
 frame = ->
@@ -54,8 +56,9 @@ frame = ->
   while dt > c.STEP
     dt = dt - c.STEP
     physics.updateEntity player, level, c.STEP
-  
-  render ctx, player, level
+    physics.updateEntity monster, level, c.STEP
+    physics.monsterCollide player, monster
+  render ctx, player, monster, level
   last = now
   raf frame, canvas
 

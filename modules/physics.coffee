@@ -24,12 +24,12 @@ module.exports.setupEntity = (obj) ->
     rect:
       x: obj.x
       y: obj.y
-      height: 137#c.TILE * 2
-      width: 34#c.TILE * 4
+      height: obj.height
+      width: obj.width
     hitbox:
       # offsets from the top left in pixels
-      xoff: 5
-      yoff: 20
+      xoff: obj.properties.hitbox.xoff
+      yoff: obj.properties.hitbox.yoff
     dx: 0
     dy: 0
     gravity : c.METER * (obj.properties.gravity or c.GRAVITY)
@@ -107,8 +107,8 @@ module.exports.updateEntity = (entity, level, dt) ->
   ynew = move.stepY entity, level, dt
   collide.levelCollideY entity, level, ynew
 
-  # handle collisions with other entities
-
-  
-  # handle collisions with ray
-
+module.exports.monsterCollide = (entity, monster) ->
+  if collide.overlapHitbox entity, monster
+    # the collision needs to be handled in some way here
+    console.log Math.sign(entity.dx)
+    entity.dx = -500 * Math.sign(entity.dx)
