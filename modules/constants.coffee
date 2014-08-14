@@ -33,6 +33,7 @@ module.exports =
     COLOR.GREY
   ]
   KEY:
+    CTRL  : 17
     SPACE : 32
     LEFT  : 83
     UP    : 69

@@ -15,7 +15,7 @@ last   = time()
 level = null
 player = null
 monster = null
-
+bullet = null
 
 onkey = (ev, key, down) ->
   switch key
@@ -39,7 +39,10 @@ onkey = (ev, key, down) ->
       ev.preventDefault()
       player.down = down
       return false
-
+    when c.KEY.CTRL
+      ev.preventDefault()
+      player.firing = down
+      return false
 
 setup = ->
   level_data = JSON.parse fs.readFileSync(__dirname+'/level.json', 'utf8')
@@ -49,16 +52,27 @@ setup = ->
   player = physics.setupEntity level_data.layers[1].objects[0]
   monster = physics.setupEntity level_data.layers[1].objects[1]
 
-
 frame = ->
   now = time()
   dt = dt + Math.min(1, (now - last) / 1000)
+
+  # check if player firing bullet
+  if player.firing and (!bullet)
+    bullet = {rect: {x: player.rect.x, y: player.rect.y, width: 20, height: 100}, dx: 500, dy: -400}
+    bullet.angle = Math.atan(bullet.dx / -bullet.dy);
+  
   while dt > c.STEP
     dt = dt - c.STEP
     physics.updateEntity player, level, c.STEP
     physics.updateEntity monster, level, c.STEP
+    if bullet
+      if physics.updateBullet bullet, level, c.STEP
+        bullet = null              
+      if physics.bulletCollide bullet, monster
+        bullet = null              
     physics.monsterCollide player, monster
-  render ctx, player, monster, level
+    
+  render ctx, player, monster, bullet, level
   last = now
   raf frame, canvas
 

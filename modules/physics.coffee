@@ -98,7 +98,6 @@ module.exports.rayCollide = (x, y, targetX, targetY, level, entities={}) ->
 # we want to move the entity to (this will update the velocity and
 # accelaration but not the position of the entity).  Then we move the
 # entity to the correct x position based on collisions with the level.
- 
 module.exports.updateEntity = (entity, level, dt) ->
 
   xnew = move.stepX entity, level, dt
@@ -107,8 +106,26 @@ module.exports.updateEntity = (entity, level, dt) ->
   ynew = move.stepY entity, level, dt
   collide.levelCollideY entity, level, ynew
 
+
+# check if the player an monster collided and handle (currently in a
+# rudimentary way).
 module.exports.monsterCollide = (entity, monster) ->
+
   if collide.overlapHitbox entity, monster
-    # the collision needs to be handled in some way here
     console.log Math.sign(entity.dx)
     entity.dx = -500 * Math.sign(entity.dx)
+
+# returns true / false if bullet collided with level or not
+module.exports.updateBullet = (bullet, level, dt) ->
+
+  bullet.rect.x += bullet.dx * dt
+  bullet.rect.y += bullet.dy * dt
+
+  if bullet.rect.x < 0 or bullet.rect.x > level.width or bullet.rect.y < 0 or bullet.rect.y > level.height
+    true
+  else
+    false    
+
+# returns true / false if bullet collided with monster
+module.exports.bulletCollide = (bullet, monster) ->
+  false

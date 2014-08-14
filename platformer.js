@@ -122,6 +122,7 @@ module.exports = {
   COLOR: COLOR,
   COLORS: [COLOR.YELLOW, COLOR.BRICK, COLOR.PINK, COLOR.PURPLE, COLOR.GREY],
   KEY: {
+    CTRL: 17,
     SPACE: 32,
     LEFT: 83,
     UP: 69,
@@ -374,10 +375,24 @@ module.exports.monsterCollide = function(entity, monster) {
   }
 };
 
+module.exports.updateBullet = function(bullet, level, dt) {
+  bullet.rect.x += bullet.dx * dt;
+  bullet.rect.y += bullet.dy * dt;
+  if (bullet.rect.x < 0 || bullet.rect.x > level.width || bullet.rect.y < 0 || bullet.rect.y > level.height) {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+module.exports.bulletCollide = function(bullet, monster) {
+  return false;
+};
+
 
 
 },{"./clamp":1,"./collide":2,"./constants":3,"./move":5,"./v2-unit":9}],7:[function(require,module,exports){
-var c, renderLevel;
+var c, drawAngle, renderLevel;
 
 c = require('./constants');
 
@@ -404,7 +419,23 @@ renderLevel = function(ctx, level) {
   return _results;
 };
 
-module.exports = function(ctx, me, him, level) {
+drawAngle = function(ctx, sprite) {
+  var hheight, hwidth;
+  if (!sprite) {
+    return;
+  }
+  ctx.save();
+  if (sprite.angle) {
+    hwidth = sprite.rect.width / 2;
+    hheight = sprite.rect.height / 2;
+    ctx.translate(sprite.rect.x + hwidth, sprite.rect.y + hheight);
+    ctx.rotate(sprite.angle);
+    ctx.fillRect(-hwidth, -hheight, sprite.rect.width, sprite.rect.height);
+  }
+  return ctx.restore();
+};
+
+module.exports = function(ctx, me, him, bullet, level) {
   ctx.clearRect(0, 0, level.width, level.height);
   renderLevel(ctx, level);
   ctx.fillStyle = c.COLOR.YELLOW;
@@ -413,7 +444,8 @@ module.exports = function(ctx, me, him, level) {
   ctx.fillRect(him.rect.x, him.rect.y, him.rect.width, him.rect.height);
   ctx.fillStyle = c.COLOR.BLUE;
   ctx.fillRect(me.rect.x + me.hitbox.xoff, me.rect.y + me.hitbox.yoff, me.hitbox.width, me.hitbox.height);
-  return ctx.fillRect(him.rect.x + him.hitbox.xoff, him.rect.y + him.hitbox.yoff, him.hitbox.width, him.hitbox.height);
+  ctx.fillRect(him.rect.x + him.hitbox.xoff, him.rect.y + him.hitbox.yoff, him.hitbox.width, him.hitbox.height);
+  return drawAngle(ctx, bullet);
 };
 
 
@@ -631,7 +663,7 @@ process.chdir = function (dir) {
 };
 
 },{}],13:[function(require,module,exports){
-var Level, c, canvas, ctx, dt, frame, fs, last, level, monster, now, onkey, physics, player, raf, render, setup, time;
+var Level, bullet, c, canvas, ctx, dt, frame, fs, last, level, monster, now, onkey, physics, player, raf, render, setup, time;
 
 Level = require('./modules/level');
 
@@ -663,6 +695,8 @@ player = null;
 
 monster = null;
 
+bullet = null;
+
 onkey = function(ev, key, down) {
   switch (key) {
     case c.KEY.LEFT:
@@ -685,6 +719,10 @@ onkey = function(ev, key, down) {
       ev.preventDefault();
       player.down = down;
       return false;
+    case c.KEY.CTRL:
+      ev.preventDefault();
+      player.firing = down;
+      return false;
   }
 };
 
@@ -701,13 +739,34 @@ setup = function() {
 frame = function() {
   now = time();
   dt = dt + Math.min(1, (now - last) / 1000);
+  if (player.firing && (!bullet)) {
+    bullet = {
+      rect: {
+        x: player.rect.x,
+        y: player.rect.y,
+        width: 20,
+        height: 100
+      },
+      dx: 500,
+      dy: -400
+    };
+    bullet.angle = Math.atan(bullet.dx / -bullet.dy);
+  }
   while (dt > c.STEP) {
     dt = dt - c.STEP;
     physics.updateEntity(player, level, c.STEP);
     physics.updateEntity(monster, level, c.STEP);
+    if (bullet) {
+      if (physics.updateBullet(bullet, level, c.STEP)) {
+        bullet = null;
+      }
+      if (physics.bulletCollide(bullet, monster)) {
+        bullet = null;
+      }
+    }
     physics.monsterCollide(player, monster);
   }
-  render(ctx, player, monster, level);
+  render(ctx, player, monster, bullet, level);
   last = now;
   return raf(frame, canvas);
 };
