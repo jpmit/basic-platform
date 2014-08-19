@@ -11,11 +11,10 @@ var c, inHitbox;
 c = require('./constants');
 
 module.exports.overlapHitbox = function(entity1, entity2) {
-  var h1, h2, isCollision;
+  var h1, h2;
   h1 = entity1.hitbox;
   h2 = entity2.hitbox;
-  isCollision = !(((h1.x + h1.width) < h2.x) || ((h2.x + h2.width) < h1.x) || ((h1.y + h1.height) < h2.y) || ((h2.y + h2.height) < h1.y));
-  return isCollision;
+  return !(((h1.x + h1.width) < h2.x) || ((h2.x + h2.width) < h1.x) || ((h1.y + h1.height) < h2.y) || ((h2.y + h2.height) < h1.y));
 };
 
 inHitbox = function(point, entity) {
@@ -451,7 +450,7 @@ module.exports = function(ctx, me, him, gun, bullet, level) {
   ctx.fillStyle = c.COLOR.YELLOW;
   if (bullet) {
     ctx.fillRect(bullet.topleft.x, bullet.topleft.y, 1, 1);
-    return ctx.fillRect(bullet.topright.x - 2, bullet.topright.y, 1, 1);
+    return ctx.fillRect(bullet.topright.x, bullet.topright.y, 1, 1);
   }
 };
 
@@ -775,7 +774,6 @@ frame = function() {
       x: bullet.dir.y,
       y: -bullet.dir.x
     };
-    console.log(bullet.dir);
   }
   while (dt > c.STEP) {
     dt = dt - c.STEP;
