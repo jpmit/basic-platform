@@ -33,10 +33,12 @@ module.exports =
     COLOR.GREY
   ]
   KEY:
-    CTRL  : 17
-    SPACE : 32
-    LEFT  : 83
-    UP    : 69
-    RIGHT : 70
-    DOWN  : 68
+    CTRL    : 17
+    SPACE   : 32
+    LEFT    : 83
+    UP      : 69
+    RIGHT   : 70
+    DOWN    : 68
+    GUNUP   : 38
+    GUNDOWN : 40
   STEP: 1 / FPS

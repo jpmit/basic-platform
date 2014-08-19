@@ -10,6 +10,7 @@ renderLevel = (ctx, level) ->
         ctx.fillRect x * c.TILE, y * c.TILE, c.TILE, c.TILE
         ctx.fillStyle = c.COLOR.WHITE
 
+
 # draw a sprite (currently just a rect) at some angle to vertical
 drawAngle = (ctx, sprite) ->
   if (!sprite)
@@ -23,7 +24,8 @@ drawAngle = (ctx, sprite) ->
     ctx.fillRect(-hwidth, -hheight, sprite.rect.width, sprite.rect.height);
   ctx.restore();
 
-module.exports = (ctx, me, him, bullet, level) ->
+
+module.exports = (ctx, me, him, gun, bullet, level) ->
   ctx.clearRect 0, 0, level.width, level.height
 
   renderLevel ctx, level
@@ -40,4 +42,16 @@ module.exports = (ctx, me, him, bullet, level) ->
   ctx.fillStyle = c.COLOR.BLUE
   ctx.fillRect(me.rect.x + me.hitbox.xoff, me.rect.y + me.hitbox.yoff, me.hitbox.width, me.hitbox.height)
   ctx.fillRect(him.rect.x + him.hitbox.xoff, him.rect.y + him.hitbox.yoff, him.hitbox.width, him.hitbox.height)
+
+  # draw the gun 'crosshair'
+  gunx = me.rect.x + me.rect.width / 2 + Math.sin(gun.angle) * 50
+  guny = me.rect.y + me.rect.height / 2 - Math.cos(gun.angle) * 50
+  ctx.fillRect(gunx - 2, guny - 2, 4, 4)
+
+  # draw the bullet (if there is one)
   drawAngle ctx, bullet              
+
+  ctx.fillStyle = c.COLOR.YELLOW
+  if bullet
+    ctx.fillRect(bullet.topleft.x, bullet.topleft.y, 1, 1)
+    ctx.fillRect(bullet.topright.x - 2, bullet.topright.y, 1, 1)

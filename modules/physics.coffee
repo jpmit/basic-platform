@@ -43,9 +43,6 @@ module.exports.setupEntity = (obj) ->
       y: obj.y
     left    : obj.properties.left
     right   : obj.properties.right
-    # JPM: added for testing
-    up      : obj.properties.up
-    down    : obj.properties.down 
     jump    : null
 
   entity.hitbox.x = entity.rect.x + entity.hitbox.xoff
@@ -54,45 +51,6 @@ module.exports.setupEntity = (obj) ->
   entity.hitbox.width = entity.rect.width - 2 * entity.hitbox.xoff
 
   return entity
-
-
-# determine if 2 axially aligned bounding boxes overlap
-module.exports.overlap = (x1, y1, w1, h1, x2, y2, w2, h2) ->
-  not (((x1 + w1 - 1) < x2) or
-    ((x2 + w2 - 1) < x1) or 
-    ((y1 + h1 - 1) < y2) or 
-    ((y2 + h2 - 1) < y1))
-
-
-# collide a ray with the world and determine the collision tile
-module.exports.rayCollide = (x, y, targetX, targetY, level, entities={}) ->
-  radian = Math.atan2(y - targetY, x - targetX)
-  rayUnit = angleToVector radian
-
-  # scan along the ray until we hit a non-0 tile
-  now = { x: x, y: y }
-  collisionTile = null
-  lastTileIdx = level.pixelToTile(now.x) + (level.pixelToTile(now.y) * c.MAP.tw)
-
-  while Math.abs(now.x-targetX) > 0.1 and Math.abs(now.y-targetY) > 0.1
-    now.x += (rayUnit.x * 0.1)
-    now.y += (rayUnit.y * 0.1)
-    index = level.pixelToTile(now.x) + (level.pixelToTile(now.y) * c.MAP.tw)
-    if index isnt lastTileIdx
-      # check a new tile
-      value = level.cellValue now.x, now.y, 'collision'
-
-      # check tile against all collision entities
-      for id, e of entities
-        if not e.dead
-          entityTileIdx = level.pixelToTile(e.x) + (level.pixelToTile(e.y) * c.MAP.tw)
-          if entityTileIdx is index
-            return { type: 'entity', end: now, entity: e }
-
-      if value isnt 0
-        return { type: 'env', end: now }
-      lastTileIdx = index
-
 
 # run a physics update step on an entity.  We first get the x position
 # we want to move the entity to (this will update the velocity and
@@ -107,25 +65,50 @@ module.exports.updateEntity = (entity, level, dt) ->
   collide.levelCollideY entity, level, ynew
 
 
-# check if the player an monster collided and handle (currently in a
-# rudimentary way).
-module.exports.monsterCollide = (entity, monster) ->
-
-  if collide.overlapHitbox entity, monster
-    console.log Math.sign(entity.dx)
-    entity.dx = -500 * Math.sign(entity.dx)
-
 # returns true / false if bullet collided with level or not
 module.exports.updateBullet = (bullet, level, dt) ->
 
   bullet.rect.x += bullet.dx * dt
   bullet.rect.y += bullet.dy * dt
 
-  if bullet.rect.x < 0 or bullet.rect.x > level.width or bullet.rect.y < 0 or bullet.rect.y > level.height
-    true
-  else
-    false    
+  # store the two points on the front edge of the bullet
+  centerx = bullet.rect.x + bullet.rect.width / 2
+  centery = bullet.rect.y + bullet.rect.height / 2
+  topmidx = centerx + bullet.dir.x * bullet.rect.height / 2
+  topmidy = centery + bullet.dir.y * bullet.rect.height / 2
+  topleftx = topmidx + bullet.perp.x * bullet.rect.width / 2
+  toplefty = topmidy + bullet.perp.y * bullet.rect.width / 2
+  toprightx = topmidx - bullet.perp.x * bullet.rect.width / 2
+  toprighty = topmidy - bullet.perp.y * bullet.rect.width / 2
 
-# returns true / false if bullet collided with monster
-module.exports.bulletCollide = (bullet, monster) ->
-  false
+  bullet.topleft = {x: topleftx, y: toplefty}
+  bullet.topright = {x: toprightx, y: toprighty}
+
+  # check if the 'topleft' or 'topright' points of the bullet collide
+  # with the level
+  xtile1 = level.pixelToTile bullet.topleft.x
+  ytile1 = level.pixelToTile bullet.topleft.y
+
+  if level.tileHitbox xtile1, ytile1
+    return true
+
+  xtile2 = level.pixelToTile bullet.topright.x
+  ytile2 = level.pixelToTile bullet.topright.y
+
+  if level.tileHitbox xtile2, ytile2
+    return true
+
+  
+# update 'crosshairs' (the small blue rect close to the player)
+module.exports.updateGun = (gun, dt) ->
+
+  if gun.up
+    gun.angle -= gun.sensitivity * dt
+
+  if gun.down
+    gun.angle += gun.sensitivity * dt
+                                
+  if gun.angle < 0
+    gun.angle = 0.001
+  else if gun.angle > Math.PI / 2
+    gun.angle = Math.PI / 2

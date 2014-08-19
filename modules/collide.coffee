@@ -10,6 +10,14 @@ module.exports.overlapHitbox = (entity1, entity2) ->
                      ((h2.y + h2.height) < h1.y))
   isCollision
 
+
+# return true if point is inside the entity's hitbox
+inHitbox = (point, entity) ->
+  h = entity.hitbox        
+  ((point.x > h.x) and (point.x < h.x + h.width) and
+   (point.y > h.y) and (point.y < h.y + h.height))
+   
+
 module.exports.levelCollideX = (entity, level, xnew) ->
 
   # current top left position of hitbox
@@ -87,3 +95,20 @@ module.exports.levelCollideY = (entity, level, ynew) ->
         break
 
   entity.rect.y = entity.hitbox.y - entity.hitbox.yoff  
+
+
+# returns true / false if bullet collided with monster
+module.exports.bulletCollide = (bullet, monster) ->
+
+  if ((inHitbox bullet.topleft, monster) or (inHitbox bullet.topright, monster))
+    true
+  else
+    false          
+        
+
+# check if the player an monster collided and handle (currently in a
+# rudimentary way).
+module.exports.monsterCollide = (entity, monster) ->
+
+  if module.exports.overlapHitbox entity, monster
+    entity.dx = -500 * Math.sign(entity.dx)

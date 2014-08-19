@@ -2,9 +2,11 @@ Level   = require './modules/level'
 c       = require './modules/constants'
 fs      = require 'fs'
 physics = require './modules/physics'
+collide = require './modules/collide'
 raf     = require 'raf'
 render  = require './modules/renderer'
 time    = require './modules/time'
+unitVector = require './modules/v2-unit'
 
 
 canvas = document.getElementById 'canvas'
@@ -15,6 +17,7 @@ last   = time()
 level = null
 player = null
 monster = null
+gun = null
 bullet = null
 
 onkey = (ev, key, down) ->
@@ -31,18 +34,17 @@ onkey = (ev, key, down) ->
       ev.preventDefault()
       player.jump = down
       return false
-    when c.KEY.UP
-      ev.preventDefault()
-      player.up = down
-      return false
-    when c.KEY.DOWN
-      ev.preventDefault()
-      player.down = down
-      return false
     when c.KEY.CTRL
       ev.preventDefault()
-      player.firing = down
+      gun.firing = down
       return false
+    when c.KEY.GUNUP
+      ev.preventDefault()
+      gun.up = down
+    when c.KEY.GUNDOWN
+      ev.preventDefault()
+      gun.down = down
+
 
 setup = ->
   level_data = JSON.parse fs.readFileSync(__dirname+'/level.json', 'utf8')
@@ -51,28 +53,37 @@ setup = ->
   canvas.height = level.height
   player = physics.setupEntity level_data.layers[1].objects[0]
   monster = physics.setupEntity level_data.layers[1].objects[1]
+  gun = { angle: 0.001 , firing: false, sensitivity: 5}
+
 
 frame = ->
   now = time()
   dt = dt + Math.min(1, (now - last) / 1000)
 
-  # check if player firing bullet
-  if player.firing and (!bullet)
-    bullet = {rect: {x: player.rect.x, y: player.rect.y, width: 20, height: 100}, dx: 500, dy: -400}
-    bullet.angle = Math.atan(bullet.dx / -bullet.dy);
+  # check if player firing bullet  
+  if gun.firing and (!bullet)
+    bullet = {rect: {x: player.rect.x, y: player.rect.y, width: 10, height: 50}, angle: gun.angle}
+    bullet.dx = 400 * Math.sin(bullet.angle);
+    bullet.dy = -400 * Math.cos(bullet.angle);
+    # unit vector in the direction of bullet travel
+    bullet.dir = unitVector({x: bullet.dx, y: bullet.dy})
+    bullet.perp = {x: bullet.dir.y, y: -bullet.dir.x}
+    console.log(bullet.dir)
   
   while dt > c.STEP
     dt = dt - c.STEP
     physics.updateEntity player, level, c.STEP
     physics.updateEntity monster, level, c.STEP
+    physics.updateGun gun, c.STEP
     if bullet
+      # did the bullet collide with the level?
       if physics.updateBullet bullet, level, c.STEP
+        bullet = null
+      else if collide.bulletCollide bullet, monster
         bullet = null              
-      if physics.bulletCollide bullet, monster
-        bullet = null              
-    physics.monsterCollide player, monster
+    collide.monsterCollide player, monster
     
-  render ctx, player, monster, bullet, level
+  render ctx, player, monster, gun, bullet, level
   last = now
   raf frame, canvas
 

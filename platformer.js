@@ -6,7 +6,7 @@ module.exports = function(x, min, max) {
 
 
 },{}],2:[function(require,module,exports){
-var c;
+var c, inHitbox;
 
 c = require('./constants');
 
@@ -16,6 +16,12 @@ module.exports.overlapHitbox = function(entity1, entity2) {
   h2 = entity2.hitbox;
   isCollision = !(((h1.x + h1.width) < h2.x) || ((h2.x + h2.width) < h1.x) || ((h1.y + h1.height) < h2.y) || ((h2.y + h2.height) < h1.y));
   return isCollision;
+};
+
+inHitbox = function(point, entity) {
+  var h;
+  h = entity.hitbox;
+  return (point.x > h.x) && (point.x < h.x + h.width) && (point.y > h.y) && (point.y < h.y + h.height);
 };
 
 module.exports.levelCollideX = function(entity, level, xnew) {
@@ -86,6 +92,20 @@ module.exports.levelCollideY = function(entity, level, ynew) {
   return entity.rect.y = entity.hitbox.y - entity.hitbox.yoff;
 };
 
+module.exports.bulletCollide = function(bullet, monster) {
+  if ((inHitbox(bullet.topleft, monster)) || (inHitbox(bullet.topright, monster))) {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+module.exports.monsterCollide = function(entity, monster) {
+  if (module.exports.overlapHitbox(entity, monster)) {
+    return entity.dx = -500 * Math.sign(entity.dx);
+  }
+};
+
 
 
 },{"./constants":3}],3:[function(require,module,exports){
@@ -127,7 +147,9 @@ module.exports = {
     LEFT: 83,
     UP: 69,
     RIGHT: 70,
-    DOWN: 68
+    DOWN: 68,
+    GUNUP: 38,
+    GUNDOWN: 40
   },
   STEP: 1 / FPS
 };
@@ -302,8 +324,6 @@ module.exports.setupEntity = function(obj) {
     },
     left: obj.properties.left,
     right: obj.properties.right,
-    up: obj.properties.up,
-    down: obj.properties.down,
     jump: null
   };
   entity.hitbox.x = entity.rect.x + entity.hitbox.xoff;
@@ -311,53 +331,6 @@ module.exports.setupEntity = function(obj) {
   entity.hitbox.height = entity.rect.height - 2 * entity.hitbox.yoff;
   entity.hitbox.width = entity.rect.width - 2 * entity.hitbox.xoff;
   return entity;
-};
-
-module.exports.overlap = function(x1, y1, w1, h1, x2, y2, w2, h2) {
-  return !(((x1 + w1 - 1) < x2) || ((x2 + w2 - 1) < x1) || ((y1 + h1 - 1) < y2) || ((y2 + h2 - 1) < y1));
-};
-
-module.exports.rayCollide = function(x, y, targetX, targetY, level, entities) {
-  var collisionTile, e, entityTileIdx, id, index, lastTileIdx, now, radian, rayUnit, value;
-  if (entities == null) {
-    entities = {};
-  }
-  radian = Math.atan2(y - targetY, x - targetX);
-  rayUnit = angleToVector(radian);
-  now = {
-    x: x,
-    y: y
-  };
-  collisionTile = null;
-  lastTileIdx = level.pixelToTile(now.x) + (level.pixelToTile(now.y) * c.MAP.tw);
-  while (Math.abs(now.x - targetX) > 0.1 && Math.abs(now.y - targetY) > 0.1) {
-    now.x += rayUnit.x * 0.1;
-    now.y += rayUnit.y * 0.1;
-    index = level.pixelToTile(now.x) + (level.pixelToTile(now.y) * c.MAP.tw);
-    if (index !== lastTileIdx) {
-      value = level.cellValue(now.x, now.y, 'collision');
-      for (id in entities) {
-        e = entities[id];
-        if (!e.dead) {
-          entityTileIdx = level.pixelToTile(e.x) + (level.pixelToTile(e.y) * c.MAP.tw);
-          if (entityTileIdx === index) {
-            return {
-              type: 'entity',
-              end: now,
-              entity: e
-            };
-          }
-        }
-      }
-      if (value !== 0) {
-        return {
-          type: 'env',
-          end: now
-        };
-      }
-      lastTileIdx = index;
-    }
-  }
 };
 
 module.exports.updateEntity = function(entity, level, dt) {
@@ -368,25 +341,50 @@ module.exports.updateEntity = function(entity, level, dt) {
   return collide.levelCollideY(entity, level, ynew);
 };
 
-module.exports.monsterCollide = function(entity, monster) {
-  if (collide.overlapHitbox(entity, monster)) {
-    console.log(Math.sign(entity.dx));
-    return entity.dx = -500 * Math.sign(entity.dx);
-  }
-};
-
 module.exports.updateBullet = function(bullet, level, dt) {
+  var centerx, centery, topleftx, toplefty, topmidx, topmidy, toprightx, toprighty, xtile1, xtile2, ytile1, ytile2;
   bullet.rect.x += bullet.dx * dt;
   bullet.rect.y += bullet.dy * dt;
-  if (bullet.rect.x < 0 || bullet.rect.x > level.width || bullet.rect.y < 0 || bullet.rect.y > level.height) {
+  centerx = bullet.rect.x + bullet.rect.width / 2;
+  centery = bullet.rect.y + bullet.rect.height / 2;
+  topmidx = centerx + bullet.dir.x * bullet.rect.height / 2;
+  topmidy = centery + bullet.dir.y * bullet.rect.height / 2;
+  topleftx = topmidx + bullet.perp.x * bullet.rect.width / 2;
+  toplefty = topmidy + bullet.perp.y * bullet.rect.width / 2;
+  toprightx = topmidx - bullet.perp.x * bullet.rect.width / 2;
+  toprighty = topmidy - bullet.perp.y * bullet.rect.width / 2;
+  bullet.topleft = {
+    x: topleftx,
+    y: toplefty
+  };
+  bullet.topright = {
+    x: toprightx,
+    y: toprighty
+  };
+  xtile1 = level.pixelToTile(bullet.topleft.x);
+  ytile1 = level.pixelToTile(bullet.topleft.y);
+  if (level.tileHitbox(xtile1, ytile1)) {
     return true;
-  } else {
-    return false;
+  }
+  xtile2 = level.pixelToTile(bullet.topright.x);
+  ytile2 = level.pixelToTile(bullet.topright.y);
+  if (level.tileHitbox(xtile2, ytile2)) {
+    return true;
   }
 };
 
-module.exports.bulletCollide = function(bullet, monster) {
-  return false;
+module.exports.updateGun = function(gun, dt) {
+  if (gun.up) {
+    gun.angle -= gun.sensitivity * dt;
+  }
+  if (gun.down) {
+    gun.angle += gun.sensitivity * dt;
+  }
+  if (gun.angle < 0) {
+    return gun.angle = 0.001;
+  } else if (gun.angle > Math.PI / 2) {
+    return gun.angle = Math.PI / 2;
+  }
 };
 
 
@@ -435,7 +433,8 @@ drawAngle = function(ctx, sprite) {
   return ctx.restore();
 };
 
-module.exports = function(ctx, me, him, bullet, level) {
+module.exports = function(ctx, me, him, gun, bullet, level) {
+  var gunx, guny;
   ctx.clearRect(0, 0, level.width, level.height);
   renderLevel(ctx, level);
   ctx.fillStyle = c.COLOR.YELLOW;
@@ -445,7 +444,15 @@ module.exports = function(ctx, me, him, bullet, level) {
   ctx.fillStyle = c.COLOR.BLUE;
   ctx.fillRect(me.rect.x + me.hitbox.xoff, me.rect.y + me.hitbox.yoff, me.hitbox.width, me.hitbox.height);
   ctx.fillRect(him.rect.x + him.hitbox.xoff, him.rect.y + him.hitbox.yoff, him.hitbox.width, him.hitbox.height);
-  return drawAngle(ctx, bullet);
+  gunx = me.rect.x + me.rect.width / 2 + Math.sin(gun.angle) * 50;
+  guny = me.rect.y + me.rect.height / 2 - Math.cos(gun.angle) * 50;
+  ctx.fillRect(gunx - 2, guny - 2, 4, 4);
+  drawAngle(ctx, bullet);
+  ctx.fillStyle = c.COLOR.YELLOW;
+  if (bullet) {
+    ctx.fillRect(bullet.topleft.x, bullet.topleft.y, 1, 1);
+    return ctx.fillRect(bullet.topright.x - 2, bullet.topright.y, 1, 1);
+  }
 };
 
 
@@ -663,7 +670,7 @@ process.chdir = function (dir) {
 };
 
 },{}],13:[function(require,module,exports){
-var Level, bullet, c, canvas, ctx, dt, frame, fs, last, level, monster, now, onkey, physics, player, raf, render, setup, time;
+var Level, bullet, c, canvas, collide, ctx, dt, frame, fs, gun, last, level, monster, now, onkey, physics, player, raf, render, setup, time, unitVector;
 
 Level = require('./modules/level');
 
@@ -673,11 +680,15 @@ c = require('./modules/constants');
 
 physics = require('./modules/physics');
 
+collide = require('./modules/collide');
+
 raf = require('raf');
 
 render = require('./modules/renderer');
 
 time = require('./modules/time');
+
+unitVector = require('./modules/v2-unit');
 
 canvas = document.getElementById('canvas');
 
@@ -695,6 +706,8 @@ player = null;
 
 monster = null;
 
+gun = null;
+
 bullet = null;
 
 onkey = function(ev, key, down) {
@@ -711,18 +724,16 @@ onkey = function(ev, key, down) {
       ev.preventDefault();
       player.jump = down;
       return false;
-    case c.KEY.UP:
-      ev.preventDefault();
-      player.up = down;
-      return false;
-    case c.KEY.DOWN:
-      ev.preventDefault();
-      player.down = down;
-      return false;
     case c.KEY.CTRL:
       ev.preventDefault();
-      player.firing = down;
+      gun.firing = down;
       return false;
+    case c.KEY.GUNUP:
+      ev.preventDefault();
+      return gun.up = down;
+    case c.KEY.GUNDOWN:
+      ev.preventDefault();
+      return gun.down = down;
   }
 };
 
@@ -733,40 +744,54 @@ setup = function() {
   canvas.width = level.width;
   canvas.height = level.height;
   player = physics.setupEntity(level_data.layers[1].objects[0]);
-  return monster = physics.setupEntity(level_data.layers[1].objects[1]);
+  monster = physics.setupEntity(level_data.layers[1].objects[1]);
+  return gun = {
+    angle: 0.001,
+    firing: false,
+    sensitivity: 5
+  };
 };
 
 frame = function() {
   now = time();
   dt = dt + Math.min(1, (now - last) / 1000);
-  if (player.firing && (!bullet)) {
+  if (gun.firing && (!bullet)) {
     bullet = {
       rect: {
         x: player.rect.x,
         y: player.rect.y,
-        width: 20,
-        height: 100
+        width: 10,
+        height: 50
       },
-      dx: 500,
-      dy: -400
+      angle: gun.angle
     };
-    bullet.angle = Math.atan(bullet.dx / -bullet.dy);
+    bullet.dx = 400 * Math.sin(bullet.angle);
+    bullet.dy = -400 * Math.cos(bullet.angle);
+    bullet.dir = unitVector({
+      x: bullet.dx,
+      y: bullet.dy
+    });
+    bullet.perp = {
+      x: bullet.dir.y,
+      y: -bullet.dir.x
+    };
+    console.log(bullet.dir);
   }
   while (dt > c.STEP) {
     dt = dt - c.STEP;
     physics.updateEntity(player, level, c.STEP);
     physics.updateEntity(monster, level, c.STEP);
+    physics.updateGun(gun, c.STEP);
     if (bullet) {
       if (physics.updateBullet(bullet, level, c.STEP)) {
         bullet = null;
-      }
-      if (physics.bulletCollide(bullet, monster)) {
+      } else if (collide.bulletCollide(bullet, monster)) {
         bullet = null;
       }
     }
-    physics.monsterCollide(player, monster);
+    collide.monsterCollide(player, monster);
   }
-  render(ctx, player, monster, bullet, level);
+  render(ctx, player, monster, gun, bullet, level);
   last = now;
   return raf(frame, canvas);
 };
@@ -785,4 +810,4 @@ frame();
 
 
 
-},{"./modules/constants":3,"./modules/level":4,"./modules/physics":6,"./modules/renderer":7,"./modules/time":8,"raf":10}]},{},[13])
+},{"./modules/collide":2,"./modules/constants":3,"./modules/level":4,"./modules/physics":6,"./modules/renderer":7,"./modules/time":8,"./modules/v2-unit":9,"raf":10}]},{},[13])
