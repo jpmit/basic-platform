@@ -71,7 +71,6 @@ module.exports.updateBullet = (bullet, level, dt) ->
   bullet.rect.x += bullet.dx * dt
   bullet.rect.y += bullet.dy * dt
 
-  # store the two points on the front edge of the bullet
   centerx = bullet.rect.x + bullet.rect.width / 2
   centery = bullet.rect.y + bullet.rect.height / 2
   topmidx = centerx + bullet.dir.x * bullet.rect.height / 2
@@ -81,11 +80,11 @@ module.exports.updateBullet = (bullet, level, dt) ->
   toprightx = topmidx - bullet.perp.x * bullet.rect.width / 2
   toprighty = topmidy - bullet.perp.y * bullet.rect.width / 2
 
+  # store the two points on the front edge of the bullet
   bullet.topleft = {x: topleftx, y: toplefty}
   bullet.topright = {x: toprightx, y: toprighty}
 
-  # check if the 'topleft' or 'topright' points of the bullet collide
-  # with the level
+  # check if the front points of the bullet collide with the level
   xtile1 = level.pixelToTile bullet.topleft.x
   ytile1 = level.pixelToTile bullet.topleft.y
 
@@ -98,7 +97,7 @@ module.exports.updateBullet = (bullet, level, dt) ->
   if level.tileHitbox xtile2, ytile2
     return true
 
-  
+
 # update 'crosshairs' (the small blue rect close to the player)
 module.exports.updateGun = (gun, dt) ->
 

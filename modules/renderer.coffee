@@ -51,7 +51,8 @@ module.exports = (ctx, me, him, gun, bullet, level) ->
   # draw the bullet (if there is one)
   drawAngle ctx, bullet              
 
+  # draw the front points of the bullet for illustrative purposes
   ctx.fillStyle = c.COLOR.YELLOW
   if bullet
     ctx.fillRect(bullet.topleft.x, bullet.topleft.y, 1, 1)
-    ctx.fillRect(bullet.topright.x - 2, bullet.topright.y, 1, 1)
+    ctx.fillRect(bullet.topright.x, bullet.topright.y, 1, 1)

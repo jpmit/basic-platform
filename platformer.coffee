@@ -53,6 +53,8 @@ setup = ->
   canvas.height = level.height
   player = physics.setupEntity level_data.layers[1].objects[0]
   monster = physics.setupEntity level_data.layers[1].objects[1]
+  # added gun with rudimentary aiming with up and down arrow keys;
+  # angle is in radians clockwise from horizontal
   gun = { angle: 0.001 , firing: false, sensitivity: 5}
 
 
@@ -67,20 +69,22 @@ frame = ->
     bullet.dy = -400 * Math.cos(bullet.angle);
     # unit vector in the direction of bullet travel
     bullet.dir = unitVector({x: bullet.dx, y: bullet.dy})
+    # unit vector perpendicular to direction of bullet travel
     bullet.perp = {x: bullet.dir.y, y: -bullet.dir.x}
-    console.log(bullet.dir)
   
   while dt > c.STEP
     dt = dt - c.STEP
     physics.updateEntity player, level, c.STEP
     physics.updateEntity monster, level, c.STEP
+    # update the aiming of the gun
     physics.updateGun gun, c.STEP
     if bullet
       # did the bullet collide with the level?
       if physics.updateBullet bullet, level, c.STEP
         bullet = null
       else if collide.bulletCollide bullet, monster
-        bullet = null              
+        bullet = null
+    # detect (and handle) collision between player and monster              
     collide.monsterCollide player, monster
     
   render ctx, player, monster, gun, bullet, level

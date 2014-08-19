@@ -1,22 +1,21 @@
 c = require './constants'
 
-# collide two entities, each of which has a hitbox which is an AABB
+# true if hitboxes of entities (which are AABB's) overlap
 module.exports.overlapHitbox = (entity1, entity2) ->
   h1 = entity1.hitbox
   h2 = entity2.hitbox
-  isCollision = not (((h1.x + h1.width) < h2.x) or
-                     ((h2.x + h2.width) < h1.x) or 
-                     ((h1.y + h1.height) < h2.y) or 
-                     ((h2.y + h2.height) < h1.y))
-  isCollision
+  not (((h1.x + h1.width) < h2.x) or
+       ((h2.x + h2.width) < h1.x) or 
+       ((h1.y + h1.height) < h2.y) or 
+       ((h2.y + h2.height) < h1.y))
 
 
-# return true if point is inside the entity's hitbox
+# true if point is inside the entity's hitbox
 inHitbox = (point, entity) ->
   h = entity.hitbox        
   ((point.x > h.x) and (point.x < h.x + h.width) and
    (point.y > h.y) and (point.y < h.y + h.height))
-   
+
 
 module.exports.levelCollideX = (entity, level, xnew) ->
 
@@ -97,7 +96,7 @@ module.exports.levelCollideY = (entity, level, ynew) ->
   entity.rect.y = entity.hitbox.y - entity.hitbox.yoff  
 
 
-# returns true / false if bullet collided with monster
+# true if bullet collided with monster
 module.exports.bulletCollide = (bullet, monster) ->
 
   if ((inHitbox bullet.topleft, monster) or (inHitbox bullet.topright, monster))
