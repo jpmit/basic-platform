@@ -25,7 +25,7 @@ drawAngle = (ctx, sprite) ->
   ctx.restore();
 
 
-module.exports = (ctx, me, him, gun, bullet, level) ->
+module.exports = (ctx, me, enemies, gun, bullet, level) ->
   ctx.clearRect 0, 0, level.width, level.height
 
   renderLevel ctx, level
@@ -35,13 +35,16 @@ module.exports = (ctx, me, him, gun, bullet, level) ->
   ctx.fillRect(me.rect.x, me.rect.y, me.rect.width, me.rect.height)
 
   # draw the monster sprite in white
-  ctx.fillStyle = c.COLOR.WHITE
-  ctx.fillRect(him.rect.x, him.rect.y, him.rect.width, him.rect.height)
+  for entity in enemies
+    ctx.fillStyle = c.COLOR.WHITE
+    ctx.fillRect(entity.rect.x, entity.rect.y, entity.rect.width, entity.rect.height)
 
   # draw the hitboxes in blue
   ctx.fillStyle = c.COLOR.BLUE
   ctx.fillRect(me.rect.x + me.hitbox.xoff, me.rect.y + me.hitbox.yoff, me.hitbox.width, me.hitbox.height)
-  ctx.fillRect(him.rect.x + him.hitbox.xoff, him.rect.y + him.hitbox.yoff, him.hitbox.width, him.hitbox.height)
+
+  for entity in enemies
+    ctx.fillRect(entity.rect.x + entity.hitbox.xoff, entity.rect.y + entity.hitbox.yoff, entity.hitbox.width, entity.hitbox.height)
 
   # draw the gun 'crosshair'
   gunx = me.rect.x + me.rect.width / 2 + Math.sin(gun.angle) * 50
@@ -50,9 +53,3 @@ module.exports = (ctx, me, him, gun, bullet, level) ->
 
   # draw the bullet (if there is one)
   drawAngle ctx, bullet              
-
-  # draw the front points of the bullet for illustrative purposes
-  ctx.fillStyle = c.COLOR.YELLOW
-  if bullet
-    ctx.fillRect(bullet.topleft.x, bullet.topleft.y, 1, 1)
-    ctx.fillRect(bullet.topright.x, bullet.topright.y, 1, 1)

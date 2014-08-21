@@ -1,16 +1,9 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-module.exports = function(x, min, max) {
-  return Math.max(min, Math.min(max, x));
-};
-
-
-
-},{}],2:[function(require,module,exports){
-var c, inHitbox;
+var c, inHitbox, overlapAABB;
 
 c = require('./constants');
 
-module.exports.overlapHitbox = function(entity1, entity2) {
+overlapAABB = function(entity1, entity2) {
   var h1, h2;
   h1 = entity1.hitbox;
   h2 = entity2.hitbox;
@@ -91,23 +84,27 @@ module.exports.levelCollideY = function(entity, level, ynew) {
   return entity.rect.y = entity.hitbox.y - entity.hitbox.yoff;
 };
 
-module.exports.bulletCollide = function(bullet, monster) {
-  if ((inHitbox(bullet.topleft, monster)) || (inHitbox(bullet.topright, monster))) {
+module.exports.bulletCollide = function(bullet, entity) {
+  if ((inHitbox(bullet.topleft, entity)) || (inHitbox(bullet.topright, entity))) {
     return true;
   } else {
     return false;
   }
 };
 
-module.exports.monsterCollide = function(entity, monster) {
-  if (module.exports.overlapHitbox(entity, monster)) {
-    return entity.dx = -500 * Math.sign(entity.dx);
+module.exports.entityCollide = function(entity1, entity2) {
+  if (overlapAABB(entity1, entity2)) {
+    if (entity1.dx > 0) {
+      return entity1.dx = -500;
+    } else if (entity1.dx < 0) {
+      return entity1.dx = 500;
+    }
   }
 };
 
 
 
-},{"./constants":3}],3:[function(require,module,exports){
+},{"./constants":2}],2:[function(require,module,exports){
 var COLOR, FPS, TILE;
 
 COLOR = {
@@ -155,7 +152,7 @@ module.exports = {
 
 
 
-},{}],4:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 var Level, c;
 
 c = require('./constants');
@@ -221,7 +218,7 @@ module.exports = Level;
 
 
 
-},{"./constants":3}],5:[function(require,module,exports){
+},{"./constants":2}],4:[function(require,module,exports){
 var c;
 
 c = require('./constants');
@@ -267,32 +264,14 @@ module.exports.stepY = function(entity, level, dt) {
 
 
 
-},{"./constants":3}],6:[function(require,module,exports){
-var angleToVector, c, clamp, collide, move, unitVector;
-
-c = require('./constants');
-
-clamp = require('./clamp');
-
-unitVector = require('./v2-unit');
+},{"./constants":2}],5:[function(require,module,exports){
+var c, collide, move;
 
 collide = require('./collide');
 
-move = require('./move');
+c = require('./constants');
 
-angleToVector = function(r) {
-  var UP, x, y;
-  UP = {
-    x: 0,
-    y: 1
-  };
-  y = Math.cos(r) * UP.x - Math.sin(r) * UP.y;
-  x = Math.sin(r) * UP.x + Math.cos(r) * UP.y;
-  return unitVector({
-    x: -x,
-    y: y
-  });
-};
+move = require('./move');
 
 module.exports.setupEntity = function(obj) {
   var entity, maxdx;
@@ -340,10 +319,11 @@ module.exports.updateEntity = function(entity, level, dt) {
   return collide.levelCollideY(entity, level, ynew);
 };
 
-module.exports.updateBullet = function(bullet, level, dt) {
-  var centerx, centery, topleftx, toplefty, topmidx, topmidy, toprightx, toprighty, xtile1, xtile2, ytile1, ytile2;
+module.exports.updateBullet = function(bullet, entities, level, dt) {
+  var centerx, centery, collided, ent, topleftx, toplefty, topmidx, topmidy, toprightx, toprighty, xtile1, xtile2, ytile1, ytile2, _i, _len;
   bullet.rect.x += bullet.dx * dt;
   bullet.rect.y += bullet.dy * dt;
+  collided = [];
   centerx = bullet.rect.x + bullet.rect.width / 2;
   centery = bullet.rect.y + bullet.rect.height / 2;
   topmidx = centerx + bullet.dir.x * bullet.rect.height / 2;
@@ -363,13 +343,31 @@ module.exports.updateBullet = function(bullet, level, dt) {
   xtile1 = level.pixelToTile(bullet.topleft.x);
   ytile1 = level.pixelToTile(bullet.topleft.y);
   if (level.tileHitbox(xtile1, ytile1)) {
-    return true;
+    collided.push({
+      type: 'tile',
+      location: [xtile1, ytile1]
+    });
   }
   xtile2 = level.pixelToTile(bullet.topright.x);
   ytile2 = level.pixelToTile(bullet.topright.y);
-  if (level.tileHitbox(xtile2, ytile2)) {
-    return true;
+  if (xtile2 !== xtile1 || ytile2 !== ytile1) {
+    if (level.tileHitbox(xtile2, ytile2)) {
+      collided.push({
+        type: 'tile',
+        location: [xtile1, ytile1]
+      });
+    }
   }
+  for (_i = 0, _len = entities.length; _i < _len; _i++) {
+    ent = entities[_i];
+    if (collide.bulletCollide(bullet, ent)) {
+      collided.push({
+        type: 'entity',
+        entity: ent
+      });
+    }
+  }
+  return collided;
 };
 
 module.exports.updateGun = function(gun, dt) {
@@ -388,7 +386,7 @@ module.exports.updateGun = function(gun, dt) {
 
 
 
-},{"./clamp":1,"./collide":2,"./constants":3,"./move":5,"./v2-unit":9}],7:[function(require,module,exports){
+},{"./collide":1,"./constants":2,"./move":4}],6:[function(require,module,exports){
 var c, drawAngle, renderLevel;
 
 c = require('./constants');
@@ -432,31 +430,32 @@ drawAngle = function(ctx, sprite) {
   return ctx.restore();
 };
 
-module.exports = function(ctx, me, him, gun, bullet, level) {
-  var gunx, guny;
+module.exports = function(ctx, me, enemies, gun, bullet, level) {
+  var entity, gunx, guny, _i, _j, _len, _len1;
   ctx.clearRect(0, 0, level.width, level.height);
   renderLevel(ctx, level);
   ctx.fillStyle = c.COLOR.YELLOW;
   ctx.fillRect(me.rect.x, me.rect.y, me.rect.width, me.rect.height);
-  ctx.fillStyle = c.COLOR.WHITE;
-  ctx.fillRect(him.rect.x, him.rect.y, him.rect.width, him.rect.height);
+  for (_i = 0, _len = enemies.length; _i < _len; _i++) {
+    entity = enemies[_i];
+    ctx.fillStyle = c.COLOR.WHITE;
+    ctx.fillRect(entity.rect.x, entity.rect.y, entity.rect.width, entity.rect.height);
+  }
   ctx.fillStyle = c.COLOR.BLUE;
   ctx.fillRect(me.rect.x + me.hitbox.xoff, me.rect.y + me.hitbox.yoff, me.hitbox.width, me.hitbox.height);
-  ctx.fillRect(him.rect.x + him.hitbox.xoff, him.rect.y + him.hitbox.yoff, him.hitbox.width, him.hitbox.height);
+  for (_j = 0, _len1 = enemies.length; _j < _len1; _j++) {
+    entity = enemies[_j];
+    ctx.fillRect(entity.rect.x + entity.hitbox.xoff, entity.rect.y + entity.hitbox.yoff, entity.hitbox.width, entity.hitbox.height);
+  }
   gunx = me.rect.x + me.rect.width / 2 + Math.sin(gun.angle) * 50;
   guny = me.rect.y + me.rect.height / 2 - Math.cos(gun.angle) * 50;
   ctx.fillRect(gunx - 2, guny - 2, 4, 4);
-  drawAngle(ctx, bullet);
-  ctx.fillStyle = c.COLOR.YELLOW;
-  if (bullet) {
-    ctx.fillRect(bullet.topleft.x, bullet.topleft.y, 1, 1);
-    return ctx.fillRect(bullet.topright.x, bullet.topright.y, 1, 1);
-  }
+  return drawAngle(ctx, bullet);
 };
 
 
 
-},{"./constants":3}],8:[function(require,module,exports){
+},{"./constants":2}],7:[function(require,module,exports){
 module.exports = function() {
   if ((typeof window !== "undefined" && window !== null) && window.performance && window.performance.now) {
     return window.performance.now();
@@ -467,7 +466,7 @@ module.exports = function() {
 
 
 
-},{}],9:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 var unitVector;
 
 module.exports = unitVector = function(v) {
@@ -481,7 +480,7 @@ module.exports = unitVector = function(v) {
 
 
 
-},{}],10:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 var now = require('performance-now')
   , global = typeof window === 'undefined' ? {} : window
   , vendors = ['moz', 'webkit']
@@ -563,7 +562,7 @@ module.exports.cancel = function() {
   caf.apply(global, arguments)
 }
 
-},{"performance-now":11}],11:[function(require,module,exports){
+},{"performance-now":10}],10:[function(require,module,exports){
 (function (process){
 // Generated by CoffeeScript 1.6.3
 (function() {
@@ -603,7 +602,7 @@ module.exports.cancel = function() {
 */
 
 }).call(this,require("qvMYcC"))
-},{"qvMYcC":12}],12:[function(require,module,exports){
+},{"qvMYcC":11}],11:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -668,8 +667,8 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],13:[function(require,module,exports){
-var Level, bullet, c, canvas, collide, ctx, dt, frame, fs, gun, last, level, monster, now, onkey, physics, player, raf, render, setup, time, unitVector;
+},{}],12:[function(require,module,exports){
+var Level, bullet, c, canvas, collide, ctx, dt, enemyEntities, frame, fs, gun, last, level, monster, now, onkey, physics, player, raf, render, setup, time, unitVector;
 
 Level = require('./modules/level');
 
@@ -704,6 +703,8 @@ level = null;
 player = null;
 
 monster = null;
+
+enemyEntities = [];
 
 gun = null;
 
@@ -744,14 +745,16 @@ setup = function() {
   canvas.height = level.height;
   player = physics.setupEntity(level_data.layers[1].objects[0]);
   monster = physics.setupEntity(level_data.layers[1].objects[1]);
-  return gun = {
+  gun = {
     angle: 0.001,
     firing: false,
     sensitivity: 5
   };
+  return enemyEntities = [monster];
 };
 
 frame = function() {
+  var bulletCollides, entity, _i, _j, _len, _len1;
   now = time();
   dt = dt + Math.min(1, (now - last) / 1000);
   if (gun.firing && (!bullet)) {
@@ -778,18 +781,24 @@ frame = function() {
   while (dt > c.STEP) {
     dt = dt - c.STEP;
     physics.updateEntity(player, level, c.STEP);
-    physics.updateEntity(monster, level, c.STEP);
+    for (_i = 0, _len = enemyEntities.length; _i < _len; _i++) {
+      entity = enemyEntities[_i];
+      physics.updateEntity(entity, level, c.STEP);
+    }
     physics.updateGun(gun, c.STEP);
     if (bullet) {
-      if (physics.updateBullet(bullet, level, c.STEP)) {
-        bullet = null;
-      } else if (collide.bulletCollide(bullet, monster)) {
+      bulletCollides = physics.updateBullet(bullet, enemyEntities, level, c.STEP);
+      if (bulletCollides.length > 0) {
+        console.log(bulletCollides);
         bullet = null;
       }
     }
-    collide.monsterCollide(player, monster);
+    for (_j = 0, _len1 = enemyEntities.length; _j < _len1; _j++) {
+      entity = enemyEntities[_j];
+      collide.entityCollide(player, entity);
+    }
   }
-  render(ctx, player, monster, gun, bullet, level);
+  render(ctx, player, enemyEntities, gun, bullet, level);
   last = now;
   return raf(frame, canvas);
 };
@@ -808,4 +817,4 @@ frame();
 
 
 
-},{"./modules/collide":2,"./modules/constants":3,"./modules/level":4,"./modules/physics":6,"./modules/renderer":7,"./modules/time":8,"./modules/v2-unit":9,"raf":10}]},{},[13])
+},{"./modules/collide":1,"./modules/constants":2,"./modules/level":3,"./modules/physics":5,"./modules/renderer":6,"./modules/time":7,"./modules/v2-unit":8,"raf":9}]},{},[12])

@@ -1,7 +1,7 @@
 c = require './constants'
 
 # true if hitboxes of entities (which are AABB's) overlap
-module.exports.overlapHitbox = (entity1, entity2) ->
+overlapAABB = (entity1, entity2) ->
   h1 = entity1.hitbox
   h2 = entity2.hitbox
   not (((h1.x + h1.width) < h2.x) or
@@ -97,9 +97,9 @@ module.exports.levelCollideY = (entity, level, ynew) ->
 
 
 # true if bullet collided with monster
-module.exports.bulletCollide = (bullet, monster) ->
+module.exports.bulletCollide = (bullet, entity) ->
 
-  if ((inHitbox bullet.topleft, monster) or (inHitbox bullet.topright, monster))
+  if ((inHitbox bullet.topleft, entity) or (inHitbox bullet.topright, entity))
     true
   else
     false          
@@ -107,7 +107,12 @@ module.exports.bulletCollide = (bullet, monster) ->
 
 # check if the player an monster collided and handle (currently in a
 # rudimentary way).
-module.exports.monsterCollide = (entity, monster) ->
+module.exports.entityCollide = (entity1, entity2) ->
 
-  if module.exports.overlapHitbox entity, monster
-    entity.dx = -500 * Math.sign(entity.dx)
+  if overlapAABB entity1, entity2
+    # no shim for Math.sign put in here since this response is really
+    # a temporary placeholder.
+    if entity1.dx > 0
+      entity1.dx = -500
+    else if entity1.dx < 0
+      entity1.dx = 500

@@ -17,6 +17,7 @@ last   = time()
 level = null
 player = null
 monster = null
+enemyEntities = []
 gun = null
 bullet = null
 
@@ -56,6 +57,8 @@ setup = ->
   # added gun with rudimentary aiming with up and down arrow keys;
   # angle is in radians clockwise from horizontal
   gun = { angle: 0.001 , firing: false, sensitivity: 5}
+  # list of all entities other than the player entity
+  enemyEntities = [monster]
 
 
 frame = ->
@@ -75,19 +78,21 @@ frame = ->
   while dt > c.STEP
     dt = dt - c.STEP
     physics.updateEntity player, level, c.STEP
-    physics.updateEntity monster, level, c.STEP
+    for entity in enemyEntities
+      physics.updateEntity entity, level, c.STEP
     # update the aiming of the gun
     physics.updateGun gun, c.STEP
     if bullet
-      # did the bullet collide with the level?
-      if physics.updateBullet bullet, level, c.STEP
+      # did the bullet collide with the level or other entities?
+      bulletCollides =  physics.updateBullet bullet, enemyEntities, level, c.STEP
+      if bulletCollides.length > 0
+        console.log bulletCollides              
         bullet = null
-      else if collide.bulletCollide bullet, monster
-        bullet = null
-    # detect (and handle) collision between player and monster              
-    collide.monsterCollide player, monster
+    # detect (and handle) collision between player and other entities
+    for entity in enemyEntities
+      collide.entityCollide player, entity
     
-  render ctx, player, monster, gun, bullet, level
+  render ctx, player, enemyEntities, gun, bullet, level
   last = now
   raf frame, canvas
 

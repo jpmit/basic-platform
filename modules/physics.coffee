@@ -1,16 +1,6 @@
-c          = require './constants'
-clamp      = require './clamp'
-unitVector = require './v2-unit'
 collide    = require './collide'
+c          = require './constants'
 move       = require './move'
-
-# r is an angle in radians. returns a unit vector representing the direction
-angleToVector = (r) ->
-  UP = { x:0, y:1 }
-  y = Math.cos(r) * UP.x - Math.sin(r) * UP.y
-  x = Math.sin(r) * UP.x + Math.cos(r) * UP.y
-  unitVector { x: -x, y: y }
-
 
 # create a new physics object using some initial settings
 module.exports.setupEntity = (obj) ->
@@ -65,11 +55,13 @@ module.exports.updateEntity = (entity, level, dt) ->
   collide.levelCollideY entity, level, ynew
 
 
-# returns true / false if bullet collided with level or not
-module.exports.updateBullet = (bullet, level, dt) ->
+# returns an array containing tiles / entities bullet collided with
+module.exports.updateBullet = (bullet, entities, level, dt) ->
 
   bullet.rect.x += bullet.dx * dt
   bullet.rect.y += bullet.dy * dt
+
+  collided = []
 
   centerx = bullet.rect.x + bullet.rect.width / 2
   centery = bullet.rect.y + bullet.rect.height / 2
@@ -89,13 +81,22 @@ module.exports.updateBullet = (bullet, level, dt) ->
   ytile1 = level.pixelToTile bullet.topleft.y
 
   if level.tileHitbox xtile1, ytile1
-    return true
+    collided.push {type: 'tile', location: [xtile1, ytile1]}
 
   xtile2 = level.pixelToTile bullet.topright.x
   ytile2 = level.pixelToTile bullet.topright.y
 
-  if level.tileHitbox xtile2, ytile2
-    return true
+  if xtile2 != xtile1 or ytile2 != ytile1
+    if level.tileHitbox xtile2, ytile2
+      collided.push {type: 'tile', location: [xtile1, ytile1]}
+
+  # check collisions with other entities
+  for ent in entities
+    if collide.bulletCollide bullet, ent
+      collided.push {type: 'entity', entity: ent}
+
+  # return the array of objects the bullet collided with
+  collided
 
 
 # update 'crosshairs' (the small blue rect close to the player)
