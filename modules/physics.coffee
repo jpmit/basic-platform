@@ -1,14 +1,6 @@
+collide    = require './collide'
 c          = require './constants'
-clamp      = require './clamp'
-unitVector = require './v2-unit'
-
-
-# r is an angle in radians. returns a unit vector representing the direction
-angleToVector = (r) ->
-  UP = { x:0, y:1 }
-  y = Math.cos(r) * UP.x - Math.sin(r) * UP.y
-  x = Math.sin(r) * UP.x + Math.cos(r) * UP.y
-  unitVector { x: -x, y: y }
+move       = require './move'
 
 # create a new physics object using some initial settings
 module.exports.setupEntity = (obj) ->
@@ -16,8 +8,18 @@ module.exports.setupEntity = (obj) ->
   maxdx = c.METER * (obj.properties.maxdx or c.MAXDX)
 
   entity =
-    x: obj.x
-    y: obj.y
+    # rect is the AABB of the entity, and the x, y co-ordinate is the
+    # top left of the AABB (stored in pixels). The 'hitbox' can be
+    # offset from this point by any amount in whole pixels.
+    rect:
+      x: obj.x
+      y: obj.y
+      height: obj.height
+      width: obj.width
+    hitbox:
+      # offsets from the top left in pixels
+      xoff: obj.properties.hitbox.xoff
+      yoff: obj.properties.hitbox.yoff
     dx: 0
     dy: 0
     gravity : c.METER * (obj.properties.gravity or c.GRAVITY)
@@ -33,111 +35,92 @@ module.exports.setupEntity = (obj) ->
     right   : obj.properties.right
     jump    : null
 
+  entity.hitbox.x = entity.rect.x + entity.hitbox.xoff
+  entity.hitbox.y = entity.rect.y + entity.hitbox.yoff
+  entity.hitbox.height = entity.rect.height - 2 * entity.hitbox.yoff
+  entity.hitbox.width = entity.rect.width - 2 * entity.hitbox.xoff
 
-# determine if 2 axially aligned bounding boxes overlap
-module.exports.overlap = (x1, y1, w1, h1, x2, y2, w2, h2) ->
-  not (((x1 + w1 - 1) < x2) or
-    ((x2 + w2 - 1) < x1) or 
-    ((y1 + h1 - 1) < y2) or 
-    ((y2 + h2 - 1) < y1))
+  return entity
 
-
-# collide a ray with the world and determine the collision tile
-module.exports.rayCollide = (x, y, targetX, targetY, level, entities={}) ->
-  radian = Math.atan2(y - targetY, x - targetX)
-  rayUnit = angleToVector radian
-
-  # scan along the ray until we hit a non-0 tile
-  now = { x: x, y: y }
-  collisionTile = null
-  lastTileIdx = level.pixelToTile(now.x) + (level.pixelToTile(now.y) * c.MAP.tw)
-
-  while Math.abs(now.x-targetX) > 0.1 and Math.abs(now.y-targetY) > 0.1
-    now.x += (rayUnit.x * 0.1)
-    now.y += (rayUnit.y * 0.1)
-    index = level.pixelToTile(now.x) + (level.pixelToTile(now.y) * c.MAP.tw)
-    if index isnt lastTileIdx
-      # check a new tile
-      value = level.cellValue now.x, now.y, 'collision'
-
-      # check tile against all collision entities
-      for id, e of entities
-        if not e.dead
-          entityTileIdx = level.pixelToTile(e.x) + (level.pixelToTile(e.y) * c.MAP.tw)
-          if entityTileIdx is index
-            return { type: 'entity', end: now, entity: e }
-
-      if value isnt 0
-        return { type: 'env', end: now }
-      lastTileIdx = index
-
-
-# run a physics update step on an entity
+# run a physics update step on an entity.  We first get the x position
+# we want to move the entity to (this will update the velocity and
+# accelaration but not the position of the entity).  Then we move the
+# entity to the correct x position based on collisions with the level.
 module.exports.updateEntity = (entity, level, dt) ->
-  wasleft = entity.dx < 0
-  wasright = entity.dx > 0
-  falling = entity.falling
 
-  friction = entity.friction * ((if falling then 0.5 else 1))
-  accel = entity.accel * ((if falling then 0.5 else 1))
+  xnew = move.stepX entity, level, dt
+  collide.levelCollideX entity, level, xnew
 
-  entity.ddx = 0
-  entity.ddy = entity.gravity
+  ynew = move.stepY entity, level, dt
+  collide.levelCollideY entity, level, ynew
 
-  if entity.left
-    entity.ddx = entity.ddx - accel
-  else if wasleft
-    entity.ddx = entity.ddx + friction
 
-  if entity.right
-    entity.ddx = entity.ddx + accel
-  else if wasright
-    entity.ddx = entity.ddx - friction
+# returns an array containing tiles / entities bullet collided with
+module.exports.updateBullet = (bullet, entities, level, dt) ->
 
-  if entity.jump and not entity.jumping and not falling
-    entity.ddy = entity.ddy - entity.impulse # an instant big force impulse
-    entity.jumping = true
+  bullet.rect.x += bullet.dx * dt
+  bullet.rect.y += bullet.dy * dt
+
+  collided = []
+
+  centerx = bullet.rect.x + bullet.rect.width / 2
+  centery = bullet.rect.y + bullet.rect.height / 2
+  topmidx = centerx + bullet.dir.x * bullet.rect.height / 2
+  topmidy = centery + bullet.dir.y * bullet.rect.height / 2
+  topleftx = topmidx + bullet.perp.x * bullet.rect.width / 2
+  toplefty = topmidy + bullet.perp.y * bullet.rect.width / 2
+  toprightx = topmidx - bullet.perp.x * bullet.rect.width / 2
+  toprighty = topmidy - bullet.perp.y * bullet.rect.width / 2
+
+  # store the two points on the front edge of the bullet
+  bullet.topleft = {x: topleftx, y: toplefty}
+  bullet.topright = {x: toprightx, y: toprighty}
+
+  # check if the front points of the bullet collide with the level
+  xtile1 = level.pixelToTile bullet.topleft.x
+  ytile1 = level.pixelToTile bullet.topleft.y
+
+  xtile2 = level.pixelToTile bullet.topright.x
+  ytile2 = level.pixelToTile bullet.topright.y
   
-  
-  entity.x = entity.x + (dt * entity.dx)
-  entity.y = entity.y + (dt * entity.dy)
-  entity.dx = clamp(entity.dx + (dt * entity.ddx), -entity.maxdx, entity.maxdx)
-  entity.dy = clamp(entity.dy + (dt * entity.ddy), -entity.maxdy, entity.maxdy)
+  hitleft = false
+  hitright = false
+  if level.tileHitbox xtile1, ytile1
+    hitleft = true
+  if level.tileHitbox xtile2, ytile2
+    hitright = true
 
-  if (wasleft and (entity.dx > 0)) or (wasright and (entity.dx < 0))
-    # clamp at zero to prevent friction from making us jiggle side to side
-    entity.dx = 0 
+  if hitleft
+    collided.push {type: 'tile', location: [xtile1, ytile1], points: [bullet.topleft]}
 
-  tx = level.pixelToTile entity.x
-  ty = level.pixelToTile entity.y
-  nx = entity.x % c.TILE
-  ny = entity.y % c.TILE
-  cell = level.tileToValue tx, ty, 'collision'
-  cellright = level.tileToValue(tx + 1, ty, 'collision')
-  celldown = level.tileToValue(tx, ty + 1, 'collision')
-  celldiag = level.tileToValue(tx + 1, ty + 1, 'collision')
+  if hitright
+    if xtile2 == xtile1 and ytile2 == ytile1
+      # the same tile - add collision point
+      collided[0].points.push bullet.topright
+    else
+      collided.push {type: 'tile', location: [xtile2, ytile2], points: [bullet.topright] }
 
-  if entity.dy > 0
-    if (celldown and not cell) or (celldiag and not cellright and nx)
-      entity.y = level.tileToPixel ty
-      entity.dy = 0
-      entity.falling = false
-      entity.jumping = false
-      ny = 0
-  else if entity.dy < 0
-    if (cell and not celldown) or (cellright and not celldiag and nx)
-      entity.y = level.tileToPixel(ty + 1)
-      entity.dy = 0
-      cell = celldown
-      cellright = celldiag
-      ny = 0
-  if entity.dx > 0
-    if (cellright and not cell) or (celldiag and not celldown and ny)
-      entity.x = level.tileToPixel tx
-      entity.dx = 0
-  else if entity.dx < 0
-    if (cell and not cellright) or (celldown and not celldiag and ny)
-      entity.x = level.tileToPixel(tx + 1)
-      entity.dx = 0
+  # check collisions with other entities
+  for ent in entities
+    if collide.inHitbox bullet.topleft, ent
+      collided.push {type: 'entity', entity: ent, points: [bullet.topleft]}
+    if collide.inHitbox bullet.topright, ent
+      collided[collided.length - 1].points.push bullet.topright
 
-  entity.falling = not (celldown or (nx and celldiag))
+  # return the array of objects the bullet collided with
+  collided
+
+
+# update 'crosshairs' (the small blue rect close to the player)
+module.exports.updateGun = (gun, dt) ->
+
+  if gun.up
+    gun.angle -= gun.sensitivity * dt
+
+  if gun.down
+    gun.angle += gun.sensitivity * dt
+                                
+  if gun.angle < 0
+    gun.angle = 0.001
+  else if gun.angle > Math.PI / 2
+    gun.angle = Math.PI / 2

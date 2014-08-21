@@ -1,17 +1,109 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-module.exports = function(x, min, max) {
-  return Math.max(min, Math.min(max, x));
+var c, overlapAABB;
+
+c = require('./constants');
+
+overlapAABB = function(entity1, entity2) {
+  var h1, h2;
+  h1 = entity1.hitbox;
+  h2 = entity2.hitbox;
+  return !(((h1.x + h1.width) < h2.x) || ((h2.x + h2.width) < h1.x) || ((h1.y + h1.height) < h2.y) || ((h2.y + h2.height) < h1.y));
+};
+
+module.exports.inHitbox = function(point, entity) {
+  var h;
+  h = entity.hitbox;
+  return (point.x > h.x) && (point.x < h.x + h.width) && (point.y > h.y) && (point.y < h.y + h.height);
+};
+
+module.exports.levelCollideX = function(entity, level, xnew) {
+  var tentity, xold, xtilenew, xtileold, yold, ytile, ytilebottom, ytiletop, _i;
+  xold = entity.hitbox.x;
+  yold = entity.hitbox.y;
+  entity.hitbox.x = xnew;
+  if (xnew > xold) {
+    xtileold = level.pixelToTile(xold + entity.hitbox.width - 1);
+    xtilenew = level.pixelToTile(xnew + entity.hitbox.width - 1);
+  } else if (xnew < xold) {
+    xtileold = level.pixelToTile(xold);
+    xtilenew = level.pixelToTile(xnew);
+  } else {
+    xtileold = xtilenew = null;
+  }
+  if (xtileold !== xtilenew) {
+    ytiletop = level.pixelToTile(yold);
+    ytilebottom = level.pixelToTile(yold + entity.hitbox.height - 1);
+    for (ytile = _i = ytilebottom; ytilebottom <= ytiletop ? _i <= ytiletop : _i >= ytiletop; ytile = ytilebottom <= ytiletop ? ++_i : --_i) {
+      tentity = level.tileHitbox(xtilenew, ytile);
+      if (tentity) {
+        entity.dx = 0;
+        entity.ddx = 0;
+        if (xnew > xold) {
+          entity.hitbox.x = tentity.hitbox.x - entity.hitbox.width;
+        } else {
+          entity.hitbox.x = tentity.hitbox.x + tentity.hitbox.width;
+        }
+      }
+    }
+  }
+  return entity.rect.x = entity.hitbox.x - entity.hitbox.xoff;
+};
+
+module.exports.levelCollideY = function(entity, level, ynew) {
+  var tentity, xold, xtile, xtileleft, xtileright, yold, ytilenew, ytileold, _i;
+  xold = entity.hitbox.x;
+  yold = entity.hitbox.y;
+  entity.hitbox.y = ynew;
+  if (ynew < yold) {
+    ytileold = level.pixelToTile(yold);
+    ytilenew = level.pixelToTile(ynew);
+  } else if (ynew > yold && entity.falling) {
+    ytileold = level.pixelToTile(yold + entity.hitbox.height - 1);
+    ytilenew = level.pixelToTile(ynew + entity.hitbox.height - 1);
+  } else {
+    ytileold = ytilenew = null;
+  }
+  if (ytileold !== ytilenew) {
+    xtileleft = level.pixelToTile(xold);
+    xtileright = level.pixelToTile(xold + entity.hitbox.width - 1);
+    for (xtile = _i = xtileleft; xtileleft <= xtileright ? _i <= xtileright : _i >= xtileright; xtile = xtileleft <= xtileright ? ++_i : --_i) {
+      tentity = level.tileHitbox(xtile, ytilenew);
+      if (tentity) {
+        entity.dy = 0;
+        entity.ddy = 0;
+        if (ynew < yold) {
+          entity.hitbox.y = tentity.hitbox.y + tentity.hitbox.height;
+        } else {
+          entity.hitbox.y = tentity.hitbox.y - entity.hitbox.height;
+          entity.onfloor = true;
+        }
+        break;
+      }
+    }
+  }
+  return entity.rect.y = entity.hitbox.y - entity.hitbox.yoff;
+};
+
+module.exports.entityCollide = function(entity1, entity2) {
+  if (overlapAABB(entity1, entity2)) {
+    if (entity1.dx > 0) {
+      return entity1.dx = -500;
+    } else if (entity1.dx < 0) {
+      return entity1.dx = 500;
+    }
+  }
 };
 
 
 
-},{}],2:[function(require,module,exports){
+},{"./constants":2}],2:[function(require,module,exports){
 var COLOR, FPS, TILE;
 
 COLOR = {
   GREEN: '#33CC66',
   BLUE: '#0066CC',
   BLACK: '#000000',
+  WHITE: '#FFFFFF',
   YELLOW: '#ECD078',
   BRICK: '#D95B43',
   HOT_PINK: '#FF3399',
@@ -38,11 +130,14 @@ module.exports = {
   COLOR: COLOR,
   COLORS: [COLOR.YELLOW, COLOR.BRICK, COLOR.PINK, COLOR.PURPLE, COLOR.GREY],
   KEY: {
+    CTRL: 17,
     SPACE: 32,
     LEFT: 83,
     UP: 69,
     RIGHT: 70,
-    DOWN: 68
+    DOWN: 68,
+    GUNUP: 38,
+    GUNDOWN: 40
   },
   STEP: 1 / FPS
 };
@@ -92,6 +187,21 @@ Level = (function() {
     }
   };
 
+  Level.prototype.tileHitbox = function(tx, ty) {
+    var val;
+    val = this.tileToValue(tx, ty);
+    if (val) {
+      return {
+        hitbox: {
+          x: tx * c.TILE,
+          y: ty * c.TILE,
+          width: c.TILE,
+          height: c.TILE
+        }
+      };
+    }
+  };
+
   return Level;
 
 })();
@@ -101,35 +211,75 @@ module.exports = Level;
 
 
 },{"./constants":2}],4:[function(require,module,exports){
-var angleToVector, c, clamp, unitVector;
+var c;
 
 c = require('./constants');
 
-clamp = require('./clamp');
-
-unitVector = require('./v2-unit');
-
-angleToVector = function(r) {
-  var UP, x, y;
-  UP = {
-    x: 0,
-    y: 1
-  };
-  y = Math.cos(r) * UP.x - Math.sin(r) * UP.y;
-  x = Math.sin(r) * UP.x + Math.cos(r) * UP.y;
-  return unitVector({
-    x: -x,
-    y: y
-  });
+module.exports.stepX = function(entity, level, dt) {
+  var accel, friction, wasleft, wasright;
+  wasleft = entity.dx < 0;
+  wasright = entity.dx > 0;
+  friction = entity.friction * (entity.falling ? 0.5 : 1);
+  accel = entity.accel * (entity.falling ? 0.5 : 1);
+  entity.ddx = 0;
+  if (entity.left) {
+    entity.ddx = entity.ddx - accel;
+  } else if (wasleft) {
+    entity.ddx = entity.ddx + friction;
+  }
+  if (entity.right) {
+    entity.ddx = entity.ddx + accel;
+  } else if (wasright) {
+    entity.ddx = entity.ddx - friction;
+  }
+  entity.dx = entity.dx + entity.ddx * dt;
+  if ((wasleft && (entity.dx > 0)) || (wasright && (entity.dx < 0))) {
+    entity.dx = 0;
+  }
+  return entity.hitbox.x + Math.floor(entity.dx * dt);
 };
+
+module.exports.stepY = function(entity, level, dt) {
+  entity.ddy = entity.gravity;
+  if (entity.jump && !entity.jumping && entity.onfloor) {
+    entity.ddy = entity.ddy - entity.impulse;
+    entity.jumping = true;
+    entity.onfloor = false;
+  }
+  entity.dy = entity.dy + dt * entity.ddy;
+  if (entity.dy > 0) {
+    entity.jumping = false;
+    entity.falling = true;
+  }
+  return entity.rect.y + entity.hitbox.yoff + Math.floor(entity.dy * dt);
+};
+
+
+
+},{"./constants":2}],5:[function(require,module,exports){
+var c, collide, move;
+
+collide = require('./collide');
+
+c = require('./constants');
+
+move = require('./move');
 
 module.exports.setupEntity = function(obj) {
   var entity, maxdx;
   obj.properties = obj.properties || {};
   maxdx = c.METER * (obj.properties.maxdx || c.MAXDX);
-  return entity = {
-    x: obj.x,
-    y: obj.y,
+  entity = {
+    rect: {
+      x: obj.x,
+      y: obj.y,
+      height: obj.height,
+      width: obj.width
+    },
+    hitbox: {
+      xoff: obj.properties.hitbox.xoff,
+      yoff: obj.properties.hitbox.yoff
+    },
     dx: 0,
     dy: 0,
     gravity: c.METER * (obj.properties.gravity || c.GRAVITY),
@@ -146,128 +296,106 @@ module.exports.setupEntity = function(obj) {
     right: obj.properties.right,
     jump: null
   };
-};
-
-module.exports.overlap = function(x1, y1, w1, h1, x2, y2, w2, h2) {
-  return !(((x1 + w1 - 1) < x2) || ((x2 + w2 - 1) < x1) || ((y1 + h1 - 1) < y2) || ((y2 + h2 - 1) < y1));
-};
-
-module.exports.rayCollide = function(x, y, targetX, targetY, level, entities) {
-  var collisionTile, e, entityTileIdx, id, index, lastTileIdx, now, radian, rayUnit, value;
-  if (entities == null) {
-    entities = {};
-  }
-  radian = Math.atan2(y - targetY, x - targetX);
-  rayUnit = angleToVector(radian);
-  now = {
-    x: x,
-    y: y
-  };
-  collisionTile = null;
-  lastTileIdx = level.pixelToTile(now.x) + (level.pixelToTile(now.y) * c.MAP.tw);
-  while (Math.abs(now.x - targetX) > 0.1 && Math.abs(now.y - targetY) > 0.1) {
-    now.x += rayUnit.x * 0.1;
-    now.y += rayUnit.y * 0.1;
-    index = level.pixelToTile(now.x) + (level.pixelToTile(now.y) * c.MAP.tw);
-    if (index !== lastTileIdx) {
-      value = level.cellValue(now.x, now.y, 'collision');
-      for (id in entities) {
-        e = entities[id];
-        if (!e.dead) {
-          entityTileIdx = level.pixelToTile(e.x) + (level.pixelToTile(e.y) * c.MAP.tw);
-          if (entityTileIdx === index) {
-            return {
-              type: 'entity',
-              end: now,
-              entity: e
-            };
-          }
-        }
-      }
-      if (value !== 0) {
-        return {
-          type: 'env',
-          end: now
-        };
-      }
-      lastTileIdx = index;
-    }
-  }
+  entity.hitbox.x = entity.rect.x + entity.hitbox.xoff;
+  entity.hitbox.y = entity.rect.y + entity.hitbox.yoff;
+  entity.hitbox.height = entity.rect.height - 2 * entity.hitbox.yoff;
+  entity.hitbox.width = entity.rect.width - 2 * entity.hitbox.xoff;
+  return entity;
 };
 
 module.exports.updateEntity = function(entity, level, dt) {
-  var accel, cell, celldiag, celldown, cellright, falling, friction, nx, ny, tx, ty, wasleft, wasright;
-  wasleft = entity.dx < 0;
-  wasright = entity.dx > 0;
-  falling = entity.falling;
-  friction = entity.friction * (falling ? 0.5 : 1);
-  accel = entity.accel * (falling ? 0.5 : 1);
-  entity.ddx = 0;
-  entity.ddy = entity.gravity;
-  if (entity.left) {
-    entity.ddx = entity.ddx - accel;
-  } else if (wasleft) {
-    entity.ddx = entity.ddx + friction;
+  var xnew, ynew;
+  xnew = move.stepX(entity, level, dt);
+  collide.levelCollideX(entity, level, xnew);
+  ynew = move.stepY(entity, level, dt);
+  return collide.levelCollideY(entity, level, ynew);
+};
+
+module.exports.updateBullet = function(bullet, entities, level, dt) {
+  var centerx, centery, collided, ent, hitleft, hitright, topleftx, toplefty, topmidx, topmidy, toprightx, toprighty, xtile1, xtile2, ytile1, ytile2, _i, _len;
+  bullet.rect.x += bullet.dx * dt;
+  bullet.rect.y += bullet.dy * dt;
+  collided = [];
+  centerx = bullet.rect.x + bullet.rect.width / 2;
+  centery = bullet.rect.y + bullet.rect.height / 2;
+  topmidx = centerx + bullet.dir.x * bullet.rect.height / 2;
+  topmidy = centery + bullet.dir.y * bullet.rect.height / 2;
+  topleftx = topmidx + bullet.perp.x * bullet.rect.width / 2;
+  toplefty = topmidy + bullet.perp.y * bullet.rect.width / 2;
+  toprightx = topmidx - bullet.perp.x * bullet.rect.width / 2;
+  toprighty = topmidy - bullet.perp.y * bullet.rect.width / 2;
+  bullet.topleft = {
+    x: topleftx,
+    y: toplefty
+  };
+  bullet.topright = {
+    x: toprightx,
+    y: toprighty
+  };
+  xtile1 = level.pixelToTile(bullet.topleft.x);
+  ytile1 = level.pixelToTile(bullet.topleft.y);
+  xtile2 = level.pixelToTile(bullet.topright.x);
+  ytile2 = level.pixelToTile(bullet.topright.y);
+  hitleft = false;
+  hitright = false;
+  if (level.tileHitbox(xtile1, ytile1)) {
+    hitleft = true;
   }
-  if (entity.right) {
-    entity.ddx = entity.ddx + accel;
-  } else if (wasright) {
-    entity.ddx = entity.ddx - friction;
+  if (level.tileHitbox(xtile2, ytile2)) {
+    hitright = true;
   }
-  if (entity.jump && !entity.jumping && !falling) {
-    entity.ddy = entity.ddy - entity.impulse;
-    entity.jumping = true;
+  if (hitleft) {
+    collided.push({
+      type: 'tile',
+      location: [xtile1, ytile1],
+      points: [bullet.topleft]
+    });
   }
-  entity.x = entity.x + (dt * entity.dx);
-  entity.y = entity.y + (dt * entity.dy);
-  entity.dx = clamp(entity.dx + (dt * entity.ddx), -entity.maxdx, entity.maxdx);
-  entity.dy = clamp(entity.dy + (dt * entity.ddy), -entity.maxdy, entity.maxdy);
-  if ((wasleft && (entity.dx > 0)) || (wasright && (entity.dx < 0))) {
-    entity.dx = 0;
-  }
-  tx = level.pixelToTile(entity.x);
-  ty = level.pixelToTile(entity.y);
-  nx = entity.x % c.TILE;
-  ny = entity.y % c.TILE;
-  cell = level.tileToValue(tx, ty, 'collision');
-  cellright = level.tileToValue(tx + 1, ty, 'collision');
-  celldown = level.tileToValue(tx, ty + 1, 'collision');
-  celldiag = level.tileToValue(tx + 1, ty + 1, 'collision');
-  if (entity.dy > 0) {
-    if ((celldown && !cell) || (celldiag && !cellright && nx)) {
-      entity.y = level.tileToPixel(ty);
-      entity.dy = 0;
-      entity.falling = false;
-      entity.jumping = false;
-      ny = 0;
-    }
-  } else if (entity.dy < 0) {
-    if ((cell && !celldown) || (cellright && !celldiag && nx)) {
-      entity.y = level.tileToPixel(ty + 1);
-      entity.dy = 0;
-      cell = celldown;
-      cellright = celldiag;
-      ny = 0;
-    }
-  }
-  if (entity.dx > 0) {
-    if ((cellright && !cell) || (celldiag && !celldown && ny)) {
-      entity.x = level.tileToPixel(tx);
-      entity.dx = 0;
-    }
-  } else if (entity.dx < 0) {
-    if ((cell && !cellright) || (celldown && !celldiag && ny)) {
-      entity.x = level.tileToPixel(tx + 1);
-      entity.dx = 0;
+  if (hitright) {
+    if (xtile2 === xtile1 && ytile2 === ytile1) {
+      collided[0].points.push(bullet.topright);
+    } else {
+      collided.push({
+        type: 'tile',
+        location: [xtile2, ytile2],
+        points: [bullet.topright]
+      });
     }
   }
-  return entity.falling = !(celldown || (nx && celldiag));
+  for (_i = 0, _len = entities.length; _i < _len; _i++) {
+    ent = entities[_i];
+    if (collide.inHitbox(bullet.topleft, ent)) {
+      collided.push({
+        type: 'entity',
+        entity: ent,
+        points: [bullet.topleft]
+      });
+    }
+    if (collide.inHitbox(bullet.topright, ent)) {
+      collided[collided.length - 1].points.push(bullet.topright);
+    }
+  }
+  return collided;
+};
+
+module.exports.updateGun = function(gun, dt) {
+  if (gun.up) {
+    gun.angle -= gun.sensitivity * dt;
+  }
+  if (gun.down) {
+    gun.angle += gun.sensitivity * dt;
+  }
+  if (gun.angle < 0) {
+    return gun.angle = 0.001;
+  } else if (gun.angle > Math.PI / 2) {
+    return gun.angle = Math.PI / 2;
+  }
 };
 
 
 
-},{"./clamp":1,"./constants":2,"./v2-unit":7}],5:[function(require,module,exports){
-var c, renderLevel;
+},{"./collide":1,"./constants":2,"./move":4}],6:[function(require,module,exports){
+var c, drawAngle, renderLevel;
 
 c = require('./constants');
 
@@ -282,7 +410,8 @@ renderLevel = function(ctx, level) {
         cell = level.tileToValue(x, y);
         if (cell) {
           ctx.fillStyle = c.COLORS[cell - 1];
-          _results1.push(ctx.fillRect(x * c.TILE, y * c.TILE, c.TILE, c.TILE));
+          ctx.fillRect(x * c.TILE, y * c.TILE, c.TILE, c.TILE);
+          _results1.push(ctx.fillStyle = c.COLOR.WHITE);
         } else {
           _results1.push(void 0);
         }
@@ -293,16 +422,48 @@ renderLevel = function(ctx, level) {
   return _results;
 };
 
-module.exports = function(ctx, me, level) {
+drawAngle = function(ctx, sprite) {
+  var hheight, hwidth;
+  if (!sprite) {
+    return;
+  }
+  ctx.save();
+  if (sprite.angle) {
+    hwidth = sprite.rect.width / 2;
+    hheight = sprite.rect.height / 2;
+    ctx.translate(sprite.rect.x + hwidth, sprite.rect.y + hheight);
+    ctx.rotate(sprite.angle);
+    ctx.fillRect(-hwidth, -hheight, sprite.rect.width, sprite.rect.height);
+  }
+  return ctx.restore();
+};
+
+module.exports = function(ctx, me, enemies, gun, bullet, level) {
+  var entity, gunx, guny, _i, _j, _len, _len1;
   ctx.clearRect(0, 0, level.width, level.height);
   renderLevel(ctx, level);
-  ctx.fillStyle = c.COLORS.YELLOW;
-  return ctx.fillRect(me.x + c.TILE, me.y - c.TILE, c.TILE, c.TILE * 2);
+  ctx.fillStyle = c.COLOR.YELLOW;
+  ctx.fillRect(me.rect.x, me.rect.y, me.rect.width, me.rect.height);
+  for (_i = 0, _len = enemies.length; _i < _len; _i++) {
+    entity = enemies[_i];
+    ctx.fillStyle = c.COLOR.WHITE;
+    ctx.fillRect(entity.rect.x, entity.rect.y, entity.rect.width, entity.rect.height);
+  }
+  ctx.fillStyle = c.COLOR.BLUE;
+  ctx.fillRect(me.rect.x + me.hitbox.xoff, me.rect.y + me.hitbox.yoff, me.hitbox.width, me.hitbox.height);
+  for (_j = 0, _len1 = enemies.length; _j < _len1; _j++) {
+    entity = enemies[_j];
+    ctx.fillRect(entity.rect.x + entity.hitbox.xoff, entity.rect.y + entity.hitbox.yoff, entity.hitbox.width, entity.hitbox.height);
+  }
+  gunx = me.rect.x + me.rect.width / 2 + Math.sin(gun.angle) * 50;
+  guny = me.rect.y + me.rect.height / 2 - Math.cos(gun.angle) * 50;
+  ctx.fillRect(gunx - 2, guny - 2, 4, 4);
+  return drawAngle(ctx, bullet);
 };
 
 
 
-},{"./constants":2}],6:[function(require,module,exports){
+},{"./constants":2}],7:[function(require,module,exports){
 module.exports = function() {
   if ((typeof window !== "undefined" && window !== null) && window.performance && window.performance.now) {
     return window.performance.now();
@@ -313,7 +474,7 @@ module.exports = function() {
 
 
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 var unitVector;
 
 module.exports = unitVector = function(v) {
@@ -326,71 +487,6 @@ module.exports = unitVector = function(v) {
 };
 
 
-
-},{}],8:[function(require,module,exports){
-// shim for using process in browser
-
-var process = module.exports = {};
-
-process.nextTick = (function () {
-    var canSetImmediate = typeof window !== 'undefined'
-    && window.setImmediate;
-    var canPost = typeof window !== 'undefined'
-    && window.postMessage && window.addEventListener
-    ;
-
-    if (canSetImmediate) {
-        return function (f) { return window.setImmediate(f) };
-    }
-
-    if (canPost) {
-        var queue = [];
-        window.addEventListener('message', function (ev) {
-            var source = ev.source;
-            if ((source === window || source === null) && ev.data === 'process-tick') {
-                ev.stopPropagation();
-                if (queue.length > 0) {
-                    var fn = queue.shift();
-                    fn();
-                }
-            }
-        }, true);
-
-        return function nextTick(fn) {
-            queue.push(fn);
-            window.postMessage('process-tick', '*');
-        };
-    }
-
-    return function nextTick(fn) {
-        setTimeout(fn, 0);
-    };
-})();
-
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-}
-
-// TODO(shtylman)
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
 
 },{}],9:[function(require,module,exports){
 var now = require('performance-now')
@@ -513,9 +609,74 @@ module.exports.cancel = function() {
 //@ sourceMappingURL=performance-now.map
 */
 
-}).call(this,require("FWaASH"))
-},{"FWaASH":8}],11:[function(require,module,exports){
-var Level, c, canvas, ctx, dt, frame, fs, last, level, now, onkey, physics, player, raf, render, setup, time;
+}).call(this,require("qvMYcC"))
+},{"qvMYcC":11}],11:[function(require,module,exports){
+// shim for using process in browser
+
+var process = module.exports = {};
+
+process.nextTick = (function () {
+    var canSetImmediate = typeof window !== 'undefined'
+    && window.setImmediate;
+    var canPost = typeof window !== 'undefined'
+    && window.postMessage && window.addEventListener
+    ;
+
+    if (canSetImmediate) {
+        return function (f) { return window.setImmediate(f) };
+    }
+
+    if (canPost) {
+        var queue = [];
+        window.addEventListener('message', function (ev) {
+            var source = ev.source;
+            if ((source === window || source === null) && ev.data === 'process-tick') {
+                ev.stopPropagation();
+                if (queue.length > 0) {
+                    var fn = queue.shift();
+                    fn();
+                }
+            }
+        }, true);
+
+        return function nextTick(fn) {
+            queue.push(fn);
+            window.postMessage('process-tick', '*');
+        };
+    }
+
+    return function nextTick(fn) {
+        setTimeout(fn, 0);
+    };
+})();
+
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+}
+
+// TODO(shtylman)
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+
+},{}],12:[function(require,module,exports){
+var Level, bullet, c, canvas, collide, ctx, dt, enemyEntities, frame, fs, gun, last, level, monster, now, onkey, physics, player, raf, render, setup, time, unitVector;
 
 Level = require('./modules/level');
 
@@ -525,11 +686,15 @@ c = require('./modules/constants');
 
 physics = require('./modules/physics');
 
+collide = require('./modules/collide');
+
 raf = require('raf');
 
 render = require('./modules/renderer');
 
 time = require('./modules/time');
+
+unitVector = require('./modules/v2-unit');
 
 canvas = document.getElementById('canvas');
 
@@ -545,6 +710,14 @@ level = null;
 
 player = null;
 
+monster = null;
+
+enemyEntities = [];
+
+gun = null;
+
+bullet = null;
+
 onkey = function(ev, key, down) {
   switch (key) {
     case c.KEY.LEFT:
@@ -555,30 +728,85 @@ onkey = function(ev, key, down) {
       ev.preventDefault();
       player.right = down;
       return false;
-    case c.KEY.SPACE || c.KEY.UP:
+    case c.KEY.SPACE:
       ev.preventDefault();
       player.jump = down;
       return false;
+    case c.KEY.CTRL:
+      ev.preventDefault();
+      gun.firing = down;
+      return false;
+    case c.KEY.GUNUP:
+      ev.preventDefault();
+      return gun.up = down;
+    case c.KEY.GUNDOWN:
+      ev.preventDefault();
+      return gun.down = down;
   }
 };
 
 setup = function() {
   var level_data;
-  level_data = JSON.parse("{ \"height\":48,\n \"layers\":[\n        {\n         \"data\":[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 5, 5, 5, 5, 5, 2, 2, 2, 5, 5, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 5, 5, 5, 5, 5, 5, 5, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5, 5, 5, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],\n         \"height\":48,\n         \"name\":\"background\",\n         \"opacity\":1,\n         \"type\":\"tilelayer\",\n         \"visible\":true,\n         \"width\":64,\n         \"x\":0,\n         \"y\":0\n        }, \n        {\n         \"height\":48,\n         \"name\":\"Object Layer 1\",\n         \"objects\":[\n                {\n                 \"height\":32,\n                 \"name\":\"player\",\n                 \"properties\":\n                    { },\n                 \"type\":\"player\",\n                 \"visible\":true,\n                 \"width\":32,\n                 \"x\":96,\n                 \"y\":480\n                }     \n         ],\n         \"opacity\":1,\n         \"type\":\"objectgroup\",\n         \"visible\":true,\n         \"width\":64,\n         \"x\":0,\n         \"y\":0\n        }],\n \"orientation\":\"orthogonal\",\n \"properties\": { },\n \"tileheight\":32,\n \"tilesets\":[\n        {\n         \"firstgid\":1,\n         \"image\":\"tiles.png\",\n         \"imageheight\":32,\n         \"imagewidth\":160,\n         \"margin\":0,\n         \"name\":\"tiles\",\n         \"properties\":\n            {\n\n            },\n         \"spacing\":0,\n         \"tileheight\":32,\n         \"tilewidth\":32\n        }],\n \"tilewidth\":32,\n \"version\":1,\n \"width\":64\n}");
+  level_data = JSON.parse("{ \"height\":48,\n \"layers\":[\n        {\n         \"data\":[5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 5, 5, 5, 5, 5, 2, 2, 2, 5, 5, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 5, 5, 5, 5, 5, 5, 5, 5, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 5, 5, 5, 5, 5, 5, 5, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],\n         \"height\":48,\n         \"name\":\"background\",\n         \"opacity\":1,\n         \"type\":\"tilelayer\",\n         \"visible\":true,\n         \"width\":64,\n         \"x\":0,\n         \"y\":0\n        }, \n        {\n         \"height\":48,\n         \"name\":\"Object Layer 1\",\n         \"objects\":[\n                {\n                 \"height\":67,\n                 \"name\":\"player\",\n                 \"properties\":\n                    {\n                     \"hitbox\": {\"xoff\": 6, \"yoff\": 8}\n                     },\n                 \"type\":\"player\",\n                 \"visible\":true,\n                 \"width\":32,\n                 \"x\":96,\n                 \"y\":480\n                },\n                {\n                 \"height\":100,\n                 \"name\":\"player\",\n                 \"properties\":\n                    {\n                     \"hitbox\": {\"xoff\": 10, \"yoff\": 15}\n                     },\n                 \"type\":\"player\",\n                 \"visible\":true,\n                 \"width\":36,\n                 \"x\":400,\n                 \"y\":480\n                }     \n         ],\n         \"opacity\":1,\n         \"type\":\"objectgroup\",\n         \"visible\":true,\n         \"width\":64,\n         \"x\":0,\n         \"y\":0\n        }],\n \"orientation\":\"orthogonal\",\n \"properties\": { },\n \"tileheight\":32,\n \"tilesets\":[\n        {\n         \"firstgid\":1,\n         \"image\":\"tiles.png\",\n         \"imageheight\":32,\n         \"imagewidth\":160,\n         \"margin\":0,\n         \"name\":\"tiles\",\n         \"properties\":\n            {\n\n            },\n         \"spacing\":0,\n         \"tileheight\":32,\n         \"tilewidth\":32\n        }],\n \"tilewidth\":32,\n \"version\":1,\n \"width\":64\n}\n");
   level = new Level(level_data);
   canvas.width = level.width;
   canvas.height = level.height;
-  return player = physics.setupEntity(level_data.layers[1].objects[0]);
+  player = physics.setupEntity(level_data.layers[1].objects[0]);
+  monster = physics.setupEntity(level_data.layers[1].objects[1]);
+  gun = {
+    angle: 0.001,
+    firing: false,
+    sensitivity: 5
+  };
+  return enemyEntities = [monster];
 };
 
 frame = function() {
+  var bulletCollides, entity, _i, _j, _len, _len1;
   now = time();
   dt = dt + Math.min(1, (now - last) / 1000);
+  if (gun.firing && (!bullet)) {
+    bullet = {
+      rect: {
+        x: player.rect.x,
+        y: player.rect.y,
+        width: 10,
+        height: 50
+      },
+      angle: gun.angle
+    };
+    bullet.dx = 400 * Math.sin(bullet.angle);
+    bullet.dy = -400 * Math.cos(bullet.angle);
+    bullet.dir = unitVector({
+      x: bullet.dx,
+      y: bullet.dy
+    });
+    bullet.perp = {
+      x: bullet.dir.y,
+      y: -bullet.dir.x
+    };
+  }
   while (dt > c.STEP) {
     dt = dt - c.STEP;
     physics.updateEntity(player, level, c.STEP);
+    for (_i = 0, _len = enemyEntities.length; _i < _len; _i++) {
+      entity = enemyEntities[_i];
+      physics.updateEntity(entity, level, c.STEP);
+    }
+    physics.updateGun(gun, c.STEP);
+    if (bullet) {
+      bulletCollides = physics.updateBullet(bullet, enemyEntities, level, c.STEP);
+      if (bulletCollides.length > 0) {
+        console.log(bulletCollides);
+        bullet = null;
+      }
+    }
+    for (_j = 0, _len1 = enemyEntities.length; _j < _len1; _j++) {
+      entity = enemyEntities[_j];
+      collide.entityCollide(player, entity);
+    }
   }
-  render(ctx, player, level);
+  render(ctx, player, enemyEntities, gun, bullet, level);
   last = now;
   return raf(frame, canvas);
 };
@@ -597,4 +825,4 @@ frame();
 
 
 
-},{"./modules/constants":2,"./modules/level":3,"./modules/physics":4,"./modules/renderer":5,"./modules/time":6,"raf":9}]},{},[11])
+},{"./modules/collide":1,"./modules/constants":2,"./modules/level":3,"./modules/physics":5,"./modules/renderer":6,"./modules/time":7,"./modules/v2-unit":8,"raf":9}]},{},[12])
