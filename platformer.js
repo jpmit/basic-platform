@@ -1,5 +1,5 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var c, inHitbox, overlapAABB;
+var c, overlapAABB;
 
 c = require('./constants');
 
@@ -10,7 +10,7 @@ overlapAABB = function(entity1, entity2) {
   return !(((h1.x + h1.width) < h2.x) || ((h2.x + h2.width) < h1.x) || ((h1.y + h1.height) < h2.y) || ((h2.y + h2.height) < h1.y));
 };
 
-inHitbox = function(point, entity) {
+module.exports.inHitbox = function(point, entity) {
   var h;
   h = entity.hitbox;
   return (point.x > h.x) && (point.x < h.x + h.width) && (point.y > h.y) && (point.y < h.y + h.height);
@@ -82,14 +82,6 @@ module.exports.levelCollideY = function(entity, level, ynew) {
     }
   }
   return entity.rect.y = entity.hitbox.y - entity.hitbox.yoff;
-};
-
-module.exports.bulletCollide = function(bullet, entity) {
-  if ((inHitbox(bullet.topleft, entity)) || (inHitbox(bullet.topright, entity))) {
-    return true;
-  } else {
-    return false;
-  }
 };
 
 module.exports.entityCollide = function(entity1, entity2) {
@@ -320,7 +312,7 @@ module.exports.updateEntity = function(entity, level, dt) {
 };
 
 module.exports.updateBullet = function(bullet, entities, level, dt) {
-  var centerx, centery, collided, ent, topleftx, toplefty, topmidx, topmidy, toprightx, toprighty, xtile1, xtile2, ytile1, ytile2, _i, _len;
+  var centerx, centery, collided, ent, hitleft, hitright, topleftx, toplefty, topmidx, topmidy, toprightx, toprighty, xtile1, xtile2, ytile1, ytile2, _i, _len;
   bullet.rect.x += bullet.dx * dt;
   bullet.rect.y += bullet.dy * dt;
   collided = [];
@@ -342,29 +334,45 @@ module.exports.updateBullet = function(bullet, entities, level, dt) {
   };
   xtile1 = level.pixelToTile(bullet.topleft.x);
   ytile1 = level.pixelToTile(bullet.topleft.y);
-  if (level.tileHitbox(xtile1, ytile1)) {
-    collided.push({
-      type: 'tile',
-      location: [xtile1, ytile1]
-    });
-  }
   xtile2 = level.pixelToTile(bullet.topright.x);
   ytile2 = level.pixelToTile(bullet.topright.y);
-  if (xtile2 !== xtile1 || ytile2 !== ytile1) {
-    if (level.tileHitbox(xtile2, ytile2)) {
+  hitleft = false;
+  hitright = false;
+  if (level.tileHitbox(xtile1, ytile1)) {
+    hitleft = true;
+  }
+  if (level.tileHitbox(xtile2, ytile2)) {
+    hitright = true;
+  }
+  if (hitleft) {
+    collided.push({
+      type: 'tile',
+      location: [xtile1, ytile1],
+      points: [bullet.topleft]
+    });
+  }
+  if (hitright) {
+    if (xtile2 === xtile1 && ytile2 === ytile1) {
+      collided[0].points.push(bullet.topright);
+    } else {
       collided.push({
         type: 'tile',
-        location: [xtile1, ytile1]
+        location: [xtile2, ytile2],
+        points: [bullet.topright]
       });
     }
   }
   for (_i = 0, _len = entities.length; _i < _len; _i++) {
     ent = entities[_i];
-    if (collide.bulletCollide(bullet, ent)) {
+    if (collide.inHitbox(bullet.topleft, ent)) {
       collided.push({
         type: 'entity',
-        entity: ent
+        entity: ent,
+        points: [bullet.topleft]
       });
+    }
+    if (collide.inHitbox(bullet.topright, ent)) {
+      collided[collided.length - 1].points.push(bullet.topright);
     }
   }
   return collided;

@@ -80,20 +80,32 @@ module.exports.updateBullet = (bullet, entities, level, dt) ->
   xtile1 = level.pixelToTile bullet.topleft.x
   ytile1 = level.pixelToTile bullet.topleft.y
 
-  if level.tileHitbox xtile1, ytile1
-    collided.push {type: 'tile', location: [xtile1, ytile1]}
-
   xtile2 = level.pixelToTile bullet.topright.x
   ytile2 = level.pixelToTile bullet.topright.y
+  
+  hitleft = false
+  hitright = false
+  if level.tileHitbox xtile1, ytile1
+    hitleft = true
+  if level.tileHitbox xtile2, ytile2
+    hitright = true
 
-  if xtile2 != xtile1 or ytile2 != ytile1
-    if level.tileHitbox xtile2, ytile2
-      collided.push {type: 'tile', location: [xtile1, ytile1]}
+  if hitleft
+    collided.push {type: 'tile', location: [xtile1, ytile1], points: [bullet.topleft]}
+
+  if hitright
+    if xtile2 == xtile1 and ytile2 == ytile1
+      # the same tile - add collision point
+      collided[0].points.push bullet.topright
+    else
+      collided.push {type: 'tile', location: [xtile2, ytile2], points: [bullet.topright] }
 
   # check collisions with other entities
   for ent in entities
-    if collide.bulletCollide bullet, ent
-      collided.push {type: 'entity', entity: ent}
+    if collide.inHitbox bullet.topleft, ent
+      collided.push {type: 'entity', entity: ent, points: [bullet.topleft]}
+    if collide.inHitbox bullet.topright, ent
+      collided[collided.length - 1].points.push bullet.topright
 
   # return the array of objects the bullet collided with
   collided
