@@ -1,13 +1,5 @@
-c = require './constants'
-
-# true if hitboxes of entities (which are AABB's) overlap
-overlapAABB = (entity1, entity2) ->
-  h1 = entity1.hitbox
-  h2 = entity2.hitbox
-  not (((h1.x + h1.width) < h2.x) or
-       ((h2.x + h2.width) < h1.x) or 
-       ((h1.y + h1.height) < h2.y) or 
-       ((h2.y + h2.height) < h1.y))
+c           = require './constants'
+overlapAABB = require './overlap-aabb'
 
 
 # true if point is inside the entity's hitbox
