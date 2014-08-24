@@ -20,6 +20,8 @@ module.exports.setupEntity = (obj) ->
       # offsets from the top left in pixels
       xoff: obj.properties.hitbox.xoff
       yoff: obj.properties.hitbox.yoff
+      width: obj.properties.hitbox.width
+      height: obj.properties.hitbox.height
     dx: 0
     dy: 0
     gravity : c.METER * (obj.properties.gravity or c.GRAVITY)
@@ -37,8 +39,6 @@ module.exports.setupEntity = (obj) ->
 
   entity.hitbox.x = entity.rect.x + entity.hitbox.xoff
   entity.hitbox.y = entity.rect.y + entity.hitbox.yoff
-  entity.hitbox.height = entity.rect.height - 2 * entity.hitbox.yoff
-  entity.hitbox.width = entity.rect.width - 2 * entity.hitbox.xoff
 
   return entity
 

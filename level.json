@@ -20,7 +20,7 @@
                  "name":"player",
                  "properties":
                     {
-                     "hitbox": {"xoff": 6, "yoff": 8}
+                     "hitbox": { "xoff": 6, "yoff": 8, "width": 20, "height": 51 }
                      },
                  "type":"player",
                  "visible":true,
@@ -33,7 +33,7 @@
                  "name":"player",
                  "properties":
                     {
-                     "hitbox": {"xoff": 10, "yoff": 15}
+                     "hitbox": {"xoff": 10, "yoff": 15, "width": 16, "height": 70}
                      },
                  "type":"player",
                  "visible":true,
