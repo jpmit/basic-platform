@@ -276,6 +276,14 @@ module.exports.setupEntity = function(obj) {
   var entity, maxdx;
   obj.properties = obj.properties || {};
   maxdx = c.METER * (obj.properties.maxdx || c.MAXDX);
+  if (!obj.properties.hitbox) {
+    obj.properties.hitbox = {
+      xoff: obj.x,
+      yoff: obj.y,
+      width: obj.width,
+      height: obj.height
+    };
+  }
   entity = {
     x: obj.x,
     y: obj.y,
