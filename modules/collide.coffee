@@ -92,7 +92,7 @@ module.exports.levelCollideY = (entity, level, ynew) ->
 # rudimentary way).
 module.exports.entityCollide = (entity1, entity2) ->
 
-  if overlapAABB entity1, entity2
+  if overlapAABB entity1.hitbox, entity2.hitbox
     # no shim for Math.sign put in here since this response is really
     # a temporary placeholder.
     if entity1.dx > 0

@@ -80,7 +80,7 @@ module.exports.levelCollideY = function(entity, level, ynew) {
 };
 
 module.exports.entityCollide = function(entity1, entity2) {
-  if (overlapAABB(entity1, entity2)) {
+  if (overlapAABB(entity1.hitbox, entity2.hitbox)) {
     if (entity1.dx > 0) {
       return entity1.dx = -500;
     } else if (entity1.dx < 0) {
@@ -254,11 +254,8 @@ module.exports.stepY = function(entity, level, dt) {
 },{"./constants":2}],5:[function(require,module,exports){
 var overlapAABB;
 
-module.exports = overlapAABB = function(box1, box2) {
-  var h1, h2;
-  h1 = box1.hitbox;
-  h2 = box2.hitbox;
-  return !(((h1.x + h1.width) < h2.x) || ((h2.x + h2.width) < h1.x) || ((h1.y + h1.height) < h2.y) || ((h2.y + h2.height) < h1.y));
+module.exports = overlapAABB = function(b1, b2) {
+  return !(((b1.x + b1.width) < b2.x) || ((b2.x + b2.width) < b1.x) || ((b1.y + b1.height) < b2.y) || ((b2.y + b2.height) < b1.y));
 };
 
 
