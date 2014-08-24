@@ -2,13 +2,6 @@ c           = require './constants'
 overlapAABB = require './overlap-aabb'
 
 
-# true if point is inside the entity's hitbox
-module.exports.inHitbox = (point, entity) ->
-  h = entity.hitbox        
-  ((point.x > h.x) and (point.x < h.x + h.width) and
-   (point.y > h.y) and (point.y < h.y + h.height))
-
-
 module.exports.levelCollideX = (entity, level, xnew) ->
 
   # current top left position of hitbox

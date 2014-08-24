@@ -1,6 +1,7 @@
 collide    = require './collide'
 c          = require './constants'
 move       = require './move'
+inAABB     = require './point-in-aabb'
 
 # create a new physics object using some initial settings
 module.exports.setupEntity = (obj) ->
@@ -10,8 +11,8 @@ module.exports.setupEntity = (obj) ->
   # hitbox is optional; use rendering dimensions if not specified
   if not obj.properties.hitbox
     obj.properties.hitbox =
-      xoff: obj.x
-      yoff: obj.y
+      xoff: 0
+      yoff: 0
       width: obj.width
       height: obj.height
       
@@ -109,9 +110,9 @@ module.exports.updateBullet = (bullet, entities, level, dt) ->
 
   # check collisions with other entities
   for ent in entities
-    if collide.inHitbox bullet.topleft, ent
+    if inAABB bullet.topleft, ent.hitbox
       collided.push {type: 'entity', entity: ent, points: [bullet.topleft]}
-    if collide.inHitbox bullet.topright, ent
+    if inAABB bullet.topright, ent.hitbox
       collided[collided.length - 1].points.push bullet.topright
 
   # return the array of objects the bullet collided with
