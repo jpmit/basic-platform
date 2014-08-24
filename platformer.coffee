@@ -67,7 +67,7 @@ frame = ->
 
   # check if player firing bullet  
   if gun.firing and (!bullet)
-    bullet = {rect: {x: player.rect.x, y: player.rect.y, width: 10, height: 50}, angle: gun.angle}
+    bullet = {x: player.x, y: player.y, width: 10, height: 50, angle: gun.angle}
     bullet.dx = 400 * Math.sin(bullet.angle);
     bullet.dy = -400 * Math.cos(bullet.angle);
     # unit vector in the direction of bullet travel

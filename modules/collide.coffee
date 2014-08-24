@@ -46,7 +46,7 @@ module.exports.levelCollideX = (entity, level, xnew) ->
           else
             entity.hitbox.x = tentity.hitbox.x + tentity.hitbox.width
  
-  entity.rect.x = entity.hitbox.x - entity.hitbox.xoff
+  entity.x = entity.hitbox.x - entity.hitbox.xoff
 
 # move an entity through the level in the y direction
 module.exports.levelCollideY = (entity, level, ynew) ->
@@ -85,7 +85,7 @@ module.exports.levelCollideY = (entity, level, ynew) ->
           entity.onfloor = true
         break
 
-  entity.rect.y = entity.hitbox.y - entity.hitbox.yoff  
+  entity.y = entity.hitbox.y - entity.hitbox.yoff  
 
 
 # check if the player an monster collided and handle (currently in a

@@ -41,7 +41,7 @@ module.exports.levelCollideX = function(entity, level, xnew) {
       }
     }
   }
-  return entity.rect.x = entity.hitbox.x - entity.hitbox.xoff;
+  return entity.x = entity.hitbox.x - entity.hitbox.xoff;
 };
 
 module.exports.levelCollideY = function(entity, level, ynew) {
@@ -76,7 +76,7 @@ module.exports.levelCollideY = function(entity, level, ynew) {
       }
     }
   }
-  return entity.rect.y = entity.hitbox.y - entity.hitbox.yoff;
+  return entity.y = entity.hitbox.y - entity.hitbox.yoff;
 };
 
 module.exports.entityCollide = function(entity1, entity2) {
@@ -246,7 +246,7 @@ module.exports.stepY = function(entity, level, dt) {
     entity.jumping = false;
     entity.falling = true;
   }
-  return entity.rect.y + entity.hitbox.yoff + Math.floor(entity.dy * dt);
+  return entity.y + entity.hitbox.yoff + Math.floor(entity.dy * dt);
 };
 
 
@@ -277,12 +277,10 @@ module.exports.setupEntity = function(obj) {
   obj.properties = obj.properties || {};
   maxdx = c.METER * (obj.properties.maxdx || c.MAXDX);
   entity = {
-    rect: {
-      x: obj.x,
-      y: obj.y,
-      height: obj.height,
-      width: obj.width
-    },
+    x: obj.x,
+    y: obj.y,
+    height: obj.height,
+    width: obj.width,
     hitbox: {
       xoff: obj.properties.hitbox.xoff,
       yoff: obj.properties.hitbox.yoff,
@@ -305,8 +303,8 @@ module.exports.setupEntity = function(obj) {
     right: obj.properties.right,
     jump: null
   };
-  entity.hitbox.x = entity.rect.x + entity.hitbox.xoff;
-  entity.hitbox.y = entity.rect.y + entity.hitbox.yoff;
+  entity.hitbox.x = entity.x + entity.hitbox.xoff;
+  entity.hitbox.y = entity.y + entity.hitbox.yoff;
   return entity;
 };
 
@@ -320,17 +318,17 @@ module.exports.updateEntity = function(entity, level, dt) {
 
 module.exports.updateBullet = function(bullet, entities, level, dt) {
   var centerx, centery, collided, ent, hitleft, hitright, topleftx, toplefty, topmidx, topmidy, toprightx, toprighty, xtile1, xtile2, ytile1, ytile2, _i, _len;
-  bullet.rect.x += bullet.dx * dt;
-  bullet.rect.y += bullet.dy * dt;
+  bullet.x += bullet.dx * dt;
+  bullet.y += bullet.dy * dt;
   collided = [];
-  centerx = bullet.rect.x + bullet.rect.width / 2;
-  centery = bullet.rect.y + bullet.rect.height / 2;
-  topmidx = centerx + bullet.dir.x * bullet.rect.height / 2;
-  topmidy = centery + bullet.dir.y * bullet.rect.height / 2;
-  topleftx = topmidx + bullet.perp.x * bullet.rect.width / 2;
-  toplefty = topmidy + bullet.perp.y * bullet.rect.width / 2;
-  toprightx = topmidx - bullet.perp.x * bullet.rect.width / 2;
-  toprighty = topmidy - bullet.perp.y * bullet.rect.width / 2;
+  centerx = bullet.x + bullet.width / 2;
+  centery = bullet.y + bullet.height / 2;
+  topmidx = centerx + bullet.dir.x * bullet.height / 2;
+  topmidy = centery + bullet.dir.y * bullet.height / 2;
+  topleftx = topmidx + bullet.perp.x * bullet.width / 2;
+  toplefty = topmidy + bullet.perp.y * bullet.width / 2;
+  toprightx = topmidx - bullet.perp.x * bullet.width / 2;
+  toprighty = topmidy - bullet.perp.y * bullet.width / 2;
   bullet.topleft = {
     x: topleftx,
     y: toplefty
@@ -436,11 +434,11 @@ drawAngle = function(ctx, sprite) {
   }
   ctx.save();
   if (sprite.angle) {
-    hwidth = sprite.rect.width / 2;
-    hheight = sprite.rect.height / 2;
-    ctx.translate(sprite.rect.x + hwidth, sprite.rect.y + hheight);
+    hwidth = sprite.width / 2;
+    hheight = sprite.height / 2;
+    ctx.translate(sprite.x + hwidth, sprite.y + hheight);
     ctx.rotate(sprite.angle);
-    ctx.fillRect(-hwidth, -hheight, sprite.rect.width, sprite.rect.height);
+    ctx.fillRect(-hwidth, -hheight, sprite.width, sprite.height);
   }
   return ctx.restore();
 };
@@ -450,20 +448,20 @@ module.exports = function(ctx, me, enemies, gun, bullet, level) {
   ctx.clearRect(0, 0, level.width, level.height);
   renderLevel(ctx, level);
   ctx.fillStyle = c.COLOR.YELLOW;
-  ctx.fillRect(me.rect.x, me.rect.y, me.rect.width, me.rect.height);
+  ctx.fillRect(me.x, me.y, me.width, me.height);
   for (_i = 0, _len = enemies.length; _i < _len; _i++) {
     entity = enemies[_i];
     ctx.fillStyle = c.COLOR.WHITE;
-    ctx.fillRect(entity.rect.x, entity.rect.y, entity.rect.width, entity.rect.height);
+    ctx.fillRect(entity.x, entity.y, entity.width, entity.height);
   }
   ctx.fillStyle = c.COLOR.BLUE;
-  ctx.fillRect(me.rect.x + me.hitbox.xoff, me.rect.y + me.hitbox.yoff, me.hitbox.width, me.hitbox.height);
+  ctx.fillRect(me.x + me.hitbox.xoff, me.y + me.hitbox.yoff, me.hitbox.width, me.hitbox.height);
   for (_j = 0, _len1 = enemies.length; _j < _len1; _j++) {
     entity = enemies[_j];
-    ctx.fillRect(entity.rect.x + entity.hitbox.xoff, entity.rect.y + entity.hitbox.yoff, entity.hitbox.width, entity.hitbox.height);
+    ctx.fillRect(entity.x + entity.hitbox.xoff, entity.y + entity.hitbox.yoff, entity.hitbox.width, entity.hitbox.height);
   }
-  gunx = me.rect.x + me.rect.width / 2 + Math.sin(gun.angle) * 50;
-  guny = me.rect.y + me.rect.height / 2 - Math.cos(gun.angle) * 50;
+  gunx = me.x + me.width / 2 + Math.sin(gun.angle) * 50;
+  guny = me.y + me.height / 2 - Math.cos(gun.angle) * 50;
   ctx.fillRect(gunx - 2, guny - 2, 4, 4);
   return drawAngle(ctx, bullet);
 };
@@ -774,12 +772,10 @@ frame = function() {
   dt = dt + Math.min(1, (now - last) / 1000);
   if (gun.firing && (!bullet)) {
     bullet = {
-      rect: {
-        x: player.rect.x,
-        y: player.rect.y,
-        width: 10,
-        height: 50
-      },
+      x: player.x,
+      y: player.y,
+      width: 10,
+      height: 50,
       angle: gun.angle
     };
     bullet.dx = 400 * Math.sin(bullet.angle);

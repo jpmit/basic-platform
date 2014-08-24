@@ -17,11 +17,11 @@ drawAngle = (ctx, sprite) ->
     return
   ctx.save()
   if (sprite.angle)
-    hwidth = sprite.rect.width / 2
-    hheight = sprite.rect.height / 2          
-    ctx.translate(sprite.rect.x + hwidth, sprite.rect.y + hheight);
+    hwidth = sprite.width / 2
+    hheight = sprite.height / 2          
+    ctx.translate(sprite.x + hwidth, sprite.y + hheight);
     ctx.rotate(sprite.angle);
-    ctx.fillRect(-hwidth, -hheight, sprite.rect.width, sprite.rect.height);
+    ctx.fillRect(-hwidth, -hheight, sprite.width, sprite.height);
   ctx.restore();
 
 
@@ -32,23 +32,23 @@ module.exports = (ctx, me, enemies, gun, bullet, level) ->
 
   # draw the player sprite in yellow
   ctx.fillStyle = c.COLOR.YELLOW
-  ctx.fillRect(me.rect.x, me.rect.y, me.rect.width, me.rect.height)
+  ctx.fillRect(me.x, me.y, me.width, me.height)
 
   # draw the monster sprite in white
   for entity in enemies
     ctx.fillStyle = c.COLOR.WHITE
-    ctx.fillRect(entity.rect.x, entity.rect.y, entity.rect.width, entity.rect.height)
+    ctx.fillRect(entity.x, entity.y, entity.width, entity.height)
 
   # draw the hitboxes in blue
   ctx.fillStyle = c.COLOR.BLUE
-  ctx.fillRect(me.rect.x + me.hitbox.xoff, me.rect.y + me.hitbox.yoff, me.hitbox.width, me.hitbox.height)
+  ctx.fillRect(me.x + me.hitbox.xoff, me.y + me.hitbox.yoff, me.hitbox.width, me.hitbox.height)
 
   for entity in enemies
-    ctx.fillRect(entity.rect.x + entity.hitbox.xoff, entity.rect.y + entity.hitbox.yoff, entity.hitbox.width, entity.hitbox.height)
+    ctx.fillRect(entity.x + entity.hitbox.xoff, entity.y + entity.hitbox.yoff, entity.hitbox.width, entity.hitbox.height)
 
   # draw the gun 'crosshair'
-  gunx = me.rect.x + me.rect.width / 2 + Math.sin(gun.angle) * 50
-  guny = me.rect.y + me.rect.height / 2 - Math.cos(gun.angle) * 50
+  gunx = me.x + me.width / 2 + Math.sin(gun.angle) * 50
+  guny = me.y + me.height / 2 - Math.cos(gun.angle) * 50
   ctx.fillRect(gunx - 2, guny - 2, 4, 4)
 
   # draw the bullet (if there is one)

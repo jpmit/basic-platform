@@ -8,14 +8,13 @@ module.exports.setupEntity = (obj) ->
   maxdx = c.METER * (obj.properties.maxdx or c.MAXDX)
 
   entity =
-    # rect is the AABB of the entity, and the x, y co-ordinate is the
+    # the AABB of the entity, and the x, y co-ordinate is the
     # top left of the AABB (stored in pixels). The 'hitbox' can be
     # offset from this point by any amount in whole pixels.
-    rect:
-      x: obj.x
-      y: obj.y
-      height: obj.height
-      width: obj.width
+    x: obj.x
+    y: obj.y
+    height: obj.height
+    width: obj.width
     hitbox:
       # offsets from the top left in pixels
       xoff: obj.properties.hitbox.xoff
@@ -37,8 +36,8 @@ module.exports.setupEntity = (obj) ->
     right   : obj.properties.right
     jump    : null
 
-  entity.hitbox.x = entity.rect.x + entity.hitbox.xoff
-  entity.hitbox.y = entity.rect.y + entity.hitbox.yoff
+  entity.hitbox.x = entity.x + entity.hitbox.xoff
+  entity.hitbox.y = entity.y + entity.hitbox.yoff
 
   return entity
 
@@ -58,19 +57,19 @@ module.exports.updateEntity = (entity, level, dt) ->
 # returns an array containing tiles / entities bullet collided with
 module.exports.updateBullet = (bullet, entities, level, dt) ->
 
-  bullet.rect.x += bullet.dx * dt
-  bullet.rect.y += bullet.dy * dt
+  bullet.x += bullet.dx * dt
+  bullet.y += bullet.dy * dt
 
   collided = []
 
-  centerx = bullet.rect.x + bullet.rect.width / 2
-  centery = bullet.rect.y + bullet.rect.height / 2
-  topmidx = centerx + bullet.dir.x * bullet.rect.height / 2
-  topmidy = centery + bullet.dir.y * bullet.rect.height / 2
-  topleftx = topmidx + bullet.perp.x * bullet.rect.width / 2
-  toplefty = topmidy + bullet.perp.y * bullet.rect.width / 2
-  toprightx = topmidx - bullet.perp.x * bullet.rect.width / 2
-  toprighty = topmidy - bullet.perp.y * bullet.rect.width / 2
+  centerx = bullet.x + bullet.width / 2
+  centery = bullet.y + bullet.height / 2
+  topmidx = centerx + bullet.dir.x * bullet.height / 2
+  topmidy = centery + bullet.dir.y * bullet.height / 2
+  topleftx = topmidx + bullet.perp.x * bullet.width / 2
+  toplefty = topmidy + bullet.perp.y * bullet.width / 2
+  toprightx = topmidx - bullet.perp.x * bullet.width / 2
+  toprighty = topmidy - bullet.perp.y * bullet.width / 2
 
   # store the two points on the front edge of the bullet
   bullet.topleft = {x: topleftx, y: toplefty}

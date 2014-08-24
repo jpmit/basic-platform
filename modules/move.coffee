@@ -45,4 +45,4 @@ module.exports.stepY = (entity, level, dt) ->
     entity.jumping = false
     entity.falling = true
         
-  entity.rect.y + entity.hitbox.yoff + Math.floor(entity.dy * dt)
+  entity.y + entity.hitbox.yoff + Math.floor(entity.dy * dt)
