@@ -7,6 +7,14 @@ module.exports.setupEntity = (obj) ->
   obj.properties = obj.properties or {}
   maxdx = c.METER * (obj.properties.maxdx or c.MAXDX)
 
+  # hitbox is optional; use rendering dimensions if not specified
+  if not obj.properties.hitbox
+    obj.properties.hitbox =
+      xoff: obj.x
+      yoff: obj.y
+      width: obj.width
+      height: obj.height
+      
   entity =
     # the AABB of the entity, and the x, y co-ordinate is the
     # top left of the AABB (stored in pixels). The 'hitbox' can be
