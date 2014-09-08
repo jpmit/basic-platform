@@ -1,6 +1,6 @@
-collide    = require './collide'
+collide    = require './physics-collide'
 c          = require './constants'
-move       = require './move'
+move       = require './physics-move'
 inAABB     = require './point-in-aabb'
 
 # create a new physics object using some initial settings
