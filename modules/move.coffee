@@ -1,4 +1,5 @@
-c = require './constants'
+c     = require './constants'
+clamp = require './clamp'
 
 # move an entity through the level in the x direction, return the new
 # x position (top left co-ord of hitbox)
@@ -21,7 +22,7 @@ module.exports.stepX = (entity, level, dt) ->
   else if wasright
     entity.ddx = entity.ddx - friction
 
-  entity.dx = entity.dx + entity.ddx*dt
+  entity.dx = clamp(entity.dx + (entity.ddx*dt), -entity.maxdx, entity.maxdx)
 
   if (wasleft and (entity.dx > 0)) or (wasright and (entity.dx < 0))
     # clamp at zero to prevent friction from making us jiggle side to side
@@ -39,7 +40,7 @@ module.exports.stepY = (entity, level, dt) ->
     entity.jumping = true
     entity.onfloor = false
 
-  entity.dy = entity.dy + dt * entity.ddy
+  entity.dy = clamp(entity.dy + (entity.ddy*dt), -entity.maxdy, entity.maxdy)
 
   if entity.dy > 0
     entity.jumping = false
