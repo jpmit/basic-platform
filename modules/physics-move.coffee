@@ -1,6 +1,7 @@
 c     = require './constants'
 clamp = require './clamp'
 
+
 # move an entity through the level in the x direction, return the new
 # x position (top left co-ord of hitbox)
 module.exports.stepX = (entity, level, dt) ->

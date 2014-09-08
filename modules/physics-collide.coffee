@@ -1,5 +1,5 @@
 c           = require './constants'
-overlapAABB = require './overlap-aabb'
+overlapAABB = require './aabb-overlap'
 
 
 module.exports.levelCollideX = (entity, level, xnew) ->

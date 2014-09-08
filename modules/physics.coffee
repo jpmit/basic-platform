@@ -1,7 +1,8 @@
 collide    = require './physics-collide'
 c          = require './constants'
 move       = require './physics-move'
-inAABB     = require './point-in-aabb'
+inAABB     = require './aabb-point-inside'
+
 
 # create a new physics object using some initial settings
 module.exports.setupEntity = (obj) ->
