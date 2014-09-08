@@ -1,9 +1,148 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var overlapAABB;
+
+module.exports = overlapAABB = function(b1, b2) {
+  return !(((b1.x + b1.width) < b2.x) || ((b2.x + b2.width) < b1.x) || ((b1.y + b1.height) < b2.y) || ((b2.y + b2.height) < b1.y));
+};
+
+
+
+},{}],2:[function(require,module,exports){
+var pointInAABB;
+
+module.exports = pointInAABB = function(point, box) {
+  return (point.x > box.x) && (point.x < box.x + box.width) && (point.y > box.y) && (point.y < box.y + box.height);
+};
+
+
+
+},{}],3:[function(require,module,exports){
+module.exports = function(x, min, max) {
+  return Math.max(min, Math.min(max, x));
+};
+
+
+
+},{}],4:[function(require,module,exports){
+var COLOR, FPS, TILE;
+
+COLOR = {
+  GREEN: '#33CC66',
+  BLUE: '#0066CC',
+  BLACK: '#000000',
+  WHITE: '#FFFFFF',
+  YELLOW: '#ECD078',
+  BRICK: '#D95B43',
+  HOT_PINK: '#FF3399',
+  PINK: '#C02942',
+  PURPLE: '#542437',
+  GREY: '#333',
+  SLATE: '#53777A',
+  GOLD: 'gold'
+};
+
+TILE = 32;
+
+FPS = 60;
+
+module.exports = {
+  TILE: TILE,
+  METER: TILE,
+  GRAVITY: 9.8 * 6,
+  MAXDX: 15,
+  MAXDY: 60,
+  ACCEL: 1 / 2,
+  FRICTION: 1 / 6,
+  IMPULSE: 1500,
+  COLOR: COLOR,
+  COLORS: [COLOR.YELLOW, COLOR.BRICK, COLOR.PINK, COLOR.PURPLE, COLOR.GREY],
+  KEY: {
+    CTRL: 17,
+    SPACE: 32,
+    LEFT: 83,
+    UP: 69,
+    RIGHT: 70,
+    DOWN: 68,
+    GUNUP: 38,
+    GUNDOWN: 40
+  },
+  STEP: 1 / FPS
+};
+
+
+
+},{}],5:[function(require,module,exports){
+var Level, c;
+
+c = require('./constants');
+
+Level = (function() {
+  function Level(obj) {
+    this.cells = obj.layers[0].data;
+    this.collision_cells = this.cells;
+    this.image = new Image();
+    this.objects = [];
+    this.width = obj.width * c.TILE;
+    this.height = obj.height * c.TILE;
+    this.tw = obj.width;
+    this.th = obj.height;
+  }
+
+  Level.prototype.cellValue = function(x, y, type) {
+    if (type == null) {
+      type = 'render';
+    }
+    return this.tileToValue(this.pixelToTile(x), this.pixelToTile(y), type);
+  };
+
+  Level.prototype.pixelToTile = function(p) {
+    return Math.floor(p / c.TILE);
+  };
+
+  Level.prototype.tileToPixel = function(t) {
+    return t * c.TILE;
+  };
+
+  Level.prototype.tileToValue = function(tx, ty, type) {
+    if (type == null) {
+      type = 'render';
+    }
+    if (type === 'render') {
+      return this.cells[tx + (ty * this.tw)];
+    } else {
+      return this.collision_cells[tx + (ty * this.tw)];
+    }
+  };
+
+  Level.prototype.tileHitbox = function(tx, ty) {
+    var val;
+    val = this.tileToValue(tx, ty);
+    if (val) {
+      return {
+        hitbox: {
+          x: tx * c.TILE,
+          y: ty * c.TILE,
+          width: c.TILE,
+          height: c.TILE
+        }
+      };
+    }
+  };
+
+  return Level;
+
+})();
+
+module.exports = Level;
+
+
+
+},{"./constants":4}],6:[function(require,module,exports){
 var c, overlapAABB;
 
 c = require('./constants');
 
-overlapAABB = require('./overlap-aabb');
+overlapAABB = require('./aabb-overlap');
 
 module.exports.levelCollideX = function(entity, level, xnew) {
   var tentity, xold, xtilenew, xtileold, yold, ytile, ytilebottom, ytiletop, _i;
@@ -85,124 +224,12 @@ module.exports.entityCollide = function(entity1, entity2) {
 
 
 
-},{"./constants":2,"./overlap-aabb":5}],2:[function(require,module,exports){
-var COLOR, FPS, TILE;
-
-COLOR = {
-  GREEN: '#33CC66',
-  BLUE: '#0066CC',
-  BLACK: '#000000',
-  WHITE: '#FFFFFF',
-  YELLOW: '#ECD078',
-  BRICK: '#D95B43',
-  HOT_PINK: '#FF3399',
-  PINK: '#C02942',
-  PURPLE: '#542437',
-  GREY: '#333',
-  SLATE: '#53777A',
-  GOLD: 'gold'
-};
-
-TILE = 32;
-
-FPS = 60;
-
-module.exports = {
-  TILE: TILE,
-  METER: TILE,
-  GRAVITY: 9.8 * 6,
-  MAXDX: 15,
-  MAXDY: 60,
-  ACCEL: 1 / 2,
-  FRICTION: 1 / 6,
-  IMPULSE: 1500,
-  COLOR: COLOR,
-  COLORS: [COLOR.YELLOW, COLOR.BRICK, COLOR.PINK, COLOR.PURPLE, COLOR.GREY],
-  KEY: {
-    CTRL: 17,
-    SPACE: 32,
-    LEFT: 83,
-    UP: 69,
-    RIGHT: 70,
-    DOWN: 68,
-    GUNUP: 38,
-    GUNDOWN: 40
-  },
-  STEP: 1 / FPS
-};
-
-
-
-},{}],3:[function(require,module,exports){
-var Level, c;
+},{"./aabb-overlap":1,"./constants":4}],7:[function(require,module,exports){
+var c, clamp;
 
 c = require('./constants');
 
-Level = (function() {
-  function Level(obj) {
-    this.cells = obj.layers[0].data;
-    this.collision_cells = this.cells;
-    this.image = new Image();
-    this.objects = [];
-    this.width = obj.width * c.TILE;
-    this.height = obj.height * c.TILE;
-    this.tw = obj.width;
-    this.th = obj.height;
-  }
-
-  Level.prototype.cellValue = function(x, y, type) {
-    if (type == null) {
-      type = 'render';
-    }
-    return this.tileToValue(this.pixelToTile(x), this.pixelToTile(y), type);
-  };
-
-  Level.prototype.pixelToTile = function(p) {
-    return Math.floor(p / c.TILE);
-  };
-
-  Level.prototype.tileToPixel = function(t) {
-    return t * c.TILE;
-  };
-
-  Level.prototype.tileToValue = function(tx, ty, type) {
-    if (type == null) {
-      type = 'render';
-    }
-    if (type === 'render') {
-      return this.cells[tx + (ty * this.tw)];
-    } else {
-      return this.collision_cells[tx + (ty * this.tw)];
-    }
-  };
-
-  Level.prototype.tileHitbox = function(tx, ty) {
-    var val;
-    val = this.tileToValue(tx, ty);
-    if (val) {
-      return {
-        hitbox: {
-          x: tx * c.TILE,
-          y: ty * c.TILE,
-          width: c.TILE,
-          height: c.TILE
-        }
-      };
-    }
-  };
-
-  return Level;
-
-})();
-
-module.exports = Level;
-
-
-
-},{"./constants":2}],4:[function(require,module,exports){
-var c;
-
-c = require('./constants');
+clamp = require('./clamp');
 
 module.exports.stepX = function(entity, level, dt) {
   var accel, friction, wasleft, wasright;
@@ -221,7 +248,7 @@ module.exports.stepX = function(entity, level, dt) {
   } else if (wasright) {
     entity.ddx = entity.ddx - friction;
   }
-  entity.dx = entity.dx + entity.ddx * dt;
+  entity.dx = clamp(entity.dx + (entity.ddx * dt), -entity.maxdx, entity.maxdx);
   if ((wasleft && (entity.dx > 0)) || (wasright && (entity.dx < 0))) {
     entity.dx = 0;
   }
@@ -235,7 +262,7 @@ module.exports.stepY = function(entity, level, dt) {
     entity.jumping = true;
     entity.onfloor = false;
   }
-  entity.dy = entity.dy + dt * entity.ddy;
+  entity.dy = clamp(entity.dy + (entity.ddy * dt), -entity.maxdy, entity.maxdy);
   if (entity.dy > 0) {
     entity.jumping = false;
     entity.falling = true;
@@ -245,25 +272,16 @@ module.exports.stepY = function(entity, level, dt) {
 
 
 
-},{"./constants":2}],5:[function(require,module,exports){
-var overlapAABB;
-
-module.exports = overlapAABB = function(b1, b2) {
-  return !(((b1.x + b1.width) < b2.x) || ((b2.x + b2.width) < b1.x) || ((b1.y + b1.height) < b2.y) || ((b2.y + b2.height) < b1.y));
-};
-
-
-
-},{}],6:[function(require,module,exports){
+},{"./clamp":3,"./constants":4}],8:[function(require,module,exports){
 var c, collide, inAABB, move;
 
-collide = require('./collide');
+collide = require('./physics-collide');
 
 c = require('./constants');
 
-move = require('./move');
+move = require('./physics-move');
 
-inAABB = require('./point-in-aabb');
+inAABB = require('./aabb-point-inside');
 
 module.exports.setupEntity = function(obj) {
   var entity, maxdx;
@@ -400,16 +418,7 @@ module.exports.updateGun = function(gun, dt) {
 
 
 
-},{"./collide":1,"./constants":2,"./move":4,"./point-in-aabb":7}],7:[function(require,module,exports){
-var pointInAABB;
-
-module.exports = pointInAABB = function(point, box) {
-  return (point.x > box.x) && (point.x < box.x + box.width) && (point.y > box.y) && (point.y < box.y + box.height);
-};
-
-
-
-},{}],8:[function(require,module,exports){
+},{"./aabb-point-inside":2,"./constants":4,"./physics-collide":6,"./physics-move":7}],9:[function(require,module,exports){
 var c, drawAngle, renderLevel;
 
 c = require('./constants');
@@ -478,7 +487,7 @@ module.exports = function(ctx, me, enemies, gun, bullet, level) {
 
 
 
-},{"./constants":2}],9:[function(require,module,exports){
+},{"./constants":4}],10:[function(require,module,exports){
 module.exports = function() {
   if ((typeof window !== "undefined" && window !== null) && window.performance && window.performance.now) {
     return window.performance.now();
@@ -489,7 +498,7 @@ module.exports = function() {
 
 
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 var unitVector;
 
 module.exports = unitVector = function(v) {
@@ -503,7 +512,7 @@ module.exports = unitVector = function(v) {
 
 
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -568,7 +577,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 var now = require('performance-now')
   , global = typeof window === 'undefined' ? {} : window
   , vendors = ['moz', 'webkit']
@@ -650,7 +659,7 @@ module.exports.cancel = function() {
   caf.apply(global, arguments)
 }
 
-},{"performance-now":13}],13:[function(require,module,exports){
+},{"performance-now":14}],14:[function(require,module,exports){
 (function (process){
 // Generated by CoffeeScript 1.6.3
 (function() {
@@ -690,7 +699,7 @@ module.exports.cancel = function() {
 */
 
 }).call(this,require("FWaASH"))
-},{"FWaASH":11}],14:[function(require,module,exports){
+},{"FWaASH":12}],15:[function(require,module,exports){
 var Level, bullet, c, canvas, collide, ctx, dt, enemyEntities, frame, fs, gun, last, level, monster, now, onkey, physics, player, raf, render, setup, time, unitVector;
 
 Level = require('./modules/level');
@@ -701,7 +710,7 @@ c = require('./modules/constants');
 
 physics = require('./modules/physics');
 
-collide = require('./modules/collide');
+collide = require('./modules/physics-collide');
 
 raf = require('raf');
 
@@ -838,4 +847,4 @@ frame();
 
 
 
-},{"./modules/collide":1,"./modules/constants":2,"./modules/level":3,"./modules/physics":6,"./modules/renderer":8,"./modules/time":9,"./modules/v2-unit":10,"raf":12}]},{},[14])
+},{"./modules/constants":4,"./modules/level":5,"./modules/physics":8,"./modules/physics-collide":6,"./modules/renderer":9,"./modules/time":10,"./modules/v2-unit":11,"raf":13}]},{},[15])
