@@ -20,6 +20,7 @@ monster = null
 enemyEntities = []
 gun = null
 bullet = null
+bulletUpdates = 3
 
 onkey = (ev, key, down) ->
   switch key
@@ -82,12 +83,14 @@ frame = ->
       physics.updateEntity entity, level, c.STEP
     # update the aiming of the gun
     physics.updateGun gun, c.STEP
-    if bullet
-      # did the bullet collide with the level or other entities?
-      bulletCollides =  physics.updateBullet bullet, enemyEntities, level, c.STEP
-      if bulletCollides.length > 0
-        console.log bulletCollides              
-        bullet = null
+    for _ in [1..bulletUpdates] by 1
+      if bullet
+        console.log _
+        # did the bullet collide with the level or other entities?
+        bulletCollides =  physics.updateBullet bullet, enemyEntities, level, c.STEP / bulletUpdates
+        if bulletCollides.length > 0
+          console.log bulletCollides      
+          bullet = null
     # detect (and handle) collision between player and other entities
     for entity in enemyEntities
       collide.entityCollide player, entity
