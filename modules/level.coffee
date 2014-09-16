@@ -37,10 +37,11 @@ class Level
     else
       @collision_cells[tx + (ty * @tw)]
 
-  # get the tile hitbox
-  tileHitbox: (tx, ty) ->
+  # get the tile entity: mainly useful for hitbox property
+  tileEntity: (tx, ty) ->
     val = @tileToValue tx, ty
     if val
+      type: "tile"
       hitbox:
         x : tx * c.TILE
         y : ty * c.TILE
