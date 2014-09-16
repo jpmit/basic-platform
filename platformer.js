@@ -114,11 +114,12 @@ Level = (function() {
     }
   };
 
-  Level.prototype.tileHitbox = function(tx, ty) {
+  Level.prototype.tileEntity = function(tx, ty) {
     var val;
     val = this.tileToValue(tx, ty);
     if (val) {
       return {
+        type: "tile",
         hitbox: {
           x: tx * c.TILE,
           y: ty * c.TILE,
@@ -162,7 +163,7 @@ module.exports.levelCollideX = function(entity, level, xnew) {
     ytiletop = level.pixelToTile(yold);
     ytilebottom = level.pixelToTile(yold + entity.hitbox.height - 1);
     for (ytile = _i = ytilebottom; ytilebottom <= ytiletop ? _i <= ytiletop : _i >= ytiletop; ytile = ytilebottom <= ytiletop ? ++_i : --_i) {
-      tentity = level.tileHitbox(xtilenew, ytile);
+      tentity = level.tileEntity(xtilenew, ytile);
       if (tentity) {
         entity.dx = 0;
         entity.ddx = 0;
@@ -195,7 +196,7 @@ module.exports.levelCollideY = function(entity, level, ynew) {
     xtileleft = level.pixelToTile(xold);
     xtileright = level.pixelToTile(xold + entity.hitbox.width - 1);
     for (xtile = _i = xtileleft; xtileleft <= xtileright ? _i <= xtileright : _i >= xtileright; xtile = xtileleft <= xtileright ? ++_i : --_i) {
-      tentity = level.tileHitbox(xtile, ytilenew);
+      tentity = level.tileEntity(xtile, ytilenew);
       if (tentity) {
         entity.dy = 0;
         entity.ddy = 0;
@@ -336,68 +337,78 @@ module.exports.updateEntity = function(entity, level, dt) {
 };
 
 module.exports.updateBullet = function(bullet, entities, level, dt) {
-  var centerx, centery, collided, ent, hitleft, hitright, topleftx, toplefty, topmidx, topmidy, toprightx, toprighty, xtile1, xtile2, ytile1, ytile2, _i, _len;
+  var centerx, centery, collided, ent, hb, i, mini, minp, normals, pens, points, tentity, topmidx, topmidy, x, xtile, y, ytile, _i, _j, _len;
   bullet.x += bullet.dx * dt;
   bullet.y += bullet.dy * dt;
-  collided = [];
   centerx = bullet.x + bullet.width / 2;
   centery = bullet.y + bullet.height / 2;
   topmidx = centerx + bullet.dir.x * bullet.height / 2;
   topmidy = centery + bullet.dir.y * bullet.height / 2;
-  topleftx = topmidx + bullet.perp.x * bullet.width / 2;
-  toplefty = topmidy + bullet.perp.y * bullet.width / 2;
-  toprightx = topmidx - bullet.perp.x * bullet.width / 2;
-  toprighty = topmidy - bullet.perp.y * bullet.width / 2;
-  bullet.topleft = {
-    x: topleftx,
-    y: toplefty
+  bullet.topmid = {
+    x: topmidx,
+    y: topmidy
   };
-  bullet.topright = {
-    x: toprightx,
-    y: toprighty
-  };
-  xtile1 = level.pixelToTile(bullet.topleft.x);
-  ytile1 = level.pixelToTile(bullet.topleft.y);
-  xtile2 = level.pixelToTile(bullet.topright.x);
-  ytile2 = level.pixelToTile(bullet.topright.y);
-  hitleft = false;
-  hitright = false;
-  if (level.tileHitbox(xtile1, ytile1)) {
-    hitleft = true;
+  xtile = level.pixelToTile(bullet.topmid.x);
+  ytile = level.pixelToTile(bullet.topmid.y);
+  tentity = level.tileEntity(xtile, ytile);
+  if (tentity) {
+    entities.push(tentity);
   }
-  if (level.tileHitbox(xtile2, ytile2)) {
-    hitright = true;
-  }
-  if (hitleft) {
-    collided.push({
-      type: 'tile',
-      location: [xtile1, ytile1],
-      points: [bullet.topleft]
-    });
-  }
-  if (hitright) {
-    if (xtile2 === xtile1 && ytile2 === ytile1) {
-      collided[0].points.push(bullet.topright);
-    } else {
-      collided.push({
-        type: 'tile',
-        location: [xtile2, ytile2],
-        points: [bullet.topright]
-      });
-    }
-  }
+  collided = [];
   for (_i = 0, _len = entities.length; _i < _len; _i++) {
     ent = entities[_i];
-    if (inAABB(bullet.topleft, ent.hitbox)) {
+    if (inAABB(bullet.topmid, ent.hitbox)) {
+      hb = ent.hitbox;
+      x = bullet.topmid.x;
+      y = bullet.topmid.y;
+      pens = [y - hb.y, hb.x + hb.width - x, hb.y + hb.height - y, x - hb.x];
+      normals = [
+        {
+          x: 0,
+          y: -1
+        }, {
+          x: 1,
+          y: 0
+        }, {
+          x: 0,
+          y: 1
+        }, {
+          x: -1,
+          y: 0
+        }
+      ];
+      points = [
+        {
+          x: x,
+          y: hb.y
+        }, {
+          x: hb.x + hb.width,
+          y: y
+        }, {
+          x: x,
+          y: hb.y + hb.height
+        }, {
+          x: hb.x,
+          y: y
+        }
+      ];
+      minp = pens[0];
+      mini = 0;
+      for (i = _j = 1; _j <= 3; i = ++_j) {
+        if (pens[i] < minp) {
+          mini = i;
+          minp = pens[i];
+        }
+      }
       collided.push({
-        type: 'entity',
-        entity: ent,
-        points: [bullet.topleft]
+        type: ent.type || 'entity',
+        point: points[mini],
+        normal: normals[mini]
       });
     }
-    if (inAABB(bullet.topright, ent.hitbox)) {
-      collided[collided.length - 1].points.push(bullet.topright);
-    }
+  }
+  if (tentity) {
+    entities.pop(tentity);
   }
   return collided;
 };
@@ -796,11 +807,11 @@ frame = function() {
       x: player.x,
       y: player.y,
       width: 10,
-      height: 50,
+      height: 100,
       angle: gun.angle
     };
-    bullet.dx = 400 * Math.sin(bullet.angle);
-    bullet.dy = -400 * Math.cos(bullet.angle);
+    bullet.dx = 800 * Math.sin(bullet.angle);
+    bullet.dy = -800 * Math.cos(bullet.angle);
     bullet.dir = unitVector({
       x: bullet.dx,
       y: bullet.dy
@@ -820,7 +831,6 @@ frame = function() {
     physics.updateGun(gun, c.STEP);
     for (_ = _j = 1; _j <= bulletUpdates; _ = _j += 1) {
       if (bullet) {
-        console.log(_);
         bulletCollides = physics.updateBullet(bullet, enemyEntities, level, c.STEP / bulletUpdates);
         if (bulletCollides.length > 0) {
           console.log(bulletCollides);
