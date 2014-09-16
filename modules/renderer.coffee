@@ -52,4 +52,4 @@ module.exports = (ctx, me, enemies, gun, bullet, level) ->
   ctx.fillRect(gunx - 2, guny - 2, 4, 4)
 
   # draw the bullet (if there is one)
-  drawAngle ctx, bullet              
+  drawAngle ctx, bullet

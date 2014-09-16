@@ -114,11 +114,12 @@ Level = (function() {
     }
   };
 
-  Level.prototype.tileHitbox = function(tx, ty) {
+  Level.prototype.tileEntity = function(tx, ty) {
     var val;
     val = this.tileToValue(tx, ty);
     if (val) {
       return {
+        type: "tile",
         hitbox: {
           x: tx * c.TILE,
           y: ty * c.TILE,
@@ -162,7 +163,7 @@ module.exports.levelCollideX = function(entity, level, xnew) {
     ytiletop = level.pixelToTile(yold);
     ytilebottom = level.pixelToTile(yold + entity.hitbox.height - 1);
     for (ytile = _i = ytilebottom; ytilebottom <= ytiletop ? _i <= ytiletop : _i >= ytiletop; ytile = ytilebottom <= ytiletop ? ++_i : --_i) {
-      tentity = level.tileHitbox(xtilenew, ytile);
+      tentity = level.tileEntity(xtilenew, ytile);
       if (tentity) {
         entity.dx = 0;
         entity.ddx = 0;
@@ -195,7 +196,7 @@ module.exports.levelCollideY = function(entity, level, ynew) {
     xtileleft = level.pixelToTile(xold);
     xtileright = level.pixelToTile(xold + entity.hitbox.width - 1);
     for (xtile = _i = xtileleft; xtileleft <= xtileright ? _i <= xtileright : _i >= xtileright; xtile = xtileleft <= xtileright ? ++_i : --_i) {
-      tentity = level.tileHitbox(xtile, ytilenew);
+      tentity = level.tileEntity(xtile, ytilenew);
       if (tentity) {
         entity.dy = 0;
         entity.ddy = 0;
@@ -336,68 +337,78 @@ module.exports.updateEntity = function(entity, level, dt) {
 };
 
 module.exports.updateBullet = function(bullet, entities, level, dt) {
-  var centerx, centery, collided, ent, hitleft, hitright, topleftx, toplefty, topmidx, topmidy, toprightx, toprighty, xtile1, xtile2, ytile1, ytile2, _i, _len;
+  var centerx, centery, collided, ent, hb, i, mini, minp, normals, pens, points, tentity, topmidx, topmidy, x, xtile, y, ytile, _i, _j, _len;
   bullet.x += bullet.dx * dt;
   bullet.y += bullet.dy * dt;
-  collided = [];
   centerx = bullet.x + bullet.width / 2;
   centery = bullet.y + bullet.height / 2;
   topmidx = centerx + bullet.dir.x * bullet.height / 2;
   topmidy = centery + bullet.dir.y * bullet.height / 2;
-  topleftx = topmidx + bullet.perp.x * bullet.width / 2;
-  toplefty = topmidy + bullet.perp.y * bullet.width / 2;
-  toprightx = topmidx - bullet.perp.x * bullet.width / 2;
-  toprighty = topmidy - bullet.perp.y * bullet.width / 2;
-  bullet.topleft = {
-    x: topleftx,
-    y: toplefty
+  bullet.topmid = {
+    x: topmidx,
+    y: topmidy
   };
-  bullet.topright = {
-    x: toprightx,
-    y: toprighty
-  };
-  xtile1 = level.pixelToTile(bullet.topleft.x);
-  ytile1 = level.pixelToTile(bullet.topleft.y);
-  xtile2 = level.pixelToTile(bullet.topright.x);
-  ytile2 = level.pixelToTile(bullet.topright.y);
-  hitleft = false;
-  hitright = false;
-  if (level.tileHitbox(xtile1, ytile1)) {
-    hitleft = true;
+  xtile = level.pixelToTile(bullet.topmid.x);
+  ytile = level.pixelToTile(bullet.topmid.y);
+  tentity = level.tileEntity(xtile, ytile);
+  if (tentity) {
+    entities.push(tentity);
   }
-  if (level.tileHitbox(xtile2, ytile2)) {
-    hitright = true;
-  }
-  if (hitleft) {
-    collided.push({
-      type: 'tile',
-      location: [xtile1, ytile1],
-      points: [bullet.topleft]
-    });
-  }
-  if (hitright) {
-    if (xtile2 === xtile1 && ytile2 === ytile1) {
-      collided[0].points.push(bullet.topright);
-    } else {
-      collided.push({
-        type: 'tile',
-        location: [xtile2, ytile2],
-        points: [bullet.topright]
-      });
-    }
-  }
+  collided = [];
   for (_i = 0, _len = entities.length; _i < _len; _i++) {
     ent = entities[_i];
-    if (inAABB(bullet.topleft, ent.hitbox)) {
+    if (inAABB(bullet.topmid, ent.hitbox)) {
+      hb = ent.hitbox;
+      x = bullet.topmid.x;
+      y = bullet.topmid.y;
+      pens = [y - hb.y, hb.x + hb.width - x, hb.y + hb.height - y, x - hb.x];
+      normals = [
+        {
+          x: 0,
+          y: -1
+        }, {
+          x: 1,
+          y: 0
+        }, {
+          x: 0,
+          y: 1
+        }, {
+          x: -1,
+          y: 0
+        }
+      ];
+      points = [
+        {
+          x: x,
+          y: hb.y
+        }, {
+          x: hb.x + hb.width,
+          y: y
+        }, {
+          x: x,
+          y: hb.y + hb.height
+        }, {
+          x: hb.x,
+          y: y
+        }
+      ];
+      minp = pens[0];
+      mini = 0;
+      for (i = _j = 1; _j <= 3; i = ++_j) {
+        if (pens[i] < minp) {
+          mini = i;
+          minp = pens[i];
+        }
+      }
       collided.push({
-        type: 'entity',
-        entity: ent,
-        points: [bullet.topleft]
+        type: ent.type || 'entity',
+        point: points[mini],
+        normal: normals[mini]
       });
     }
-    if (inAABB(bullet.topright, ent.hitbox)) {
-      collided[collided.length - 1].points.push(bullet.topright);
-    }
+  }
+  if (tentity) {
+    entities.pop(tentity);
   }
   return collided;
 };
@@ -513,6 +524,128 @@ module.exports = unitVector = function(v) {
 
 
 },{}],12:[function(require,module,exports){
+var now = require('performance-now')
+  , global = typeof window === 'undefined' ? {} : window
+  , vendors = ['moz', 'webkit']
+  , suffix = 'AnimationFrame'
+  , raf = global['request' + suffix]
+  , caf = global['cancel' + suffix] || global['cancelRequest' + suffix]
+  , native = true
+
+for(var i = 0; i < vendors.length && !raf; i++) {
+  raf = global[vendors[i] + 'Request' + suffix]
+  caf = global[vendors[i] + 'Cancel' + suffix]
+      || global[vendors[i] + 'CancelRequest' + suffix]
+}
+
+// Some versions of FF have rAF but not cAF
+if(!raf || !caf) {
+  native = false
+
+  var last = 0
+    , id = 0
+    , queue = []
+    , frameDuration = 1000 / 60
+
+  raf = function(callback) {
+    if(queue.length === 0) {
+      var _now = now()
+        , next = Math.max(0, frameDuration - (_now - last))
+      last = next + _now
+      setTimeout(function() {
+        var cp = queue.slice(0)
+        // Clear queue here to prevent
+        // callbacks from appending listeners
+        // to the current frame's queue
+        queue.length = 0
+        for(var i = 0; i < cp.length; i++) {
+          if(!cp[i].cancelled) {
+            try{
+              cp[i].callback(last)
+            } catch(e) {
+              setTimeout(function() { throw e }, 0)
+            }
+          }
+        }
+      }, next)
+    }
+    queue.push({
+      handle: ++id,
+      callback: callback,
+      cancelled: false
+    })
+    return id
+  }
+
+  caf = function(handle) {
+    for(var i = 0; i < queue.length; i++) {
+      if(queue[i].handle === handle) {
+        queue[i].cancelled = true
+      }
+    }
+  }
+}
+
+module.exports = function(fn) {
+  // Wrap in a new function to prevent
+  // `cancel` potentially being assigned
+  // to the native rAF function
+  if(!native) {
+    return raf.call(global, fn)
+  }
+  return raf.call(global, function() {
+    try{
+      fn.apply(this, arguments)
+    } catch(e) {
+      setTimeout(function() { throw e }, 0)
+    }
+  })
+}
+module.exports.cancel = function() {
+  caf.apply(global, arguments)
+}
+
+},{"performance-now":13}],13:[function(require,module,exports){
+(function (process){
+// Generated by CoffeeScript 1.6.3
+(function() {
+  var getNanoSeconds, hrtime, loadTime;
+
+  if ((typeof performance !== "undefined" && performance !== null) && performance.now) {
+    module.exports = function() {
+      return performance.now();
+    };
+  } else if ((typeof process !== "undefined" && process !== null) && process.hrtime) {
+    module.exports = function() {
+      return (getNanoSeconds() - loadTime) / 1e6;
+    };
+    hrtime = process.hrtime;
+    getNanoSeconds = function() {
+      var hr;
+      hr = hrtime();
+      return hr[0] * 1e9 + hr[1];
+    };
+    loadTime = getNanoSeconds();
+  } else if (Date.now) {
+    module.exports = function() {
+      return Date.now() - loadTime;
+    };
+    loadTime = Date.now();
+  } else {
+    module.exports = function() {
+      return new Date().getTime() - loadTime;
+    };
+    loadTime = new Date().getTime();
+  }
+
+}).call(this);
+
+/*
+//@ sourceMappingURL=performance-now.map
+*/
+
+}).call(this,require("qvMYcC"))
+},{"qvMYcC":14}],14:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -577,130 +710,8 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],13:[function(require,module,exports){
-var now = require('performance-now')
-  , global = typeof window === 'undefined' ? {} : window
-  , vendors = ['moz', 'webkit']
-  , suffix = 'AnimationFrame'
-  , raf = global['request' + suffix]
-  , caf = global['cancel' + suffix] || global['cancelRequest' + suffix]
-  , native = true
-
-for(var i = 0; i < vendors.length && !raf; i++) {
-  raf = global[vendors[i] + 'Request' + suffix]
-  caf = global[vendors[i] + 'Cancel' + suffix]
-      || global[vendors[i] + 'CancelRequest' + suffix]
-}
-
-// Some versions of FF have rAF but not cAF
-if(!raf || !caf) {
-  native = false
-
-  var last = 0
-    , id = 0
-    , queue = []
-    , frameDuration = 1000 / 60
-
-  raf = function(callback) {
-    if(queue.length === 0) {
-      var _now = now()
-        , next = Math.max(0, frameDuration - (_now - last))
-      last = next + _now
-      setTimeout(function() {
-        var cp = queue.slice(0)
-        // Clear queue here to prevent
-        // callbacks from appending listeners
-        // to the current frame's queue
-        queue.length = 0
-        for(var i = 0; i < cp.length; i++) {
-          if(!cp[i].cancelled) {
-            try{
-              cp[i].callback(last)
-            } catch(e) {
-              setTimeout(function() { throw e }, 0)
-            }
-          }
-        }
-      }, Math.round(next))
-    }
-    queue.push({
-      handle: ++id,
-      callback: callback,
-      cancelled: false
-    })
-    return id
-  }
-
-  caf = function(handle) {
-    for(var i = 0; i < queue.length; i++) {
-      if(queue[i].handle === handle) {
-        queue[i].cancelled = true
-      }
-    }
-  }
-}
-
-module.exports = function(fn) {
-  // Wrap in a new function to prevent
-  // `cancel` potentially being assigned
-  // to the native rAF function
-  if(!native) {
-    return raf.call(global, fn)
-  }
-  return raf.call(global, function() {
-    try{
-      fn.apply(this, arguments)
-    } catch(e) {
-      setTimeout(function() { throw e }, 0)
-    }
-  })
-}
-module.exports.cancel = function() {
-  caf.apply(global, arguments)
-}
-
-},{"performance-now":14}],14:[function(require,module,exports){
-(function (process){
-// Generated by CoffeeScript 1.6.3
-(function() {
-  var getNanoSeconds, hrtime, loadTime;
-
-  if ((typeof performance !== "undefined" && performance !== null) && performance.now) {
-    module.exports = function() {
-      return performance.now();
-    };
-  } else if ((typeof process !== "undefined" && process !== null) && process.hrtime) {
-    module.exports = function() {
-      return (getNanoSeconds() - loadTime) / 1e6;
-    };
-    hrtime = process.hrtime;
-    getNanoSeconds = function() {
-      var hr;
-      hr = hrtime();
-      return hr[0] * 1e9 + hr[1];
-    };
-    loadTime = getNanoSeconds();
-  } else if (Date.now) {
-    module.exports = function() {
-      return Date.now() - loadTime;
-    };
-    loadTime = Date.now();
-  } else {
-    module.exports = function() {
-      return new Date().getTime() - loadTime;
-    };
-    loadTime = new Date().getTime();
-  }
-
-}).call(this);
-
-/*
-//@ sourceMappingURL=performance-now.map
-*/
-
-}).call(this,require("FWaASH"))
-},{"FWaASH":12}],15:[function(require,module,exports){
-var Level, bullet, c, canvas, collide, ctx, dt, enemyEntities, frame, fs, gun, last, level, monster, now, onkey, physics, player, raf, render, setup, time, unitVector;
+},{}],15:[function(require,module,exports){
+var Level, bullet, bulletUpdates, c, canvas, collide, ctx, dt, enemyEntities, frame, fs, gun, last, level, monster, now, onkey, physics, player, raf, render, setup, time, unitVector;
 
 Level = require('./modules/level');
 
@@ -741,6 +752,8 @@ enemyEntities = [];
 gun = null;
 
 bullet = null;
+
+bulletUpdates = 3;
 
 onkey = function(ev, key, down) {
   switch (key) {
@@ -786,7 +799,7 @@ setup = function() {
 };
 
 frame = function() {
-  var bulletCollides, entity, _i, _j, _len, _len1;
+  var bulletCollides, entity, _, _i, _j, _k, _len, _len1;
   now = time();
   dt = dt + Math.min(1, (now - last) / 1000);
   if (gun.firing && (!bullet)) {
@@ -794,11 +807,11 @@ frame = function() {
       x: player.x,
       y: player.y,
       width: 10,
-      height: 50,
+      height: 100,
       angle: gun.angle
     };
-    bullet.dx = 400 * Math.sin(bullet.angle);
-    bullet.dy = -400 * Math.cos(bullet.angle);
+    bullet.dx = 800 * Math.sin(bullet.angle);
+    bullet.dy = -800 * Math.cos(bullet.angle);
     bullet.dir = unitVector({
       x: bullet.dx,
       y: bullet.dy
@@ -816,15 +829,17 @@ frame = function() {
       physics.updateEntity(entity, level, c.STEP);
     }
     physics.updateGun(gun, c.STEP);
-    if (bullet) {
-      bulletCollides = physics.updateBullet(bullet, enemyEntities, level, c.STEP);
-      if (bulletCollides.length > 0) {
-        console.log(bulletCollides);
-        bullet = null;
+    for (_ = _j = 1; _j <= bulletUpdates; _ = _j += 1) {
+      if (bullet) {
+        bulletCollides = physics.updateBullet(bullet, enemyEntities, level, c.STEP / bulletUpdates);
+        if (bulletCollides.length > 0) {
+          console.log(bulletCollides);
+          bullet = null;
+        }
       }
     }
-    for (_j = 0, _len1 = enemyEntities.length; _j < _len1; _j++) {
-      entity = enemyEntities[_j];
+    for (_k = 0, _len1 = enemyEntities.length; _k < _len1; _k++) {
+      entity = enemyEntities[_k];
       collide.entityCollide(player, entity);
     }
   }
@@ -847,4 +862,4 @@ frame();
 
 
 
-},{"./modules/constants":4,"./modules/level":5,"./modules/physics":8,"./modules/physics-collide":6,"./modules/renderer":9,"./modules/time":10,"./modules/v2-unit":11,"raf":13}]},{},[15])
+},{"./modules/constants":4,"./modules/level":5,"./modules/physics":8,"./modules/physics-collide":6,"./modules/renderer":9,"./modules/time":10,"./modules/v2-unit":11,"raf":12}]},{},[15])

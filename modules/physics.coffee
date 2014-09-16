@@ -70,52 +70,52 @@ module.exports.updateBullet = (bullet, entities, level, dt) ->
   bullet.x += bullet.dx * dt
   bullet.y += bullet.dy * dt
 
-  collided = []
-
   centerx = bullet.x + bullet.width / 2
   centery = bullet.y + bullet.height / 2
   topmidx = centerx + bullet.dir.x * bullet.height / 2
   topmidy = centery + bullet.dir.y * bullet.height / 2
-  topleftx = topmidx + bullet.perp.x * bullet.width / 2
-  toplefty = topmidy + bullet.perp.y * bullet.width / 2
-  toprightx = topmidx - bullet.perp.x * bullet.width / 2
-  toprighty = topmidy - bullet.perp.y * bullet.width / 2
 
-  # store the two points on the front edge of the bullet
-  bullet.topleft = {x: topleftx, y: toplefty}
-  bullet.topright = {x: toprightx, y: toprighty}
+  # store the points on the tip of the bullet
+  bullet.topmid = { x: topmidx, y: topmidy }
 
-  # check if the front points of the bullet collide with the level
-  xtile1 = level.pixelToTile bullet.topleft.x
-  ytile1 = level.pixelToTile bullet.topleft.y
+  # get the index of the tile at the tip of the bullet
+  xtile = level.pixelToTile bullet.topmid.x
+  ytile = level.pixelToTile bullet.topmid.y
 
-  xtile2 = level.pixelToTile bullet.topright.x
-  ytile2 = level.pixelToTile bullet.topright.y
-  
-  hitleft = false
-  hitright = false
-  if level.tileHitbox xtile1, ytile1
-    hitleft = true
-  if level.tileHitbox xtile2, ytile2
-    hitright = true
+  tentity = level.tileEntity xtile, ytile
+  if tentity
+    # add the tile to the entity list, hence consider for collisions
+    entities.push tentity
 
-  if hitleft
-    collided.push {type: 'tile', location: [xtile1, ytile1], points: [bullet.topleft]}
-
-  if hitright
-    if xtile2 == xtile1 and ytile2 == ytile1
-      # the same tile - add collision point
-      collided[0].points.push bullet.topright
-    else
-      collided.push {type: 'tile', location: [xtile2, ytile2], points: [bullet.topright] }
-
-  # check collisions with other entities
+  collided = []
   for ent in entities
-    if inAABB bullet.topleft, ent.hitbox
-      collided.push {type: 'entity', entity: ent, points: [bullet.topleft]}
-    if inAABB bullet.topright, ent.hitbox
-      collided[collided.length - 1].points.push bullet.topright
+    if inAABB bullet.topmid, ent.hitbox
+      hb = ent.hitbox
+      x = bullet.topmid.x
+      y = bullet.topmid.y
 
+      # penetration into each face clockwise starting from top
+      pens = [y - hb.y, hb.x + hb.width - x, hb.y + hb.height - y, x - hb.x]
+      # corresponding face normals
+      normals = [{x: 0, y: -1}, {x: 1, y: 0}, {x: 0, y: 1}, {x: -1, y: 0}]
+      # and collision points
+      points = [{x: x, y: hb.y}, {x: hb.x + hb.width, y: y},
+                {x: x, y: hb.y + hb.height}, {x: hb.x, y: y}]
+
+      # work out which face we penetrated beyond least, hence surface normal and collision point
+      minp = pens[0]
+      mini = 0
+      for i in [1..3]
+        if (pens[i] < minp)
+          mini = i
+          minp = pens[i]
+
+      collided.push {type: ent.type || 'entity', point: points[mini], normal: normals[mini]}
+
+  if tentity
+    # remove the tile entity from the entity array
+    entities.pop tentity
+    
   # return the array of objects the bullet collided with
   collided
 

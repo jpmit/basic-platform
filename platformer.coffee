@@ -20,6 +20,7 @@ monster = null
 enemyEntities = []
 gun = null
 bullet = null
+bulletUpdates = 3
 
 onkey = (ev, key, down) ->
   switch key
@@ -67,9 +68,9 @@ frame = ->
 
   # check if player firing bullet  
   if gun.firing and (!bullet)
-    bullet = {x: player.x, y: player.y, width: 10, height: 50, angle: gun.angle}
-    bullet.dx = 400 * Math.sin(bullet.angle);
-    bullet.dy = -400 * Math.cos(bullet.angle);
+    bullet = {x: player.x, y: player.y, width: 10, height: 100, angle: gun.angle}
+    bullet.dx = 800 * Math.sin(bullet.angle);
+    bullet.dy = -800 * Math.cos(bullet.angle);
     # unit vector in the direction of bullet travel
     bullet.dir = unitVector({x: bullet.dx, y: bullet.dy})
     # unit vector perpendicular to direction of bullet travel
@@ -82,16 +83,17 @@ frame = ->
       physics.updateEntity entity, level, c.STEP
     # update the aiming of the gun
     physics.updateGun gun, c.STEP
-    if bullet
-      # did the bullet collide with the level or other entities?
-      bulletCollides =  physics.updateBullet bullet, enemyEntities, level, c.STEP
-      if bulletCollides.length > 0
-        console.log bulletCollides              
-        bullet = null
+    # multiple timesteps for gun collision
+    for _ in [1..bulletUpdates] by 1
+      if bullet
+        # did the bullet collide with the level or other entities?
+        bulletCollides =  physics.updateBullet bullet, enemyEntities, level, c.STEP / bulletUpdates
+        if bulletCollides.length > 0
+          console.log bulletCollides      
+          bullet = null
     # detect (and handle) collision between player and other entities
     for entity in enemyEntities
       collide.entityCollide player, entity
-    
   render ctx, player, enemyEntities, gun, bullet, level
   last = now
   raf frame, canvas

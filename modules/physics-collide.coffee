@@ -1,7 +1,6 @@
 c           = require './constants'
 overlapAABB = require './aabb-overlap'
 
-
 module.exports.levelCollideX = (entity, level, xnew) ->
 
   # current top left position of hitbox
@@ -30,7 +29,7 @@ module.exports.levelCollideX = (entity, level, xnew) ->
     ytiletop = level.pixelToTile yold
     ytilebottom = level.pixelToTile yold + entity.hitbox.height - 1
     for ytile in [ytilebottom..ytiletop]
-        tentity = level.tileHitbox xtilenew, ytile
+        tentity = level.tileEntity xtilenew, ytile
         if tentity
           entity.dx = 0
           entity.ddx = 0
@@ -67,7 +66,7 @@ module.exports.levelCollideY = (entity, level, ynew) ->
     xtileleft = level.pixelToTile xold
     xtileright = level.pixelToTile (xold + entity.hitbox.width - 1)
     for xtile in [xtileleft..xtileright]
-      tentity = level.tileHitbox xtile, ytilenew            
+      tentity = level.tileEntity xtile, ytilenew            
       if tentity
         entity.dy = 0
         entity.ddy = 0
