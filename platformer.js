@@ -1,4 +1,4 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-from-rect.coffee":[function(require,module,exports){
 var toAABB;
 
 module.exports = toAABB = function(rect) {
@@ -17,7 +17,7 @@ module.exports = toAABB = function(rect) {
 
 
 
-},{}],2:[function(require,module,exports){
+},{}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-intersect-line.coffee":[function(require,module,exports){
 var clamp, intersectSegment, sign;
 
 clamp = require('./clamp');
@@ -95,7 +95,7 @@ module.exports = intersectSegment = function(aabb, pos, delta, paddingX, padding
 
 
 
-},{"./clamp":5,"./sign":12}],3:[function(require,module,exports){
+},{"./clamp":"/Users/michaelreinstein/wwwroot/basic-platform/modules/clamp.coffee","./sign":"/Users/michaelreinstein/wwwroot/basic-platform/modules/sign.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-intersect.coffee":[function(require,module,exports){
 var intersectAABB, sign;
 
 sign = require('./sign');
@@ -164,7 +164,7 @@ module.exports = intersectAABB = function(aabb, aabb2) {
 
 
 
-},{"./sign":12}],4:[function(require,module,exports){
+},{"./sign":"/Users/michaelreinstein/wwwroot/basic-platform/modules/sign.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-point-inside.coffee":[function(require,module,exports){
 var pointInAABB;
 
 module.exports = pointInAABB = function(point, box) {
@@ -173,14 +173,14 @@ module.exports = pointInAABB = function(point, box) {
 
 
 
-},{}],5:[function(require,module,exports){
+},{}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/clamp.coffee":[function(require,module,exports){
 module.exports = function(x, min, max) {
   return Math.max(min, Math.min(max, x));
 };
 
 
 
-},{}],6:[function(require,module,exports){
+},{}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee":[function(require,module,exports){
 var COLOR, FPS, TILE;
 
 COLOR = {
@@ -228,7 +228,7 @@ module.exports = {
 
 
 
-},{}],7:[function(require,module,exports){
+},{}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/level.coffee":[function(require,module,exports){
 var Level, c;
 
 c = require('./constants');
@@ -295,7 +295,7 @@ module.exports = Level;
 
 
 
-},{"./constants":6}],8:[function(require,module,exports){
+},{"./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics-collide.coffee":[function(require,module,exports){
 var intersectAABB, toAABB;
 
 intersectAABB = require('./aabb-intersect');
@@ -382,7 +382,7 @@ module.exports.entityCollide = function(entity1, entity2) {
 
 
 
-},{"./aabb-from-rect":1,"./aabb-intersect":3}],9:[function(require,module,exports){
+},{"./aabb-from-rect":"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-from-rect.coffee","./aabb-intersect":"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-intersect.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics-move.coffee":[function(require,module,exports){
 var c, clamp;
 
 c = require('./constants');
@@ -430,7 +430,7 @@ module.exports.stepY = function(entity, level, dt) {
 
 
 
-},{"./clamp":5,"./constants":6}],10:[function(require,module,exports){
+},{"./clamp":"/Users/michaelreinstein/wwwroot/basic-platform/modules/clamp.coffee","./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics.coffee":[function(require,module,exports){
 var c, collide, findNearestCollision, inAABB, intersectLine, move, toAABB;
 
 collide = require('./physics-collide');
@@ -576,7 +576,7 @@ module.exports.updateGun = function(gun, dt) {
 
 
 
-},{"./aabb-from-rect":1,"./aabb-intersect-line":2,"./aabb-point-inside":4,"./constants":6,"./physics-collide":8,"./physics-move":9}],11:[function(require,module,exports){
+},{"./aabb-from-rect":"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-from-rect.coffee","./aabb-intersect-line":"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-intersect-line.coffee","./aabb-point-inside":"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-point-inside.coffee","./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee","./physics-collide":"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics-collide.coffee","./physics-move":"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics-move.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/renderer.coffee":[function(require,module,exports){
 var c, drawAngle, renderLevel;
 
 c = require('./constants');
@@ -645,7 +645,7 @@ module.exports = function(ctx, me, enemies, gun, bullet, level) {
 
 
 
-},{"./constants":6}],12:[function(require,module,exports){
+},{"./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/sign.coffee":[function(require,module,exports){
 var sign;
 
 module.exports = sign = function(value) {
@@ -658,7 +658,7 @@ module.exports = sign = function(value) {
 
 
 
-},{}],13:[function(require,module,exports){
+},{}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/time.coffee":[function(require,module,exports){
 module.exports = function() {
   if ((typeof window !== "undefined" && window !== null) && window.performance && window.performance.now) {
     return window.performance.now();
@@ -669,7 +669,7 @@ module.exports = function() {
 
 
 
-},{}],14:[function(require,module,exports){
+},{}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/v2-unit.coffee":[function(require,module,exports){
 var unitVector;
 
 module.exports = unitVector = function(v) {
@@ -683,7 +683,7 @@ module.exports = unitVector = function(v) {
 
 
 
-},{}],15:[function(require,module,exports){
+},{}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/process/browser.js":[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -748,7 +748,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],16:[function(require,module,exports){
+},{}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/raf/index.js":[function(require,module,exports){
 var now = require('performance-now')
   , global = typeof window === 'undefined' ? {} : window
   , vendors = ['moz', 'webkit']
@@ -830,7 +830,7 @@ module.exports.cancel = function() {
   caf.apply(global, arguments)
 }
 
-},{"performance-now":17}],17:[function(require,module,exports){
+},{"performance-now":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/raf/node_modules/performance-now/lib/performance-now.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/raf/node_modules/performance-now/lib/performance-now.js":[function(require,module,exports){
 (function (process){
 // Generated by CoffeeScript 1.6.3
 (function() {
@@ -869,8 +869,8 @@ module.exports.cancel = function() {
 //@ sourceMappingURL=performance-now.map
 */
 
-}).call(this,require("FWaASH"))
-},{"FWaASH":15}],18:[function(require,module,exports){
+}).call(this,require('_process'))
+},{"_process":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/process/browser.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/platformer.coffee":[function(require,module,exports){
 var Level, bullet, bulletUpdates, c, canvas, collide, ctx, dt, enemyEntities, frame, fs, gun, last, level, monster, now, onkey, physics, player, raf, render, setup, time, unitVector;
 
 Level = require('./modules/level');
@@ -1020,4 +1020,4 @@ frame();
 
 
 
-},{"./modules/constants":6,"./modules/level":7,"./modules/physics":10,"./modules/physics-collide":8,"./modules/renderer":11,"./modules/time":13,"./modules/v2-unit":14,"raf":16}]},{},[18])
+},{"./modules/constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee","./modules/level":"/Users/michaelreinstein/wwwroot/basic-platform/modules/level.coffee","./modules/physics":"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics.coffee","./modules/physics-collide":"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics-collide.coffee","./modules/renderer":"/Users/michaelreinstein/wwwroot/basic-platform/modules/renderer.coffee","./modules/time":"/Users/michaelreinstein/wwwroot/basic-platform/modules/time.coffee","./modules/v2-unit":"/Users/michaelreinstein/wwwroot/basic-platform/modules/v2-unit.coffee","raf":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/raf/index.js"}]},{},["/Users/michaelreinstein/wwwroot/basic-platform/platformer.coffee"]);

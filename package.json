@@ -8,11 +8,11 @@
   },
   "dependencies": {
     "brfs": "^1.2.0",
-    "browserify": "^4.2.3",
+    "browserify": "^5.12.0",
     "browserify-shim": "^3.4.1",
     "coffeeify": "^0.7.0",
     "raf": "^2.0.1",
-    "watchify": "^0.10.2"
+    "watchify": "^1.0.3"
   },
   "repository": {
     "type": "git",
