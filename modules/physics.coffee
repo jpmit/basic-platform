@@ -84,6 +84,8 @@ module.exports.setupEntity = (obj) ->
     left    : obj.properties.left
     right   : obj.properties.right
     jump    : null
+    jumpcount: 0
+    maxjumpcount: obj.properties.maxjumpcount or 1
 
   entity.hitbox.x = entity.x + entity.hitbox.xoff
   entity.hitbox.y = entity.y + entity.hitbox.yoff
@@ -95,7 +97,6 @@ module.exports.setupEntity = (obj) ->
 # accelaration but not the position of the entity).  Then we move the
 # entity to the correct x position based on collisions with the level.
 module.exports.updateEntity = (entity, level, dt) ->
-
   xnew = move.stepX entity, level, dt
   collide.levelCollideX entity, level, xnew
 
@@ -122,7 +123,6 @@ module.exports.updateBullet = (bullet, entities, level, dt) ->
 
 # update 'crosshairs' (the small blue rect close to the player)
 module.exports.updateGun = (gun, dt) ->
-
   if gun.up
     gun.angle -= gun.sensitivity * dt
 

@@ -20,7 +20,8 @@
                  "name":"player",
                  "properties":
                     {
-                     "hitbox": { "xoff": 6, "yoff": 8, "width": 20, "height": 51 }
+                     "hitbox": { "xoff": 6, "yoff": 8, "width": 20, "height": 51 },
+                     "maxjumpcount": 3
                      },
                  "type":"player",
                  "visible":true,

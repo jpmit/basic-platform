@@ -34,12 +34,13 @@ module.exports.stepX = (entity, level, dt) ->
 # move an entity through the level in the y direction, return the new
 # y position (top left co-ord of hitbox)
 module.exports.stepY = (entity, level, dt) ->
-  
   entity.ddy = entity.gravity
-  if entity.jump and not entity.jumping and entity.onfloor
+  if entity.jump and not entity.jumping and (entity.onfloor or (entity.jumpcount < entity.maxjumpcount))
+    entity.dy = 0
     entity.ddy = entity.ddy - entity.impulse # an instant big force impulse
     entity.jumping = true
     entity.onfloor = false
+    entity.jumpcount++
 
   entity.dy = clamp(entity.dy + (entity.ddy*dt), -entity.maxdy, entity.maxdy)
 
