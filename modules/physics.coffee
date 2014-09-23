@@ -1,7 +1,46 @@
-collide    = require './physics-collide'
-c          = require './constants'
-move       = require './physics-move'
-inAABB     = require './aabb-point-inside'
+collide       = require './physics-collide'
+c             = require './constants'
+intersectLine = require './aabb-intersect-line'
+move          = require './physics-move'
+inAABB        = require './aabb-point-inside'
+toAABB        = require './aabb-from-rect'
+
+
+findNearestCollision = (minX, maxX, minY, maxY, pos, delta, entities, level) ->
+  aabbs = []
+  # if any of the tiles are collidable, add their AABBs to the list
+  for y in [minY..maxY]
+    for x in [minX..maxX]
+      if level.tileToValue(x, y, 'collision')
+        aabb =
+          pos:
+            x: (x * c.TILE) + c.TILE / 2
+            y: (y * c.TILE) + c.TILE / 2
+          half:
+            x: c.TILE / 2
+            y: c.TILE / 2
+
+        aabb.type = 'tile'
+        aabbs.push aabb
+
+  for ent in entities
+    aabb = toAABB(ent.hitbox)
+    aabb.type = 'entity'
+    aabb.entity = ent
+    aabbs.push aabb
+
+  # narrow phase: take the potentially colliding aabbs and find the nearest collision
+  nearestTime = 1
+  nearestHit = null
+
+  for aabb in aabbs
+    hit = intersectLine aabb, pos, delta
+    if hit and hit.time < nearestTime
+      hit.type = aabb.type
+      hit.entity = aabb.entity
+      nearestTime = hit.time
+      nearestHit = hit
+  nearestHit
 
 
 # create a new physics object using some initial settings
@@ -64,60 +103,21 @@ module.exports.updateEntity = (entity, level, dt) ->
   collide.levelCollideY entity, level, ynew
 
 
-# returns an array containing tiles / entities bullet collided with
+# returns closest tile/entity the bullet collided with
 module.exports.updateBullet = (bullet, entities, level, dt) ->
+  # broad phase: collect all tiles that overlap the path the bullet traveled through
+  minX = Math.floor(bullet.x / c.TILE)
+  maxX = Math.floor( (bullet.x + bullet.dx * dt) / c.TILE)
+  minY = Math.floor(bullet.y / c.TILE)
+  maxY = Math.floor( (bullet.y + bullet.dy * dt) / c.TILE)
+
+  pos = { x: bullet.x, y: bullet.y }
+  delta = { x: bullet.dx * dt, y: bullet.dy * dt }
+  collision = findNearestCollision minX, maxX, minY, maxY, pos, delta, entities, level
 
   bullet.x += bullet.dx * dt
   bullet.y += bullet.dy * dt
-
-  centerx = bullet.x + bullet.width / 2
-  centery = bullet.y + bullet.height / 2
-  topmidx = centerx + bullet.dir.x * bullet.height / 2
-  topmidy = centery + bullet.dir.y * bullet.height / 2
-
-  # store the points on the tip of the bullet
-  bullet.topmid = { x: topmidx, y: topmidy }
-
-  # get the index of the tile at the tip of the bullet
-  xtile = level.pixelToTile bullet.topmid.x
-  ytile = level.pixelToTile bullet.topmid.y
-
-  tentity = level.tileEntity xtile, ytile
-  if tentity
-    # add the tile to the entity list, hence consider for collisions
-    entities.push tentity
-
-  collided = []
-  for ent in entities
-    if inAABB bullet.topmid, ent.hitbox
-      hb = ent.hitbox
-      x = bullet.topmid.x
-      y = bullet.topmid.y
-
-      # penetration into each face clockwise starting from top
-      pens = [y - hb.y, hb.x + hb.width - x, hb.y + hb.height - y, x - hb.x]
-      # corresponding face normals
-      normals = [{x: 0, y: -1}, {x: 1, y: 0}, {x: 0, y: 1}, {x: -1, y: 0}]
-      # and collision points
-      points = [{x: x, y: hb.y}, {x: hb.x + hb.width, y: y},
-                {x: x, y: hb.y + hb.height}, {x: hb.x, y: y}]
-
-      # work out which face we penetrated beyond least, hence surface normal and collision point
-      minp = pens[0]
-      mini = 0
-      for i in [1..3]
-        if (pens[i] < minp)
-          mini = i
-          minp = pens[i]
-
-      collided.push {type: ent.type || 'entity', point: points[mini], normal: normals[mini]}
-
-  if tentity
-    # remove the tile entity from the entity array
-    entities.pop tentity
-    
-  # return the array of objects the bullet collided with
-  collided
+  collision
 
 
 # update 'crosshairs' (the small blue rect close to the player)

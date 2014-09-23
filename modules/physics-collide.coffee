@@ -1,5 +1,6 @@
-c           = require './constants'
-overlapAABB = require './aabb-overlap'
+intersectAABB = require './aabb-intersect'
+toAABB        = require './aabb-from-rect'
+
 
 module.exports.levelCollideX = (entity, level, xnew) ->
 
@@ -84,7 +85,7 @@ module.exports.levelCollideY = (entity, level, ynew) ->
 # rudimentary way).
 module.exports.entityCollide = (entity1, entity2) ->
 
-  if overlapAABB entity1.hitbox, entity2.hitbox
+  if intersectAABB(toAABB(entity1.hitbox), toAABB(entity2.hitbox))
     # no shim for Math.sign put in here since this response is really
     # a temporary placeholder.
     if entity1.dx > 0

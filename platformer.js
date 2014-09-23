@@ -1,13 +1,170 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var overlapAABB;
+var toAABB;
 
-module.exports = overlapAABB = function(b1, b2) {
-  return !(((b1.x + b1.width) < b2.x) || ((b2.x + b2.width) < b1.x) || ((b1.y + b1.height) < b2.y) || ((b2.y + b2.height) < b1.y));
+module.exports = toAABB = function(rect) {
+  var aabb;
+  return aabb = {
+    pos: {
+      x: rect.x + rect.width / 2,
+      y: rect.y + rect.height / 2
+    },
+    half: {
+      x: rect.width / 2,
+      y: rect.height / 2
+    }
+  };
 };
 
 
 
 },{}],2:[function(require,module,exports){
+var clamp, intersectSegment, sign;
+
+clamp = require('./clamp');
+
+sign = require('./sign');
+
+
+/*
+determine if a line segment intersects a bounding box
+aabb is has pos, which is the center point of the bounding box and half, which is the radius of the box on each axis
+pos is the x,y position of the start of the line segment
+delta is the length of the line segment in 2 directions
+ */
+
+module.exports = intersectSegment = function(aabb, pos, delta, paddingX, paddingY) {
+  var farTime, farTimeX, farTimeY, hit, nearTime, nearTimeX, nearTimeY, scaleX, scaleY, signX, signY;
+  if (paddingX == null) {
+    paddingX = 0;
+  }
+  if (paddingY == null) {
+    paddingY = 0;
+  }
+  scaleX = 1.0 / delta.x;
+  scaleY = 1.0 / delta.y;
+  signX = sign(scaleX);
+  signY = sign(scaleY);
+  nearTimeX = (aabb.pos.x - signX * (aabb.half.x + paddingX) - pos.x) * scaleX;
+  nearTimeY = (aabb.pos.y - signY * (aabb.half.y + paddingY) - pos.y) * scaleY;
+  farTimeX = (aabb.pos.x + signX * (aabb.half.x + paddingX) - pos.x) * scaleX;
+  farTimeY = (aabb.pos.y + signY * (aabb.half.y + paddingY) - pos.y) * scaleY;
+  if (nearTimeX > farTimeY || nearTimeY > farTimeX) {
+    return null;
+  }
+  nearTime = nearTimeX > nearTimeY ? nearTimeX : nearTimeY;
+  farTime = farTimeX < farTimeY ? farTimeX : farTimeY;
+  if (nearTime >= 1 || farTime <= 0) {
+    return null;
+  }
+
+  /*
+  hit.pos is the point of contact between the two objects (or an estimation of it, in some sweep tests).
+  hit.normal is the surface normal at the point of contact.
+  hit.delta is the overlap between the two objects, and is a vector that can be added to the colliding object’s position to move it back to a non-colliding state.
+  hit.time is a fraction from 0 to 1 indicating how far along the line the collision occurred. (This is the t value for the line equation L(t) = A + t * (B - A))
+   */
+  hit = {
+    collider: aabb,
+    pos: {
+      x: 0,
+      y: 0
+    },
+    delta: {
+      x: 0,
+      y: 0
+    },
+    normal: {
+      x: 0,
+      y: 0
+    },
+    time: clamp(nearTime, 0, 1)
+  };
+  if (nearTimeX > nearTimeY) {
+    hit.normal.x = -signX;
+    hit.normal.y = 0;
+  } else {
+    hit.normal.x = 0;
+    hit.normal.y = -signY;
+  }
+  hit.delta.x = hit.time * delta.x;
+  hit.delta.y = hit.time * delta.y;
+  hit.pos.x = pos.x + hit.delta.x;
+  hit.pos.y = pos.y + hit.delta.y;
+  return hit;
+};
+
+
+
+},{"./clamp":5,"./sign":12}],3:[function(require,module,exports){
+var intersectAABB, sign;
+
+sign = require('./sign');
+
+
+/*
+This test uses a separating axis test, which checks for overlaps between the
+two boxes on each axis. If either axis is not overlapping, the boxes aren’t
+colliding.
+
+The function returns a Hit object, or null if the two static boxes do not
+overlap, and gives the axis of least overlap as the contact point. That is, it
+sets hit.delta so that the colliding box will be pushed out of the nearest edge
+This can cause weird behavior for moving boxes, so you should use sweepAABB
+instead for moving boxes.
+ */
+
+module.exports = intersectAABB = function(aabb, aabb2) {
+  var dx, dy, hit, px, py, sx, sy;
+  dx = aabb2.pos.x - aabb.pos.x;
+  px = (aabb2.half.x + aabb.half.x) - Math.abs(dx);
+  if (px <= 0) {
+    return null;
+  }
+  dy = aabb2.pos.y - aabb.pos.y;
+  py = (aabb2.half.y + aabb.half.y) - Math.abs(dy);
+  if (py <= 0) {
+    return null;
+  }
+
+  /*
+  hit.pos is the point of contact between the two objects (or an estimation of it, in some sweep tests).
+  hit.normal is the surface normal at the point of contact.
+  hit.delta is the overlap between the two objects, and is a vector that can be added to the colliding object’s position to move it back to a non-colliding state.
+   */
+  hit = {
+    collider: aabb,
+    pos: {
+      x: 0,
+      y: 0
+    },
+    delta: {
+      x: 0,
+      y: 0
+    },
+    normal: {
+      x: 0,
+      y: 0
+    }
+  };
+  if (px < py) {
+    sx = sign(dx);
+    hit.delta.x = px * sx;
+    hit.normal.x = sx;
+    hit.pos.x = aabb.pos.x + (aabb.half.x * sx);
+    hit.pos.y = aabb2.pos.y;
+  } else {
+    sy = sign(dy);
+    hit.delta.y = py * sy;
+    hit.normal.y = sy;
+    hit.pos.x = aabb2.pos.x;
+    hit.pos.y = aabb.pos.y + (aabb.half.y * sy);
+  }
+  return hit;
+};
+
+
+
+},{"./sign":12}],4:[function(require,module,exports){
 var pointInAABB;
 
 module.exports = pointInAABB = function(point, box) {
@@ -16,14 +173,14 @@ module.exports = pointInAABB = function(point, box) {
 
 
 
-},{}],3:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 module.exports = function(x, min, max) {
   return Math.max(min, Math.min(max, x));
 };
 
 
 
-},{}],4:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 var COLOR, FPS, TILE;
 
 COLOR = {
@@ -71,7 +228,7 @@ module.exports = {
 
 
 
-},{}],5:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 var Level, c;
 
 c = require('./constants');
@@ -138,12 +295,12 @@ module.exports = Level;
 
 
 
-},{"./constants":4}],6:[function(require,module,exports){
-var c, overlapAABB;
+},{"./constants":6}],8:[function(require,module,exports){
+var intersectAABB, toAABB;
 
-c = require('./constants');
+intersectAABB = require('./aabb-intersect');
 
-overlapAABB = require('./aabb-overlap');
+toAABB = require('./aabb-from-rect');
 
 module.exports.levelCollideX = function(entity, level, xnew) {
   var tentity, xold, xtilenew, xtileold, yold, ytile, ytilebottom, ytiletop, _i;
@@ -214,7 +371,7 @@ module.exports.levelCollideY = function(entity, level, ynew) {
 };
 
 module.exports.entityCollide = function(entity1, entity2) {
-  if (overlapAABB(entity1.hitbox, entity2.hitbox)) {
+  if (intersectAABB(toAABB(entity1.hitbox), toAABB(entity2.hitbox))) {
     if (entity1.dx > 0) {
       return entity1.dx = -500;
     } else if (entity1.dx < 0) {
@@ -225,7 +382,7 @@ module.exports.entityCollide = function(entity1, entity2) {
 
 
 
-},{"./aabb-overlap":1,"./constants":4}],7:[function(require,module,exports){
+},{"./aabb-from-rect":1,"./aabb-intersect":3}],9:[function(require,module,exports){
 var c, clamp;
 
 c = require('./constants');
@@ -273,16 +430,63 @@ module.exports.stepY = function(entity, level, dt) {
 
 
 
-},{"./clamp":3,"./constants":4}],8:[function(require,module,exports){
-var c, collide, inAABB, move;
+},{"./clamp":5,"./constants":6}],10:[function(require,module,exports){
+var c, collide, findNearestCollision, inAABB, intersectLine, move, toAABB;
 
 collide = require('./physics-collide');
 
 c = require('./constants');
 
+intersectLine = require('./aabb-intersect-line');
+
 move = require('./physics-move');
 
 inAABB = require('./aabb-point-inside');
+
+toAABB = require('./aabb-from-rect');
+
+findNearestCollision = function(minX, maxX, minY, maxY, pos, delta, entities, level) {
+  var aabb, aabbs, ent, hit, nearestHit, nearestTime, x, y, _i, _j, _k, _l, _len, _len1;
+  aabbs = [];
+  for (y = _i = minY; minY <= maxY ? _i <= maxY : _i >= maxY; y = minY <= maxY ? ++_i : --_i) {
+    for (x = _j = minX; minX <= maxX ? _j <= maxX : _j >= maxX; x = minX <= maxX ? ++_j : --_j) {
+      if (level.tileToValue(x, y, 'collision')) {
+        aabb = {
+          pos: {
+            x: (x * c.TILE) + c.TILE / 2,
+            y: (y * c.TILE) + c.TILE / 2
+          },
+          half: {
+            x: c.TILE / 2,
+            y: c.TILE / 2
+          }
+        };
+        aabb.type = 'tile';
+        aabbs.push(aabb);
+      }
+    }
+  }
+  for (_k = 0, _len = entities.length; _k < _len; _k++) {
+    ent = entities[_k];
+    aabb = toAABB(ent.hitbox);
+    aabb.type = 'entity';
+    aabb.entity = ent;
+    aabbs.push(aabb);
+  }
+  nearestTime = 1;
+  nearestHit = null;
+  for (_l = 0, _len1 = aabbs.length; _l < _len1; _l++) {
+    aabb = aabbs[_l];
+    hit = intersectLine(aabb, pos, delta);
+    if (hit && hit.time < nearestTime) {
+      hit.type = aabb.type;
+      hit.entity = aabb.entity;
+      nearestTime = hit.time;
+      nearestHit = hit;
+    }
+  }
+  return nearestHit;
+};
 
 module.exports.setupEntity = function(obj) {
   var entity, maxdx;
@@ -337,80 +541,23 @@ module.exports.updateEntity = function(entity, level, dt) {
 };
 
 module.exports.updateBullet = function(bullet, entities, level, dt) {
-  var centerx, centery, collided, ent, hb, i, mini, minp, normals, pens, points, tentity, topmidx, topmidy, x, xtile, y, ytile, _i, _j, _len;
+  var collision, delta, maxX, maxY, minX, minY, pos;
+  minX = Math.floor(bullet.x / c.TILE);
+  maxX = Math.floor((bullet.x + bullet.dx * dt) / c.TILE);
+  minY = Math.floor(bullet.y / c.TILE);
+  maxY = Math.floor((bullet.y + bullet.dy * dt) / c.TILE);
+  pos = {
+    x: bullet.x,
+    y: bullet.y
+  };
+  delta = {
+    x: bullet.dx * dt,
+    y: bullet.dy * dt
+  };
+  collision = findNearestCollision(minX, maxX, minY, maxY, pos, delta, entities, level);
   bullet.x += bullet.dx * dt;
   bullet.y += bullet.dy * dt;
-  centerx = bullet.x + bullet.width / 2;
-  centery = bullet.y + bullet.height / 2;
-  topmidx = centerx + bullet.dir.x * bullet.height / 2;
-  topmidy = centery + bullet.dir.y * bullet.height / 2;
-  bullet.topmid = {
-    x: topmidx,
-    y: topmidy
-  };
-  xtile = level.pixelToTile(bullet.topmid.x);
-  ytile = level.pixelToTile(bullet.topmid.y);
-  tentity = level.tileEntity(xtile, ytile);
-  if (tentity) {
-    entities.push(tentity);
-  }
-  collided = [];
-  for (_i = 0, _len = entities.length; _i < _len; _i++) {
-    ent = entities[_i];
-    if (inAABB(bullet.topmid, ent.hitbox)) {
-      hb = ent.hitbox;
-      x = bullet.topmid.x;
-      y = bullet.topmid.y;
-      pens = [y - hb.y, hb.x + hb.width - x, hb.y + hb.height - y, x - hb.x];
-      normals = [
-        {
-          x: 0,
-          y: -1
-        }, {
-          x: 1,
-          y: 0
-        }, {
-          x: 0,
-          y: 1
-        }, {
-          x: -1,
-          y: 0
-        }
-      ];
-      points = [
-        {
-          x: x,
-          y: hb.y
-        }, {
-          x: hb.x + hb.width,
-          y: y
-        }, {
-          x: x,
-          y: hb.y + hb.height
-        }, {
-          x: hb.x,
-          y: y
-        }
-      ];
-      minp = pens[0];
-      mini = 0;
-      for (i = _j = 1; _j <= 3; i = ++_j) {
-        if (pens[i] < minp) {
-          mini = i;
-          minp = pens[i];
-        }
-      }
-      collided.push({
-        type: ent.type || 'entity',
-        point: points[mini],
-        normal: normals[mini]
-      });
-    }
-  }
-  if (tentity) {
-    entities.pop(tentity);
-  }
-  return collided;
+  return collision;
 };
 
 module.exports.updateGun = function(gun, dt) {
@@ -429,7 +576,7 @@ module.exports.updateGun = function(gun, dt) {
 
 
 
-},{"./aabb-point-inside":2,"./constants":4,"./physics-collide":6,"./physics-move":7}],9:[function(require,module,exports){
+},{"./aabb-from-rect":1,"./aabb-intersect-line":2,"./aabb-point-inside":4,"./constants":6,"./physics-collide":8,"./physics-move":9}],11:[function(require,module,exports){
 var c, drawAngle, renderLevel;
 
 c = require('./constants');
@@ -498,7 +645,20 @@ module.exports = function(ctx, me, enemies, gun, bullet, level) {
 
 
 
-},{"./constants":4}],10:[function(require,module,exports){
+},{"./constants":6}],12:[function(require,module,exports){
+var sign;
+
+module.exports = sign = function(value) {
+  if (value < 0) {
+    return -1;
+  } else {
+    return 1;
+  }
+};
+
+
+
+},{}],13:[function(require,module,exports){
 module.exports = function() {
   if ((typeof window !== "undefined" && window !== null) && window.performance && window.performance.now) {
     return window.performance.now();
@@ -509,7 +669,7 @@ module.exports = function() {
 
 
 
-},{}],11:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 var unitVector;
 
 module.exports = unitVector = function(v) {
@@ -523,129 +683,7 @@ module.exports = unitVector = function(v) {
 
 
 
-},{}],12:[function(require,module,exports){
-var now = require('performance-now')
-  , global = typeof window === 'undefined' ? {} : window
-  , vendors = ['moz', 'webkit']
-  , suffix = 'AnimationFrame'
-  , raf = global['request' + suffix]
-  , caf = global['cancel' + suffix] || global['cancelRequest' + suffix]
-  , native = true
-
-for(var i = 0; i < vendors.length && !raf; i++) {
-  raf = global[vendors[i] + 'Request' + suffix]
-  caf = global[vendors[i] + 'Cancel' + suffix]
-      || global[vendors[i] + 'CancelRequest' + suffix]
-}
-
-// Some versions of FF have rAF but not cAF
-if(!raf || !caf) {
-  native = false
-
-  var last = 0
-    , id = 0
-    , queue = []
-    , frameDuration = 1000 / 60
-
-  raf = function(callback) {
-    if(queue.length === 0) {
-      var _now = now()
-        , next = Math.max(0, frameDuration - (_now - last))
-      last = next + _now
-      setTimeout(function() {
-        var cp = queue.slice(0)
-        // Clear queue here to prevent
-        // callbacks from appending listeners
-        // to the current frame's queue
-        queue.length = 0
-        for(var i = 0; i < cp.length; i++) {
-          if(!cp[i].cancelled) {
-            try{
-              cp[i].callback(last)
-            } catch(e) {
-              setTimeout(function() { throw e }, 0)
-            }
-          }
-        }
-      }, next)
-    }
-    queue.push({
-      handle: ++id,
-      callback: callback,
-      cancelled: false
-    })
-    return id
-  }
-
-  caf = function(handle) {
-    for(var i = 0; i < queue.length; i++) {
-      if(queue[i].handle === handle) {
-        queue[i].cancelled = true
-      }
-    }
-  }
-}
-
-module.exports = function(fn) {
-  // Wrap in a new function to prevent
-  // `cancel` potentially being assigned
-  // to the native rAF function
-  if(!native) {
-    return raf.call(global, fn)
-  }
-  return raf.call(global, function() {
-    try{
-      fn.apply(this, arguments)
-    } catch(e) {
-      setTimeout(function() { throw e }, 0)
-    }
-  })
-}
-module.exports.cancel = function() {
-  caf.apply(global, arguments)
-}
-
-},{"performance-now":13}],13:[function(require,module,exports){
-(function (process){
-// Generated by CoffeeScript 1.6.3
-(function() {
-  var getNanoSeconds, hrtime, loadTime;
-
-  if ((typeof performance !== "undefined" && performance !== null) && performance.now) {
-    module.exports = function() {
-      return performance.now();
-    };
-  } else if ((typeof process !== "undefined" && process !== null) && process.hrtime) {
-    module.exports = function() {
-      return (getNanoSeconds() - loadTime) / 1e6;
-    };
-    hrtime = process.hrtime;
-    getNanoSeconds = function() {
-      var hr;
-      hr = hrtime();
-      return hr[0] * 1e9 + hr[1];
-    };
-    loadTime = getNanoSeconds();
-  } else if (Date.now) {
-    module.exports = function() {
-      return Date.now() - loadTime;
-    };
-    loadTime = Date.now();
-  } else {
-    module.exports = function() {
-      return new Date().getTime() - loadTime;
-    };
-    loadTime = new Date().getTime();
-  }
-
-}).call(this);
-
-/*
-//@ sourceMappingURL=performance-now.map
-*/
-
-}).call(this,require("qvMYcC"))
-},{"qvMYcC":14}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -710,7 +748,129 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
+var now = require('performance-now')
+  , global = typeof window === 'undefined' ? {} : window
+  , vendors = ['moz', 'webkit']
+  , suffix = 'AnimationFrame'
+  , raf = global['request' + suffix]
+  , caf = global['cancel' + suffix] || global['cancelRequest' + suffix]
+  , native = true
+
+for(var i = 0; i < vendors.length && !raf; i++) {
+  raf = global[vendors[i] + 'Request' + suffix]
+  caf = global[vendors[i] + 'Cancel' + suffix]
+      || global[vendors[i] + 'CancelRequest' + suffix]
+}
+
+// Some versions of FF have rAF but not cAF
+if(!raf || !caf) {
+  native = false
+
+  var last = 0
+    , id = 0
+    , queue = []
+    , frameDuration = 1000 / 60
+
+  raf = function(callback) {
+    if(queue.length === 0) {
+      var _now = now()
+        , next = Math.max(0, frameDuration - (_now - last))
+      last = next + _now
+      setTimeout(function() {
+        var cp = queue.slice(0)
+        // Clear queue here to prevent
+        // callbacks from appending listeners
+        // to the current frame's queue
+        queue.length = 0
+        for(var i = 0; i < cp.length; i++) {
+          if(!cp[i].cancelled) {
+            try{
+              cp[i].callback(last)
+            } catch(e) {
+              setTimeout(function() { throw e }, 0)
+            }
+          }
+        }
+      }, Math.round(next))
+    }
+    queue.push({
+      handle: ++id,
+      callback: callback,
+      cancelled: false
+    })
+    return id
+  }
+
+  caf = function(handle) {
+    for(var i = 0; i < queue.length; i++) {
+      if(queue[i].handle === handle) {
+        queue[i].cancelled = true
+      }
+    }
+  }
+}
+
+module.exports = function(fn) {
+  // Wrap in a new function to prevent
+  // `cancel` potentially being assigned
+  // to the native rAF function
+  if(!native) {
+    return raf.call(global, fn)
+  }
+  return raf.call(global, function() {
+    try{
+      fn.apply(this, arguments)
+    } catch(e) {
+      setTimeout(function() { throw e }, 0)
+    }
+  })
+}
+module.exports.cancel = function() {
+  caf.apply(global, arguments)
+}
+
+},{"performance-now":17}],17:[function(require,module,exports){
+(function (process){
+// Generated by CoffeeScript 1.6.3
+(function() {
+  var getNanoSeconds, hrtime, loadTime;
+
+  if ((typeof performance !== "undefined" && performance !== null) && performance.now) {
+    module.exports = function() {
+      return performance.now();
+    };
+  } else if ((typeof process !== "undefined" && process !== null) && process.hrtime) {
+    module.exports = function() {
+      return (getNanoSeconds() - loadTime) / 1e6;
+    };
+    hrtime = process.hrtime;
+    getNanoSeconds = function() {
+      var hr;
+      hr = hrtime();
+      return hr[0] * 1e9 + hr[1];
+    };
+    loadTime = getNanoSeconds();
+  } else if (Date.now) {
+    module.exports = function() {
+      return Date.now() - loadTime;
+    };
+    loadTime = Date.now();
+  } else {
+    module.exports = function() {
+      return new Date().getTime() - loadTime;
+    };
+    loadTime = new Date().getTime();
+  }
+
+}).call(this);
+
+/*
+//@ sourceMappingURL=performance-now.map
+*/
+
+}).call(this,require("FWaASH"))
+},{"FWaASH":15}],18:[function(require,module,exports){
 var Level, bullet, bulletUpdates, c, canvas, collide, ctx, dt, enemyEntities, frame, fs, gun, last, level, monster, now, onkey, physics, player, raf, render, setup, time, unitVector;
 
 Level = require('./modules/level');
@@ -799,7 +959,7 @@ setup = function() {
 };
 
 frame = function() {
-  var bulletCollides, entity, _, _i, _j, _k, _len, _len1;
+  var collision, entity, _i, _j, _len, _len1;
   now = time();
   dt = dt + Math.min(1, (now - last) / 1000);
   if (gun.firing && (!bullet)) {
@@ -807,11 +967,11 @@ frame = function() {
       x: player.x,
       y: player.y,
       width: 10,
-      height: 100,
+      height: 10,
       angle: gun.angle
     };
-    bullet.dx = 800 * Math.sin(bullet.angle);
-    bullet.dy = -800 * Math.cos(bullet.angle);
+    bullet.dx = 1100 * Math.sin(bullet.angle);
+    bullet.dy = -1100 * Math.cos(bullet.angle);
     bullet.dir = unitVector({
       x: bullet.dx,
       y: bullet.dy
@@ -829,17 +989,15 @@ frame = function() {
       physics.updateEntity(entity, level, c.STEP);
     }
     physics.updateGun(gun, c.STEP);
-    for (_ = _j = 1; _j <= bulletUpdates; _ = _j += 1) {
-      if (bullet) {
-        bulletCollides = physics.updateBullet(bullet, enemyEntities, level, c.STEP / bulletUpdates);
-        if (bulletCollides.length > 0) {
-          console.log(bulletCollides);
-          bullet = null;
-        }
+    if (bullet) {
+      collision = physics.updateBullet(bullet, enemyEntities, level, c.STEP);
+      if (collision) {
+        console.log(collision);
+        bullet = null;
       }
     }
-    for (_k = 0, _len1 = enemyEntities.length; _k < _len1; _k++) {
-      entity = enemyEntities[_k];
+    for (_j = 0, _len1 = enemyEntities.length; _j < _len1; _j++) {
+      entity = enemyEntities[_j];
       collide.entityCollide(player, entity);
     }
   }
@@ -862,4 +1020,4 @@ frame();
 
 
 
-},{"./modules/constants":4,"./modules/level":5,"./modules/physics":8,"./modules/physics-collide":6,"./modules/renderer":9,"./modules/time":10,"./modules/v2-unit":11,"raf":12}]},{},[15])
+},{"./modules/constants":6,"./modules/level":7,"./modules/physics":10,"./modules/physics-collide":8,"./modules/renderer":11,"./modules/time":13,"./modules/v2-unit":14,"raf":16}]},{},[18])
