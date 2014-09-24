@@ -1,6 +1,6 @@
 intersectAABB = require './aabb-intersect'
 toAABB        = require './aabb-from-rect'
-
+c             = require './constants'
 
 module.exports.levelCollideX = (entity, level, xnew) ->
 
@@ -31,7 +31,7 @@ module.exports.levelCollideX = (entity, level, xnew) ->
     ytilebottom = level.pixelToTile yold + entity.hitbox.height - 1
     for ytile in [ytilebottom..ytiletop]
         tentity = level.tileEntity xtilenew, ytile
-        if tentity
+        if tentity and tentity.value != c.WTILE
           entity.dx = 0
           entity.ddx = 0
           if xnew > xold
@@ -68,7 +68,7 @@ module.exports.levelCollideY = (entity, level, ynew) ->
     xtileright = level.pixelToTile (xold + entity.hitbox.width - 1)
     for xtile in [xtileleft..xtileright]
       tentity = level.tileEntity xtile, ytilenew            
-      if tentity
+      if tentity and tentity.value != c.WTILE
         entity.dy = 0
         entity.ddy = 0
         if ynew < yold

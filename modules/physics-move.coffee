@@ -1,7 +1,6 @@
 c     = require './constants'
 clamp = require './clamp'
 
-
 # move an entity through the level in the x direction, return the new
 # x position (top left co-ord of hitbox)
 module.exports.stepX = (entity, level, dt) ->
@@ -34,7 +33,14 @@ module.exports.stepX = (entity, level, dt) ->
 # move an entity through the level in the y direction, return the new
 # y position (top left co-ord of hitbox)
 module.exports.stepY = (entity, level, dt) ->
-  entity.ddy = entity.gravity
+
+  # fall normally, unless we are in water
+  console.log(level.cellValue(entity.x + entity.width / 2, entity.y + entity.height / 2))
+  if (level.cellValue(entity.x + entity.width / 2, entity.y + entity.height / 2) == c.WTILE)
+    entity.ddy = -entity.gravity
+  else
+    entity.ddy = entity.gravity
+    
   if entity.jump and not entity.jumping and (entity.onfloor or (entity.jumpcount < entity.maxjumpcount))
     entity.dy = 0
     entity.ddy = entity.ddy - entity.impulse # an instant big force impulse

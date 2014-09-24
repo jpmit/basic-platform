@@ -11,6 +11,7 @@ COLOR =
   GREY: '#333'
   SLATE: '#53777A'
   GOLD: 'gold'
+  LBLUE: '#20BFF5'
 
 TILE = 32
 FPS  = 60
@@ -18,8 +19,9 @@ FPS  = 60
 module.exports =
   TILE: TILE         # the size of each tile (in game pixels)
   METER    : TILE    # abitrary choice for 1m
+  WTILE    : 6       # value of water tile 
   GRAVITY  : 9.8 * 6 # default (exagerated) gravity
-  MAXDX    : 15       # default max horizontal speed (15 tiles per second)
+  MAXDX    : 15      # default max horizontal speed (15 tiles per second)
   MAXDY    : 60      # default max vertical speed   (60 tiles per second)
   ACCEL    : 1 / 2   # default take 1/2 second to reach maxdx (horizontal acceleration)
   FRICTION : 1 / 6   # default take 1/6 second to stop from maxdx (horizontal friction)
@@ -31,6 +33,7 @@ module.exports =
     COLOR.PINK
     COLOR.PURPLE
     COLOR.GREY
+    COLOR.LBLUE
   ]
   KEY:
     CTRL    : 17
