@@ -41,10 +41,9 @@ class Level
     if val
       type: "tile"
       value: val
-      hitbox:
-        x : tx * c.TILE
-        y : ty * c.TILE
-        width : c.TILE
-        height : c.TILE
+      x : tx * c.TILE
+      y : ty * c.TILE
+      width : c.TILE
+      height : c.TILE
 
 module.exports = Level

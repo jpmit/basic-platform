@@ -24,7 +24,7 @@ findNearestCollision = (minX, maxX, minY, maxY, pos, delta, entities, level) ->
         aabbs.push aabb
 
   for ent in entities
-    aabb = toAABB(ent.hitbox)
+    aabb = toAABB ent
     aabb.type = 'entity'
     aabb.entity = ent
     aabbs.push aabb
@@ -43,84 +43,18 @@ findNearestCollision = (minX, maxX, minY, maxY, pos, delta, entities, level) ->
   nearestHit
 
 
-# create a new physics object using some initial settings
-module.exports.setupEntity = (obj) ->
-  obj.properties = obj.properties or {}
-  maxdx = c.METER * (obj.properties.maxdx or c.MAXDX)
-
-  # hitbox is optional; use rendering dimensions if not specified
-  if not obj.properties.hitbox
-    obj.properties.hitbox =
-      xoff: 0
-      yoff: 0
-      width: obj.width
-      height: obj.height
-      
-  entity =
-    # the AABB of the entity, and the x, y co-ordinate is the
-    # top left of the AABB (stored in pixels). The 'hitbox' can be
-    # offset from this point by any amount in whole pixels.
-    x: obj.x
-    y: obj.y
-    height: obj.height
-    width: obj.width
-    hitbox:
-      # offsets from the top left in pixels
-      xoff: obj.properties.hitbox.xoff
-      yoff: obj.properties.hitbox.yoff
-      width: obj.properties.hitbox.width
-      height: obj.properties.hitbox.height
-    dx: 0
-    dy: 0
-    gravity : c.METER * (obj.properties.gravity or c.GRAVITY)
-    maxdx   : maxdx
-    maxdy   : c.METER * (obj.properties.maxdy or c.MAXDY)
-    impulse : c.METER * (obj.properties.impulse or c.IMPULSE)
-    accel   : maxdx / (obj.properties.accel or c.ACCEL)
-    friction: maxdx / (obj.properties.friction or c.FRICTION)
-    start:
-      x: obj.x
-      y: obj.y
-    left    : obj.properties.left
-    right   : obj.properties.right
-    jump    : null
-    jumpcount: 0
-    maxjumpcount: obj.properties.maxjumpcount or 1
-
-  # added for water: all of these constants are 'made up' and probably
-  # need to be adjusted.
-  # accelaration due to buoyancy: if < gravity, entity will float
-  entity.buoyancy = 0.95 * entity.gravity
-  # reduced jump in water
-  entity.wImpulse = 0.5 * c.METER * (obj.properties.impulse or c.IMPULSE)
-  entity.inWater = false
-  # can have different values of friction and accelaration when in water
-  entity.wFriction = 2 * entity.friction
-  entity.wAccel = 0.5 * entity.accel
-
-  # added for ladders
-  entity.onLadder = false
-  entity.ladderdx = 120
-  entity.ladderdy = 120
-
-  entity.hitbox.x = entity.x + entity.hitbox.xoff
-  entity.hitbox.y = entity.y + entity.hitbox.yoff
-
-  return entity
-
-
 # entity is in water if center point is on water tile
 inWater = (entity, level) ->
   level.cellValue(entity.x + entity.width / 2, entity.y + entity.height / 2) == c.WTILE
 
 
-# entity is on ladder if its hitbox overlaps with the ladder tile
+# entity is on ladder if its rigid body overlaps with the ladder tile
 onLadder = (entity, level) ->
-  # get tile values at all four corners of hitbox and check if any are ladder tiles
-  points = [[entity.hitbox.x, entity.hitbox.y],
-            [entity.hitbox.x + entity.hitbox.width, entity.hitbox.y],
-            [entity.hitbox.x, entity.hitbox.y + entity.hitbox.height],
-            [entity.hitbox.x + entity.hitbox.width, entity.hitbox.y + entity.hitbox.height]]
+  # get tile values at all four corners of rigid body and check if any are ladder tiles
+  points = [[entity.x, entity.y],
+            [entity.x + entity.width, entity.y],
+            [entity.x, entity.y + entity.height],
+            [entity.x + entity.width, entity.y + entity.height]]
   for i in [0..3] by 1
     p = points[i]
     if level.cellValue(p[0], p[1]) == c.LTILE

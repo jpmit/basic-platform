@@ -1,11 +1,13 @@
-Level   = require './modules/level'
-c       = require './modules/constants'
-fs      = require 'fs'
-physics = require './modules/physics'
-collide = require './modules/physics-collide'
-raf     = require 'raf'
-render  = require './modules/renderer'
-time    = require './modules/time'
+Level      = require './modules/level'
+RigidBody  = require './modules/mixin-rigid-body'
+assign     = require 'lodash.assign'
+c          = require './modules/constants'
+collide    = require './modules/physics-collide'
+fs         = require 'fs'
+physics    = require './modules/physics'
+raf        = require 'raf'
+render     = require './modules/renderer'
+time       = require './modules/time'
 unitVector = require './modules/v2-unit'
 
 
@@ -17,7 +19,7 @@ last   = time()
 level = null
 player = null
 monster = null
-enemyEntities = []
+monsters = []
 gun = null
 bullet = null
 bulletUpdates = 3
@@ -57,18 +59,40 @@ onkey = (ev, key, down) ->
       gun.down = down
 
 
+# create an entity that mixins a physics rigid body
+createEntity = (obj) ->
+  entity =
+    xoff : obj.properties.hitbox.xoff
+    yoff : obj.properties.hitbox.yoff
+    render_width: obj.width
+    render_height: obj.height
+    start:
+      x: obj.x
+      y: obj.y
+
+  obj.width = obj.properties.hitbox.width
+  obj.height = obj.properties.hitbox.height
+
+  assign entity, new RigidBody(obj)
+
+
 setup = ->
   level_data = JSON.parse fs.readFileSync(__dirname+'/level.json', 'utf8')
   level = new Level level_data
   canvas.width = level.width
   canvas.height = level.height
-  player = physics.setupEntity level_data.layers[1].objects[0]
-  monster = physics.setupEntity level_data.layers[1].objects[1]
+
+  player = createEntity level_data.layers[1].objects[0]
+  player.maxjumpcount = 3
+
+  monster = createEntity level_data.layers[1].objects[1]
+
   # added gun with rudimentary aiming with up and down arrow keys;
   # angle is in radians clockwise from horizontal
   gun = { angle: 0.001 , firing: false, sensitivity: 5}
+
   # list of all entities other than the player entity
-  enemyEntities = [monster]
+  monsters = [ monster ]
 
 
 frame = ->
@@ -88,22 +112,21 @@ frame = ->
   while dt > c.STEP
     dt = dt - c.STEP
     physics.updateEntity player, level, c.STEP
-    #for entity in enemyEntities
-    #  physics.updateEntity entity, level, c.STEP
+    physics.updateEntity(monster, level, c.STEP) for monster in monsters 
     # update the aiming of the gun
     physics.updateGun gun, c.STEP
     
     if bullet
       # did the bullet collide with the level or other entities?
-      collision =  physics.updateBullet bullet, enemyEntities, level, c.STEP
+      collision =  physics.updateBullet bullet, monsters, level, c.STEP
       if collision
         console.log collision      
         bullet = null
   
     # detect (and handle) collision between player and other entities
-    for entity in enemyEntities
-      collide.entityCollide player, entity
-  render ctx, player, enemyEntities, gun, bullet, level
+    for monster in monsters
+      collide.entityCollide player, monster
+  render ctx, player, monsters, gun, bullet, level
   last = now
   raf frame, canvas
 
