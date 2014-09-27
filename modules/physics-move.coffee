@@ -27,14 +27,14 @@ module.exports.stepX = (entity, level, dt) ->
       entity.ddx = entity.ddx + accel
     else if wasright
       entity.ddx = entity.ddx - friction
-
+  
   entity.dx = clamp(entity.dx + (entity.ddx*dt), -entity.maxdx, entity.maxdx)
 
   if (wasleft and (entity.dx > 0)) or (wasright and (entity.dx < 0))
     # clamp at zero to prevent friction from making us jiggle side to side
     entity.dx = 0
 
-  entity.hitbox.x + Math.floor(entity.dx * dt)
+  entity.hitbox.x + Math.round(entity.dx * dt)
 
 
 # move an entity through the level in the y direction, return the new
@@ -47,15 +47,14 @@ module.exports.stepY = (entity, level, dt) ->
     if entity.up
       entity.dy = -entity.ladderdy
     if entity.down
-      entity.dy = 10 * entity.ladderdy
-    console.log entity.up, entity.down, entity.dy
+      entity.dy =  entity.ladderdy
   else
     entity.ddy = entity.gravity
     
   if entity.inWater
     entity.ddy = entity.ddy - entity.buoyancy
     
-  if entity.jump and not entity.jumping and (entity.onfloor or (entity.jumpcount < entity.maxjumpcount))
+  if entity.jump and not entity.jumping and not entity.onLadder and (entity.onfloor or (entity.jumpcount < entity.maxjumpcount))
     entity.dy = 0
     # we probably shouldn't be able to jump as high if we are in water
     if entity.inWater
@@ -71,5 +70,5 @@ module.exports.stepY = (entity, level, dt) ->
   if entity.dy > 0
     entity.jumping = false
     entity.falling = true
-        
-  entity.y + entity.hitbox.yoff + Math.floor(entity.dy * dt)
+
+  entity.y + entity.hitbox.yoff + Math.round(entity.dy * dt)

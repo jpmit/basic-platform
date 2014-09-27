@@ -100,8 +100,8 @@ module.exports.setupEntity = (obj) ->
 
   # added for ladders
   entity.onLadder = false
-  entity.ladderdx = 5
-  entity.ladderdy = 5
+  entity.ladderdx = 120
+  entity.ladderdy = 120
 
   entity.hitbox.x = entity.x + entity.hitbox.xoff
   entity.hitbox.y = entity.y + entity.hitbox.yoff

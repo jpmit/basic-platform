@@ -429,7 +429,7 @@ module.exports.stepX = function(entity, level, dt) {
   if ((wasleft && (entity.dx > 0)) || (wasright && (entity.dx < 0))) {
     entity.dx = 0;
   }
-  return entity.hitbox.x + Math.floor(entity.dx * dt);
+  return entity.hitbox.x + Math.round(entity.dx * dt);
 };
 
 module.exports.stepY = function(entity, level, dt) {
@@ -440,16 +440,15 @@ module.exports.stepY = function(entity, level, dt) {
       entity.dy = -entity.ladderdy;
     }
     if (entity.down) {
-      entity.dy = 10 * entity.ladderdy;
+      entity.dy = entity.ladderdy;
     }
-    console.log(entity.up, entity.down, entity.dy);
   } else {
     entity.ddy = entity.gravity;
   }
   if (entity.inWater) {
     entity.ddy = entity.ddy - entity.buoyancy;
   }
-  if (entity.jump && !entity.jumping && (entity.onfloor || (entity.jumpcount < entity.maxjumpcount))) {
+  if (entity.jump && !entity.jumping && !entity.onLadder && (entity.onfloor || (entity.jumpcount < entity.maxjumpcount))) {
     entity.dy = 0;
     if (entity.inWater) {
       entity.ddy = entity.ddy - entity.wImpulse;
@@ -465,7 +464,7 @@ module.exports.stepY = function(entity, level, dt) {
     entity.jumping = false;
     entity.falling = true;
   }
-  return entity.y + entity.hitbox.yoff + Math.floor(entity.dy * dt);
+  return entity.y + entity.hitbox.yoff + Math.round(entity.dy * dt);
 };
 
 
@@ -575,8 +574,8 @@ module.exports.setupEntity = function(obj) {
   entity.wFriction = 2 * entity.friction;
   entity.wAccel = 0.5 * entity.accel;
   entity.onLadder = false;
-  entity.ladderdx = 5;
-  entity.ladderdy = 5;
+  entity.ladderdx = 120;
+  entity.ladderdy = 120;
   entity.hitbox.x = entity.x + entity.hitbox.xoff;
   entity.hitbox.y = entity.y + entity.hitbox.yoff;
   return entity;
@@ -1047,7 +1046,7 @@ setup = function() {
 };
 
 frame = function() {
-  var collision, entity, _i, _j, _len, _len1;
+  var collision, entity, _i, _len;
   now = time();
   dt = dt + Math.min(1, (now - last) / 1000);
   if (gun.firing && (!bullet)) {
@@ -1072,10 +1071,6 @@ frame = function() {
   while (dt > c.STEP) {
     dt = dt - c.STEP;
     physics.updateEntity(player, level, c.STEP);
-    for (_i = 0, _len = enemyEntities.length; _i < _len; _i++) {
-      entity = enemyEntities[_i];
-      physics.updateEntity(entity, level, c.STEP);
-    }
     physics.updateGun(gun, c.STEP);
     if (bullet) {
       collision = physics.updateBullet(bullet, enemyEntities, level, c.STEP);
@@ -1084,8 +1079,8 @@ frame = function() {
         bullet = null;
       }
     }
-    for (_j = 0, _len1 = enemyEntities.length; _j < _len1; _j++) {
-      entity = enemyEntities[_j];
+    for (_i = 0, _len = enemyEntities.length; _i < _len; _i++) {
+      entity = enemyEntities[_i];
       collide.entityCollide(player, entity);
     }
   }

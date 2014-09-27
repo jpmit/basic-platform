@@ -88,8 +88,8 @@ frame = ->
   while dt > c.STEP
     dt = dt - c.STEP
     physics.updateEntity player, level, c.STEP
-    for entity in enemyEntities
-      physics.updateEntity entity, level, c.STEP
+    #for entity in enemyEntities
+    #  physics.updateEntity entity, level, c.STEP
     # update the aiming of the gun
     physics.updateGun gun, c.STEP
     
