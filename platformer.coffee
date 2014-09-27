@@ -32,6 +32,15 @@ onkey = (ev, key, down) ->
       ev.preventDefault()
       player.right = down
       return false
+    # UP and DOWN used for climbing ladders
+    when c.KEY.UP
+      ev.preventDefault()
+      player.up = down
+      return false
+    when c.KEY.DOWN
+      ev.preventDefault()
+      player.down = down
+      return false
     when c.KEY.SPACE
       ev.preventDefault()
       player.jump = down
@@ -79,8 +88,8 @@ frame = ->
   while dt > c.STEP
     dt = dt - c.STEP
     physics.updateEntity player, level, c.STEP
-    for entity in enemyEntities
-      physics.updateEntity entity, level, c.STEP
+    #for entity in enemyEntities
+    #  physics.updateEntity entity, level, c.STEP
     # update the aiming of the gun
     physics.updateGun gun, c.STEP
     

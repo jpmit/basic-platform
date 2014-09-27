@@ -1,6 +1,5 @@
 c = require './constants'
 
-
 class Level
   constructor: (obj) ->
     @cells = obj.layers[0].data # cell rendering data
@@ -27,7 +26,6 @@ class Level
 
   tileToPixel: (t) -> t * c.TILE
 
-
   # get the value at the given cell
   # type is 'render' or 'collision'
   # example  tileTovalue(0,1, cells) returns the value at col 0, row 1
@@ -42,6 +40,7 @@ class Level
     val = @tileToValue tx, ty
     if val
       type: "tile"
+      value: val
       hitbox:
         x : tx * c.TILE
         y : ty * c.TILE

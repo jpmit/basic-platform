@@ -87,16 +87,67 @@ module.exports.setupEntity = (obj) ->
     jumpcount: 0
     maxjumpcount: obj.properties.maxjumpcount or 1
 
+  # added for water: all of these constants are 'made up' and probably
+  # need to be adjusted.
+  # accelaration due to buoyancy: if < gravity, entity will float
+  entity.buoyancy = 0.95 * entity.gravity
+  # reduced jump in water
+  entity.wImpulse = 0.5 * c.METER * (obj.properties.impulse or c.IMPULSE)
+  entity.inWater = false
+  # can have different values of friction and accelaration when in water
+  entity.wFriction = 2 * entity.friction
+  entity.wAccel = 0.5 * entity.accel
+
+  # added for ladders
+  entity.onLadder = false
+  entity.ladderdx = 120
+  entity.ladderdy = 120
+
   entity.hitbox.x = entity.x + entity.hitbox.xoff
   entity.hitbox.y = entity.y + entity.hitbox.yoff
 
   return entity
+
+
+# entity is in water if center point is on water tile
+inWater = (entity, level) ->
+  level.cellValue(entity.x + entity.width / 2, entity.y + entity.height / 2) == c.WTILE
+
+
+# entity is on ladder if its hitbox overlaps with the ladder tile
+onLadder = (entity, level) ->
+  # get tile values at all four corners of hitbox and check if any are ladder tiles
+  points = [[entity.hitbox.x, entity.hitbox.y],
+            [entity.hitbox.x + entity.hitbox.width, entity.hitbox.y],
+            [entity.hitbox.x, entity.hitbox.y + entity.hitbox.height],
+            [entity.hitbox.x + entity.hitbox.width, entity.hitbox.y + entity.hitbox.height]]
+  for i in [0..3] by 1
+    p = points[i]
+    if level.cellValue(p[0], p[1]) == c.LTILE
+      return true
+  return false
+
 
 # run a physics update step on an entity.  We first get the x position
 # we want to move the entity to (this will update the velocity and
 # accelaration but not the position of the entity).  Then we move the
 # entity to the correct x position based on collisions with the level.
 module.exports.updateEntity = (entity, level, dt) ->
+
+  if inWater entity, level
+    entity.inWater = true
+  else
+    entity.inWater = false
+
+  if onLadder entity, level
+    if not entity.onLadder
+      # first time on ladder
+      entity.dy = 0
+      entity.dx = 0
+    entity.onLadder = true
+  else
+    entity.onLadder = false
+  
   xnew = move.stepX entity, level, dt
   collide.levelCollideX entity, level, xnew
 
