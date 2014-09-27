@@ -1,6 +1,5 @@
 c = require './constants'
 
-
 class Level
   constructor: (obj) ->
     @cells = obj.layers[0].data # cell rendering data

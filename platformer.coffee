@@ -32,6 +32,15 @@ onkey = (ev, key, down) ->
       ev.preventDefault()
       player.right = down
       return false
+    # UP and DOWN used for climbing ladders
+    when c.KEY.UP
+      ev.preventDefault()
+      player.up = down
+      return false
+    when c.KEY.DOWN
+      ev.preventDefault()
+      player.down = down
+      return false
     when c.KEY.SPACE
       ev.preventDefault()
       player.jump = down
