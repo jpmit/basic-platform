@@ -43,6 +43,8 @@ class RigidBodyMixin
     # can have different values of friction and accelaration when in water
     @wFriction = 2 * @friction
     @wAccel = 0.5 * @accel
+    # multiple velocity by this when entering water
+    @wVelRescale = 0.1
 
     # added for ladders
     @onLadder = false

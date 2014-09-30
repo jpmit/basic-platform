@@ -69,9 +69,14 @@ onLadder = (entity, level) ->
 module.exports.updateEntity = (entity, level, dt) ->
 
   if inWater entity, level
+    if not entity.inWater
+      entity.brokeWater = true
+    else
+      entity.brokeWater = false
     entity.inWater = true
   else
     entity.inWater = false
+    entity.brokeWater = false
 
   if onLadder entity, level
     if not entity.onLadder

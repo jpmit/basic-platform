@@ -1,4 +1,4 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-from-rect.coffee":[function(require,module,exports){
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/aabb-from-rect.coffee":[function(require,module,exports){
 var toAABB;
 
 module.exports = toAABB = function(rect) {
@@ -17,7 +17,7 @@ module.exports = toAABB = function(rect) {
 
 
 
-},{}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-intersect-line.coffee":[function(require,module,exports){
+},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/aabb-intersect-line.coffee":[function(require,module,exports){
 var clamp, intersectSegment, sign;
 
 clamp = require('./clamp');
@@ -95,7 +95,7 @@ module.exports = intersectSegment = function(aabb, pos, delta, paddingX, padding
 
 
 
-},{"./clamp":"/Users/michaelreinstein/wwwroot/basic-platform/modules/clamp.coffee","./sign":"/Users/michaelreinstein/wwwroot/basic-platform/modules/sign.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-intersect.coffee":[function(require,module,exports){
+},{"./clamp":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/clamp.coffee","./sign":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/sign.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/aabb-intersect.coffee":[function(require,module,exports){
 var intersectAABB, sign;
 
 sign = require('./sign');
@@ -164,7 +164,7 @@ module.exports = intersectAABB = function(aabb, aabb2) {
 
 
 
-},{"./sign":"/Users/michaelreinstein/wwwroot/basic-platform/modules/sign.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-point-inside.coffee":[function(require,module,exports){
+},{"./sign":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/sign.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/aabb-point-inside.coffee":[function(require,module,exports){
 var pointInAABB;
 
 module.exports = pointInAABB = function(point, box) {
@@ -173,14 +173,14 @@ module.exports = pointInAABB = function(point, box) {
 
 
 
-},{}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/clamp.coffee":[function(require,module,exports){
+},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/clamp.coffee":[function(require,module,exports){
 module.exports = function(x, min, max) {
   return Math.max(min, Math.min(max, x));
 };
 
 
 
-},{}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee":[function(require,module,exports){
+},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee":[function(require,module,exports){
 var COLOR, FPS, TILE;
 
 COLOR = {
@@ -232,7 +232,7 @@ module.exports = {
 
 
 
-},{}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/level.coffee":[function(require,module,exports){
+},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/level.coffee":[function(require,module,exports){
 var Level, c;
 
 c = require('./constants');
@@ -298,7 +298,7 @@ module.exports = Level;
 
 
 
-},{"./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/mixin-rigid-body.coffee":[function(require,module,exports){
+},{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/mixin-rigid-body.coffee":[function(require,module,exports){
 var RigidBodyMixin, c;
 
 c = require('./constants');
@@ -331,6 +331,7 @@ RigidBodyMixin = (function() {
     this.inWater = false;
     this.wFriction = 2 * this.friction;
     this.wAccel = 0.5 * this.accel;
+    this.wVelRescale = 0.1;
     this.onLadder = false;
     this.ladderdx = 120;
     this.ladderdy = 120;
@@ -344,7 +345,7 @@ module.exports = RigidBodyMixin;
 
 
 
-},{"./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics-collide.coffee":[function(require,module,exports){
+},{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee":[function(require,module,exports){
 var c, intersectAABB, toAABB,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
@@ -441,7 +442,7 @@ module.exports.entityCollide = function(entity1, entity2) {
 
 
 
-},{"./aabb-from-rect":"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-from-rect.coffee","./aabb-intersect":"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-intersect.coffee","./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics-move.coffee":[function(require,module,exports){
+},{"./aabb-from-rect":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/aabb-from-rect.coffee","./aabb-intersect":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/aabb-intersect.coffee","./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-move.coffee":[function(require,module,exports){
 var c, clamp;
 
 c = require('./constants');
@@ -496,6 +497,9 @@ module.exports.stepY = function(entity, level, dt) {
     entity.ddy = entity.gravity;
   }
   if (entity.inWater) {
+    if (entity.brokeWater) {
+      entity.dy = entity.wVelRescale * entity.dy;
+    }
     entity.ddy = entity.ddy - entity.buoyancy;
   }
   if (entity.jump && !entity.jumping && !entity.onLadder && (entity.onfloor || (entity.jumpcount < entity.maxjumpcount))) {
@@ -519,7 +523,7 @@ module.exports.stepY = function(entity, level, dt) {
 
 
 
-},{"./clamp":"/Users/michaelreinstein/wwwroot/basic-platform/modules/clamp.coffee","./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics.coffee":[function(require,module,exports){
+},{"./clamp":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/clamp.coffee","./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics.coffee":[function(require,module,exports){
 var c, collide, findNearestCollision, inAABB, inWater, intersectLine, move, onLadder, toAABB;
 
 collide = require('./physics-collide');
@@ -596,9 +600,15 @@ onLadder = function(entity, level) {
 module.exports.updateEntity = function(entity, level, dt) {
   var xnew, ynew;
   if (inWater(entity, level)) {
+    if (!entity.inWater) {
+      entity.brokeWater = true;
+    } else {
+      entity.brokeWater = false;
+    }
     entity.inWater = true;
   } else {
     entity.inWater = false;
+    entity.brokeWater = false;
   }
   if (onLadder(entity, level)) {
     if (!entity.onLadder) {
@@ -651,7 +661,7 @@ module.exports.updateGun = function(gun, dt) {
 
 
 
-},{"./aabb-from-rect":"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-from-rect.coffee","./aabb-intersect-line":"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-intersect-line.coffee","./aabb-point-inside":"/Users/michaelreinstein/wwwroot/basic-platform/modules/aabb-point-inside.coffee","./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee","./physics-collide":"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics-collide.coffee","./physics-move":"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics-move.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/renderer.coffee":[function(require,module,exports){
+},{"./aabb-from-rect":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/aabb-from-rect.coffee","./aabb-intersect-line":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/aabb-intersect-line.coffee","./aabb-point-inside":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/aabb-point-inside.coffee","./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./physics-move":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-move.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/renderer.coffee":[function(require,module,exports){
 var c, drawAngle, renderLevel;
 
 c = require('./constants');
@@ -720,7 +730,7 @@ module.exports = function(ctx, me, enemies, gun, bullet, level) {
 
 
 
-},{"./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/sign.coffee":[function(require,module,exports){
+},{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/sign.coffee":[function(require,module,exports){
 var sign;
 
 module.exports = sign = function(value) {
@@ -733,7 +743,7 @@ module.exports = sign = function(value) {
 
 
 
-},{}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/time.coffee":[function(require,module,exports){
+},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/time.coffee":[function(require,module,exports){
 module.exports = function() {
   if ((typeof window !== "undefined" && window !== null) && window.performance && window.performance.now) {
     return window.performance.now();
@@ -744,7 +754,7 @@ module.exports = function() {
 
 
 
-},{}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/v2-unit.coffee":[function(require,module,exports){
+},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/v2-unit.coffee":[function(require,module,exports){
 var unitVector;
 
 module.exports = unitVector = function(v) {
@@ -758,7 +768,7 @@ module.exports = unitVector = function(v) {
 
 
 
-},{}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/process/browser.js":[function(require,module,exports){
+},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/browserify/node_modules/process/browser.js":[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -823,7 +833,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/index.js":[function(require,module,exports){
+},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -895,7 +905,7 @@ var assign = function(object, source, guard) {
 
 module.exports = assign;
 
-},{"lodash._basecreatecallback":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js","lodash._objecttypes":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js","lodash.keys":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js":[function(require,module,exports){
+},{"lodash._basecreatecallback":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js","lodash._objecttypes":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js","lodash.keys":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -977,7 +987,7 @@ function baseCreateCallback(func, thisArg, argCount) {
 
 module.exports = baseCreateCallback;
 
-},{"lodash._setbinddata":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js","lodash.bind":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js","lodash.identity":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js","lodash.support":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js":[function(require,module,exports){
+},{"lodash._setbinddata":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js","lodash.bind":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js","lodash.identity":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js","lodash.support":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -1022,7 +1032,7 @@ var setBindData = !defineProperty ? noop : function(func, value) {
 
 module.exports = setBindData;
 
-},{"lodash._isnative":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js","lodash.noop":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":[function(require,module,exports){
+},{"lodash._isnative":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js","lodash.noop":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -1058,7 +1068,7 @@ function isNative(value) {
 
 module.exports = isNative;
 
-},{}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":[function(require,module,exports){
+},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -1086,7 +1096,7 @@ function noop() {
 
 module.exports = noop;
 
-},{}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js":[function(require,module,exports){
+},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -1128,7 +1138,7 @@ function bind(func, thisArg) {
 
 module.exports = bind;
 
-},{"lodash._createwrapper":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js","lodash._slice":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js":[function(require,module,exports){
+},{"lodash._createwrapper":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js","lodash._slice":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -1236,7 +1246,7 @@ function createWrapper(func, bitmask, partialArgs, partialRightArgs, thisArg, ar
 
 module.exports = createWrapper;
 
-},{"lodash._basebind":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js","lodash._basecreatewrapper":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js","lodash._slice":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js","lodash.isfunction":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js":[function(require,module,exports){
+},{"lodash._basebind":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js","lodash._basecreatewrapper":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js","lodash._slice":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js","lodash.isfunction":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -1300,7 +1310,7 @@ function baseBind(bindData) {
 
 module.exports = baseBind;
 
-},{"lodash._basecreate":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js","lodash._setbinddata":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js","lodash._slice":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js","lodash.isobject":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
+},{"lodash._basecreate":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js","lodash._setbinddata":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js","lodash._slice":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js","lodash.isobject":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
 (function (global){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
@@ -1346,11 +1356,11 @@ if (!nativeCreate) {
 module.exports = baseCreate;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"lodash._isnative":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js","lodash.isobject":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js","lodash.noop":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js":[function(require,module,exports){
+},{"lodash._isnative":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js","lodash.isobject":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js","lodash.noop":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
+module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
+module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -1391,7 +1401,7 @@ function isObject(value) {
 
 module.exports = isObject;
 
-},{"lodash._objecttypes":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js":[function(require,module,exports){
+},{"lodash._objecttypes":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -1471,11 +1481,11 @@ function baseCreateWrapper(bindData) {
 
 module.exports = baseCreateWrapper;
 
-},{"lodash._basecreate":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/index.js","lodash._setbinddata":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js","lodash._slice":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js","lodash.isobject":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js":[function(require,module,exports){
+},{"lodash._basecreate":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/index.js","lodash._setbinddata":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js","lodash._slice":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js","lodash.isobject":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
+module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js":[function(require,module,exports){
+module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js")
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -1504,7 +1514,7 @@ function isFunction(value) {
 
 module.exports = isFunction;
 
-},{}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js":[function(require,module,exports){
+},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -1544,7 +1554,7 @@ function slice(array, start, end) {
 
 module.exports = slice;
 
-},{}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js":[function(require,module,exports){
+},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -1574,7 +1584,7 @@ function identity(value) {
 
 module.exports = identity;
 
-},{}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js":[function(require,module,exports){
+},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js":[function(require,module,exports){
 (function (global){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
@@ -1618,9 +1628,9 @@ support.funcNames = typeof Function.name == 'string';
 module.exports = support;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"lodash._isnative":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
+},{"lodash._isnative":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js":[function(require,module,exports){
+module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js")
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -1642,7 +1652,7 @@ var objectTypes = {
 
 module.exports = objectTypes;
 
-},{}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js":[function(require,module,exports){
+},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -1680,9 +1690,9 @@ var keys = !nativeKeys ? shimKeys : function(object) {
 
 module.exports = keys;
 
-},{"lodash._isnative":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._isnative/index.js","lodash._shimkeys":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js","lodash.isobject":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js":[function(require,module,exports){
+},{"lodash._isnative":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._isnative/index.js","lodash._shimkeys":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js","lodash.isobject":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._isnative/index.js":[function(require,module,exports){
+module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js")
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -1722,9 +1732,9 @@ var shimKeys = function(object) {
 
 module.exports = shimKeys;
 
-},{"lodash._objecttypes":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/raf/index.js":[function(require,module,exports){
+},{"lodash._objecttypes":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js":[function(require,module,exports){
+module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js")
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/raf/index.js":[function(require,module,exports){
 var now = require('performance-now')
   , global = typeof window === 'undefined' ? {} : window
   , vendors = ['moz', 'webkit']
@@ -1768,7 +1778,7 @@ if(!raf || !caf) {
             }
           }
         }
-      }, Math.round(next))
+      }, next)
     }
     queue.push({
       handle: ++id,
@@ -1806,7 +1816,7 @@ module.exports.cancel = function() {
   caf.apply(global, arguments)
 }
 
-},{"performance-now":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/raf/node_modules/performance-now/lib/performance-now.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/raf/node_modules/performance-now/lib/performance-now.js":[function(require,module,exports){
+},{"performance-now":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/raf/node_modules/performance-now/lib/performance-now.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/raf/node_modules/performance-now/lib/performance-now.js":[function(require,module,exports){
 (function (process){
 // Generated by CoffeeScript 1.6.3
 (function() {
@@ -1846,7 +1856,7 @@ module.exports.cancel = function() {
 */
 
 }).call(this,require('_process'))
-},{"_process":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/process/browser.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/platformer.coffee":[function(require,module,exports){
+},{"_process":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/browserify/node_modules/process/browser.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/platformer.coffee":[function(require,module,exports){
 var Level, RigidBody, assign, bullet, bulletUpdates, c, canvas, collide, createEntity, ctx, dt, frame, fs, gun, last, level, monster, monsters, now, onkey, physics, player, raf, render, setup, time, unitVector;
 
 Level = require('./modules/level');
@@ -2026,4 +2036,4 @@ frame();
 
 
 
-},{"./modules/constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee","./modules/level":"/Users/michaelreinstein/wwwroot/basic-platform/modules/level.coffee","./modules/mixin-rigid-body":"/Users/michaelreinstein/wwwroot/basic-platform/modules/mixin-rigid-body.coffee","./modules/physics":"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics.coffee","./modules/physics-collide":"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics-collide.coffee","./modules/renderer":"/Users/michaelreinstein/wwwroot/basic-platform/modules/renderer.coffee","./modules/time":"/Users/michaelreinstein/wwwroot/basic-platform/modules/time.coffee","./modules/v2-unit":"/Users/michaelreinstein/wwwroot/basic-platform/modules/v2-unit.coffee","lodash.assign":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/index.js","raf":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/raf/index.js"}]},{},["/Users/michaelreinstein/wwwroot/basic-platform/platformer.coffee"]);
+},{"./modules/constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./modules/level":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/level.coffee","./modules/mixin-rigid-body":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/mixin-rigid-body.coffee","./modules/physics":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics.coffee","./modules/physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./modules/renderer":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/renderer.coffee","./modules/time":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/time.coffee","./modules/v2-unit":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/v2-unit.coffee","lodash.assign":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/index.js","raf":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/raf/index.js"}]},{},["/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/platformer.coffee"]);
