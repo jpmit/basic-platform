@@ -52,6 +52,9 @@ module.exports.stepY = (entity, level, dt) ->
     entity.ddy = entity.gravity
     
   if entity.inWater
+    if entity.brokeWater
+      # we reduce the player velocity when entering the water
+      entity.dy = entity.wVelRescale * entity.dy
     entity.ddy = entity.ddy - entity.buoyancy
     
   if entity.jump and not entity.jumping and not entity.onLadder and (entity.onfloor or (entity.jumpcount < entity.maxjumpcount))
