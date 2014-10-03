@@ -1,14 +1,16 @@
-Level      = require './modules/level'
-RigidBody  = require './modules/mixin-rigid-body'
-assign     = require 'lodash.assign'
-c          = require './modules/constants'
-collide    = require './modules/physics-collide'
-fs         = require 'fs'
-physics    = require './modules/physics'
-raf        = require 'raf'
-render     = require './modules/renderer'
-time       = require './modules/time'
-unitVector = require './modules/v2-unit'
+Entity        = require './modules/entity'
+Level         = require './modules/level'
+RigidBody     = require './modules/mixin-rigid-body'
+assign        = require 'lodash.assign'
+bulletPhysics = require './modules/physics-bullet'
+c             = require './modules/constants'
+collide       = require './modules/physics-collide'
+fs            = require 'fs'
+mixin         = require 'lodash.mixin'
+raf           = require 'raf'
+render        = require './modules/renderer'
+time          = require './modules/time'
+unitVector    = require './modules/v2-unit'
 
 
 canvas = document.getElementById 'canvas'
@@ -66,14 +68,14 @@ createEntity = (obj) ->
     yoff : obj.properties.hitbox.yoff
     render_width: obj.width
     render_height: obj.height
+    x: obj.x
+    y: obj.y
     start:
       x: obj.x
       y: obj.y
-
-  obj.width = obj.properties.hitbox.width
-  obj.height = obj.properties.hitbox.height
-
-  assign entity, new RigidBody(obj)
+    width: obj.properties.hitbox.width
+    height: obj.properties.hitbox.height
+  new Entity(entity)
 
 
 setup = ->
@@ -111,21 +113,21 @@ frame = ->
   
   while dt > c.STEP
     dt = dt - c.STEP
-    physics.updateEntity player, level, c.STEP
-    physics.updateEntity(monster, level, c.STEP) for monster in monsters 
+    player.step level, c.STEP
+    monster.step(level, c.STEP) for monster in monsters 
     # update the aiming of the gun
-    physics.updateGun gun, c.STEP
+    bulletPhysics.updateGun gun, c.STEP
     
     if bullet
       # did the bullet collide with the level or other entities?
-      collision =  physics.updateBullet bullet, monsters, level, c.STEP
+      collision =  bulletPhysics.step bullet, monsters, level, c.STEP
       if collision
         console.log collision      
         bullet = null
   
     # detect (and handle) collision between player and other entities
-    for monster in monsters
-      collide.entityCollide player, monster
+    collide.entityCollide(player, monster) for monster in monsters
+
   render ctx, player, monsters, gun, bullet, level
   last = now
   raf frame, canvas
