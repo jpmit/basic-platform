@@ -283,8 +283,8 @@ Level = (function() {
     this.objects = [];
     this.width = obj.width * c.TILE;
     this.height = obj.height * c.TILE;
-    this.tw = obj.width;
-    this.th = obj.height;
+    this.cols = obj.width;
+    this.rows = obj.height;
   }
 
   Level.prototype.cellValue = function(x, y, type) {
@@ -307,9 +307,9 @@ Level = (function() {
       type = 'render';
     }
     if (type === 'render') {
-      return this.cells[tx + (ty * this.tw)];
+      return this.cells[tx + (ty * this.cols)];
     } else {
-      return this.collision_cells[tx + (ty * this.tw)];
+      return this.collision_cells[tx + (ty * this.rows)];
     }
   };
 
@@ -818,11 +818,11 @@ c = require('./constants');
 renderLevel = function(ctx, level) {
   var cell, x, y, _i, _ref, _results;
   _results = [];
-  for (y = _i = 0, _ref = level.th - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; y = 0 <= _ref ? ++_i : --_i) {
+  for (y = _i = 0, _ref = level.rows - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; y = 0 <= _ref ? ++_i : --_i) {
     _results.push((function() {
       var _j, _ref1, _results1;
       _results1 = [];
-      for (x = _j = 0, _ref1 = level.tw - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; x = 0 <= _ref1 ? ++_j : --_j) {
+      for (x = _j = 0, _ref1 = level.cols - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; x = 0 <= _ref1 ? ++_j : --_j) {
         cell = level.tileToValue(x, y);
         if (cell) {
           ctx.fillStyle = c.COLORS[cell - 1];

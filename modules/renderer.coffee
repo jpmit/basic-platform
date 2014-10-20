@@ -2,8 +2,8 @@ c = require './constants'
 
 
 renderLevel = (ctx, level) ->
-  for y in [0..level.th-1]
-    for x in [0..level.tw-1]
+  for y in [0..level.rows-1]
+    for x in [0..level.cols-1]
       cell = level.tileToValue x, y
       if cell
         ctx.fillStyle = c.COLORS[cell - 1]

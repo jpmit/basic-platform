@@ -9,8 +9,8 @@ class Level
     #console.log 'uhggg', obj
     @width  = obj.width * c.TILE
     @height = obj.height * c.TILE
-    @tw = obj.width
-    @th = obj.height
+    @cols = obj.width
+    @rows = obj.height
     #c.MAP.tw = obj.width
     #c.MAP.th = obj.height
 
@@ -31,9 +31,9 @@ class Level
   # example  tileTovalue(0,1, cells) returns the value at col 0, row 1
   tileToValue: (tx, ty, type='render') ->
     if type is 'render'
-      @cells[tx + (ty * @tw)]
+      @cells[tx + (ty * @cols)]
     else
-      @collision_cells[tx + (ty * @tw)]
+      @collision_cells[tx + (ty * @rows)]
 
   # get the tile entity: mainly useful for hitbox property
   tileEntity: (tx, ty) ->
