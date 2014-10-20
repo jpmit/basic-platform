@@ -337,13 +337,15 @@ module.exports = Level;
 
 
 },{"./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/mixin-local-control.coffee":[function(require,module,exports){
-var LocalControlMixin, c, events, screen, v2Unit, viewport;
+var LocalControlMixin, c, events, screen, v2Sub, v2Unit, viewport;
 
 c = require('./constants');
 
 events = require('events');
 
 screen = require('./screen');
+
+v2Sub = require('./v2-subtract');
 
 v2Unit = require('./v2-unit');
 
@@ -366,17 +368,17 @@ LocalControlMixin = (function() {
   }
 
   LocalControlMixin.prototype.getAimVector = function(event) {
-    var shoulderX, shoulderY, targetX, targetY, v;
-    targetX = screen.toCanvas(event.clientX) + viewport.offsetX;
-    targetY = screen.toCanvas(event.clientY) + viewport.offsetY;
-    shoulderX = this.x + this.width / 2;
-    shoulderY = this.y + this.height / 2;
-    console.log('shoulder', targetX, targetY);
-    v = {
-      x: targetX - shoulderX,
-      y: targetY - shoulderY
+    var aim, shoulder, target;
+    target = {
+      x: screen.toCanvas(event.clientX) + viewport.offset.x,
+      y: screen.toCanvas(event.clientY) + viewport.offset.y
     };
-    return v2Unit(v);
+    shoulder = {
+      x: this.x + this.width / 2,
+      y: this.y + this.height / 2
+    };
+    aim = v2Sub(target, shoulder);
+    return v2Unit(aim);
   };
 
   LocalControlMixin.prototype.mouseDown = function(event) {
@@ -389,8 +391,8 @@ LocalControlMixin = (function() {
   LocalControlMixin.prototype.mouseMove = function(event) {
     var aimX, aimY;
     this.aim = this.getAimVector(event);
-    aimX = screen.toCanvas(event.clientX) + viewport.offsetX;
-    aimY = screen.toCanvas(event.clientY) + viewport.offsetY;
+    aimX = screen.toCanvas(event.clientX) + viewport.offset.x;
+    aimY = screen.toCanvas(event.clientY) + viewport.offset.y;
     this.cursorOffset = {
       x: aimX - this.x,
       y: aimY - this.y
@@ -455,7 +457,7 @@ module.exports = LocalControlMixin;
 
 
 
-},{"./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee","./screen":"/Users/michaelreinstein/wwwroot/basic-platform/modules/screen.coffee","./v2-unit":"/Users/michaelreinstein/wwwroot/basic-platform/modules/v2-unit.coffee","./viewport":"/Users/michaelreinstein/wwwroot/basic-platform/modules/viewport.coffee","events":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/events/events.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/mixin-rigid-body.coffee":[function(require,module,exports){
+},{"./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee","./screen":"/Users/michaelreinstein/wwwroot/basic-platform/modules/screen.coffee","./v2-subtract":"/Users/michaelreinstein/wwwroot/basic-platform/modules/v2-subtract.coffee","./v2-unit":"/Users/michaelreinstein/wwwroot/basic-platform/modules/v2-unit.coffee","./viewport":"/Users/michaelreinstein/wwwroot/basic-platform/modules/viewport.coffee","events":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/events/events.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/mixin-rigid-body.coffee":[function(require,module,exports){
 var RigidBodyMixin, c, collide, move;
 
 c = require('./constants');
@@ -880,19 +882,6 @@ module.exports = function(ctx, me, enemies, gun, bullet, level) {
 
 
 },{"./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/screen.coffee":[function(require,module,exports){
-module.exports.leftTop = function(el) {
-  var element, x, y;
-  x = parseInt(el.offsetLeft, 10);
-  y = parseInt(el.offsetTop, 10);
-  element = el.offsetParent;
-  while (element !== null) {
-    x += parseInt(element.offsetLeft, 10);
-    y += parseInt(element.offsetTop, 10);
-    element = element.offsetParent;
-  }
-  return [x, y];
-};
-
 module.exports.ratio = window.devicePixelRatio || 1;
 
 module.exports.scale_factor = 1;
@@ -927,6 +916,19 @@ module.exports = function() {
 
 
 
+},{}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/v2-subtract.coffee":[function(require,module,exports){
+var subtract;
+
+module.exports = subtract = function(v2_a, v2_b) {
+  var v;
+  return v = {
+    x: v2_a.x - v2_b.x,
+    y: v2_a.y - v2_b.y
+  };
+};
+
+
+
 },{}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/v2-unit.coffee":[function(require,module,exports){
 var unitVector;
 
@@ -950,8 +952,10 @@ screen = require('./screen');
 
 Viewport = (function() {
   function Viewport() {
-    this.offsetX = 0;
-    this.offsetY = 0;
+    this.offset = {
+      x: 0,
+      y: 0
+    };
   }
 
   Viewport.prototype.setScreenSize = function(screenWidth, screenHeight) {
@@ -989,8 +993,10 @@ Viewport = (function() {
     if (this.startCol < 0) {
       this.startCol = 0;
     }
-    this.offsetX = this.startCol * c.TILE;
-    return this.offsetY = this.startRow * c.TILE;
+    return this.offset = {
+      x: this.startCol * c.TILE,
+      y: this.startRow * c.TILE
+    };
   };
 
   Viewport.prototype.resize = function(canvas) {

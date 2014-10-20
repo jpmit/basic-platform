@@ -1,6 +1,7 @@
 c        = require './constants'
 events   = require 'events'
 screen   = require './screen'
+v2Sub    = require './v2-subtract'
 v2Unit   = require './v2-unit'
 viewport = require './viewport'
 
@@ -23,17 +24,16 @@ class LocalControlMixin
 
 
   getAimVector: (event) ->
-    targetX = screen.toCanvas(event.clientX) + viewport.offsetX
-    targetY = screen.toCanvas(event.clientY) + viewport.offsetY
+    target =
+      x: screen.toCanvas(event.clientX) + viewport.offset.x
+      y: screen.toCanvas(event.clientY) + viewport.offset.y
 
-    shoulderX = @x + @width/2
-    shoulderY = @y + @height/2
+    shoulder =
+      x: @x + @width/2
+      y: @y + @height/2
 
-    console.log 'shoulder', targetX, targetY
-    v = 
-      x: targetX - shoulderX
-      y: targetY - shoulderY
-    v2Unit v
+    aim = v2Sub target, shoulder
+    v2Unit aim
 
 
   mouseDown: (event) ->
@@ -43,8 +43,8 @@ class LocalControlMixin
   mouseMove: (event) ->
     @aim = @getAimVector event
 
-    aimX = screen.toCanvas(event.clientX) + viewport.offsetX
-    aimY = screen.toCanvas(event.clientY) + viewport.offsetY
+    aimX = screen.toCanvas(event.clientX) + viewport.offset.x
+    aimY = screen.toCanvas(event.clientY) + viewport.offset.y
 
     @cursorOffset =
       x: aimX - @x

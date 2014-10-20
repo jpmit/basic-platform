@@ -6,8 +6,7 @@ screen = require './screen'
 
 class Viewport
   constructor: ->
-    @offsetX = 0
-    @offsetY = 0
+    @offset = { x: 0, y: 0 }
 
 
   setScreenSize: (@screenWidth, @screenHeight)  ->
@@ -45,8 +44,7 @@ class Viewport
     if @startCol < 0
       @startCol = 0
 
-    @offsetX = @startCol * c.TILE
-    @offsetY = @startRow * c.TILE
+    @offset = { x: @startCol * c.TILE, y: @startRow * c.TILE }
 
 
   # called whenver the window is resized
