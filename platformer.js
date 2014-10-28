@@ -619,6 +619,8 @@ astar = require('./astar');
 
 _pgraph = null;
 
+module.exports.path = null;
+
 module.exports.preProcess = function(level) {
   return _pgraph = new PlatformGraph(level);
 };
@@ -708,7 +710,6 @@ PlatformGraph = PlatformGraph = (function() {
     }
     this.platforms = platforms;
     this.neighbors = neighbors;
-    console.log(neighbors);
   }
 
   PlatformGraph.prototype.getNeighbors = function(pnum) {
@@ -768,15 +769,14 @@ PlatformGraph = PlatformGraph = (function() {
 })();
 
 module.exports.findpath = function(entity1, entity2) {
-  var a, path, pnum1, pnum2;
+  var a, pnum1, pnum2;
   pnum1 = _pgraph.getPlatformIndexForEntity(entity1);
   pnum2 = _pgraph.getPlatformIndexForEntity(entity2);
   if ((pnum1 === null) || (pnum2 === null)) {
-    return;
+    return null;
   }
   a = new astar.Astar;
-  path = a.findPath(_pgraph.platforms[pnum1], _pgraph.platforms[pnum2]);
-  return console.log(path);
+  return a.findPath(_pgraph.platforms[pnum1], _pgraph.platforms[pnum2]);
 };
 
 
@@ -1094,8 +1094,8 @@ drawAngle = function(ctx, sprite) {
   return ctx.restore();
 };
 
-module.exports = function(ctx, me, enemies, gun, bullet, level) {
-  var entity, gunx, guny, _i, _j, _len, _len1;
+module.exports = function(ctx, me, enemies, gun, bullet, level, path) {
+  var entity, gunx, guny, i, _i, _j, _k, _len, _len1, _ref;
   ctx.clearRect(0, 0, level.width, level.height);
   renderLevel(ctx, level);
   ctx.fillStyle = c.COLOR.BLUE;
@@ -1114,7 +1114,21 @@ module.exports = function(ctx, me, enemies, gun, bullet, level) {
   gunx = me.x + me.width / 2 + Math.sin(gun.angle) * 50;
   guny = me.y + me.height / 2 - Math.cos(gun.angle) * 50;
   ctx.fillRect(gunx - 2, guny - 2, 4, 4);
-  return drawAngle(ctx, bullet);
+  drawAngle(ctx, bullet);
+  if (path) {
+    ctx.save();
+    ctx.strokeStyle = '#ff0000';
+    ctx.lineWidth = 10;
+    if (path.length > 1) {
+      ctx.beginPath();
+      for (i = _k = 0, _ref = path.length - 2; 0 <= _ref ? _k <= _ref : _k >= _ref; i = 0 <= _ref ? ++_k : --_k) {
+        ctx.moveTo(path[i].midx() * c.TILE, path[i].y * c.TILE);
+        ctx.lineTo(path[i + 1].midx() * c.TILE, path[i + 1].y * c.TILE);
+      }
+      ctx.stroke();
+    }
+    return ctx.restore();
+  }
 };
 
 
@@ -6560,7 +6574,7 @@ setup = function() {
 };
 
 frame = function() {
-  var collision, _i, _j, _len, _len1;
+  var collision, path, _i, _j, _len, _len1;
   now = time();
   dt = dt + Math.min(1, (now - last) / 1000);
   if (gun.firing && (!bullet)) {
@@ -6601,9 +6615,9 @@ frame = function() {
       monster = monsters[_j];
       collide.entityCollide(player, monster);
     }
-    pathfinder.findpath(monster, player);
   }
-  render(ctx, player, monsters, gun, bullet, level);
+  path = pathfinder.findpath(monster, player);
+  render(ctx, player, monsters, gun, bullet, level, path);
   last = now;
   return raf(frame, canvas);
 };

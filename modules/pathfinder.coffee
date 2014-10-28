@@ -3,6 +3,9 @@ astar = require './astar'
 
 _pgraph = null
 
+# export the path for rendering
+module.exports.path = null
+
 module.exports.preProcess = (level) ->
   # create graph that connects platforms
   _pgraph = new PlatformGraph(level)
@@ -90,7 +93,6 @@ PlatformGraph = class PlatformGraph
       neighbors.push(pneighs)
     @platforms = platforms
     @neighbors = neighbors
-    console.log neighbors
 
   # get neighbours for a particular platform index
   getNeighbors: (pnum) ->
@@ -152,11 +154,8 @@ module.exports.findpath = (entity1, entity2) ->
   pnum2 = _pgraph.getPlatformIndexForEntity(entity2)
   # we'll only try to find a path if both entities are currently on a platform
   if (pnum1 == null) or (pnum2 == null)
-    return
+    return null
   # compute route from pnum1 to pnum2
   a = new astar.Astar
-  path = a.findPath(_pgraph.platforms[pnum1], _pgraph.platforms[pnum2])
-  console.log path
-  
-  # draw the route on the level!
-#  console.log pnum1, pnum2
+  # return the path
+  a.findPath(_pgraph.platforms[pnum1], _pgraph.platforms[pnum2])

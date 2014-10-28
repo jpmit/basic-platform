@@ -1,5 +1,4 @@
-c = require './constants'
-
+c          = require './constants'
 
 renderLevel = (ctx, level) ->
   for y in [0..level.rows-1]
@@ -25,7 +24,7 @@ drawAngle = (ctx, sprite) ->
   ctx.restore();
 
 
-module.exports = (ctx, me, enemies, gun, bullet, level) ->
+module.exports = (ctx, me, enemies, gun, bullet, level, path) ->
   ctx.clearRect 0, 0, level.width, level.height
 
   renderLevel ctx, level
@@ -53,3 +52,16 @@ module.exports = (ctx, me, enemies, gun, bullet, level) ->
 
   # draw the bullet (if there is one)
   drawAngle ctx, bullet
+
+  # draw the path from pathfinding (draw the route on the level!)
+  if (path)
+    ctx.save()
+    ctx.strokeStyle = '#ff0000';
+    ctx.lineWidth = 10;
+    if path.length > 1
+      ctx.beginPath()
+      for i in [0..path.length - 2]
+        ctx.moveTo path[i].midx() * c.TILE, path[i].y * c.TILE
+        ctx.lineTo path[i + 1].midx() * c.TILE, path[i + 1].y * c.TILE
+      ctx.stroke()
+    ctx.restore()

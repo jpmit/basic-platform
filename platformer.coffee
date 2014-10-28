@@ -131,10 +131,12 @@ frame = ->
     # detect (and handle) collision between player and other entities
     collide.entityCollide(player, monster) for monster in monsters
 
-    # pathfinding!
-    pathfinder.findpath(monster, player)
+  # pathfinding
+  path = pathfinder.findpath monster, player
 
-  render ctx, player, monsters, gun, bullet, level
+  render ctx, player, monsters, gun, bullet, level, path
+
+  
   last = now
   raf frame, canvas
 
