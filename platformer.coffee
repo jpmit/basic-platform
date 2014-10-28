@@ -11,7 +11,7 @@ raf           = require 'raf'
 render        = require './modules/renderer'
 time          = require './modules/time'
 unitVector    = require './modules/v2-unit'
-
+pathfinder    = require './modules/pathfinder'
 
 canvas = document.getElementById 'canvas'
 ctx    = canvas.getContext '2d'
@@ -96,6 +96,8 @@ setup = ->
   # list of all entities other than the player entity
   monsters = [ monster ]
 
+  # pathfinding: create platform graph
+  pgrah = new pathfinder.PlatformGraph(level)
 
 frame = ->
   now = time()
@@ -127,6 +129,9 @@ frame = ->
   
     # detect (and handle) collision between player and other entities
     collide.entityCollide(player, monster) for monster in monsters
+
+    # pathfinding!
+    pathfinder.findpath(monster, player, pgraph)
 
   render ctx, player, monsters, gun, bullet, level
   last = now
