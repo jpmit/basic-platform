@@ -25,6 +25,7 @@ monsters = []
 gun = null
 bullet = null
 bulletUpdates = 3
+pgraph = null
 
 onkey = (ev, key, down) ->
   switch key
@@ -96,8 +97,8 @@ setup = ->
   # list of all entities other than the player entity
   monsters = [ monster ]
 
-  # pathfinding: create platform graph
-  pgrah = new pathfinder.PlatformGraph(level)
+  # pre-process the level for pathfinding
+  pathfinder.preProcess(level)
 
 frame = ->
   now = time()
@@ -131,7 +132,7 @@ frame = ->
     collide.entityCollide(player, monster) for monster in monsters
 
     # pathfinding!
-    pathfinder.findpath(monster, player, pgraph)
+    pathfinder.findpath(monster, player)
 
   render ctx, player, monsters, gun, bullet, level
   last = now
