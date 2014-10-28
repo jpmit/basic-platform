@@ -75,6 +75,7 @@ module.exports.levelCollideY = (entity, level, ynew) ->
         else
           entity.y = tentity.y - entity.height
           entity.onfloor = true
+          entity.ytile = ytilenew
           entity.jumpcount = 0
         break 
 
