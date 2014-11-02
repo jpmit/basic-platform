@@ -23,9 +23,19 @@ class Platform
   overlap: (xleft, xright) ->
     not (@xright < xleft or @xleft > xright)
 
+  # min and max x values can reach / can be reached from this platform
+  xMax: (physics) ->
+    [@xleft - physics.xmax, @xright + physics.xmax]
+
   # middle x tile
   midx: () ->
     (@xleft + @xright) / 2
+
+  # is an x tile point within the platform?
+  xInPlatform: (tx) ->
+    if @xleft < tx and @xright > tx
+      true
+    false
 
   # used in A* search
   key: () ->
@@ -58,8 +68,7 @@ class PhysicsFinder
 # -> p2.
 canReachPlatform = (p1, p2, physics) ->
   # check we can get there horizontally first
-  leftx = p1.xleft - physics.xmax
-  rightx = p1.xright + physics.xmax
+  [leftx, rightx] = p1.xMax physics
   if p2.overlap leftx, rightx
     # can we simply drop onto the platform?
     if p2.y > p1.y
@@ -93,6 +102,64 @@ PlatformGraph = class PlatformGraph
       neighbors.push(pneighs)
     @platforms = platforms
     @neighbors = neighbors
+
+    # create 'jump points' for pairs of platforms
+    @jumppoints = @_getJumpPoints()
+
+    console.log @neighbors
+    console.log @jumppoints
+
+  _getJumpPoints: () ->
+    jumppoints = [] 
+    for i in [0..@platforms.length - 1]
+      p1 = @platforms[i]
+      jp = [] # stores jump points for all neighbours of this platform
+      for j in [0..@neighbors[i].length - 1]
+        p2 = @neighbors[i][j]
+        point = {}
+        # if neighbouring platform is lower it is a fall point
+        if p2.y > p1.y
+          point.type = "fall"
+          if p2.xleft < p1.xleft or p2.xInPlatform(p1.xleft)
+            # can fall left (might also be able to fall right, but let's fall left)
+            point.dir = "left"
+            point.x = p1.xleft
+          else if p2.xright > p1.xright or p2.xInPlatform(p1.xright)
+            # can fall right
+            point.dir = "right"
+            point.x = p1.xright
+          else # lower platform is contained within upper platform (case not yet handled)
+            console.log "contained platform", p1.xleft, p1.xright, p2.xleft, p2.xright
+        else # neighbouring platform is either level or above
+          point.type = "jump"
+          if p2.xleft > p1.xright
+            point.dir = "right"
+            point.x = p1.xright
+          else if p2.xright < p1.xleft
+            point.dir = "left"
+            point.x = p1.xleft 
+          else # neighbouring platform is 'partially or fully enclosed'
+            [xleft, xright] = p2.xMax
+            # if the region to the right hand side of p2 overlaps p1, we want to jump left
+            if p1.overlap(p2.xright, xright)
+              point.dir = "left"
+              for x in [p2.xright..xright]
+                if p1.xInPlatform x
+                  point.x = x
+                  break
+            # not sure why else not allowed here
+            if p1.overlap(xleft, p2.xleft)
+              point.dir = "right"
+              for x in [p2.xleft..xleft] by -1
+                if p2.xInPlatform x
+                  point.x = x
+                  break
+        # add the point
+        jp.push point
+      
+      # add all points to the list
+      jumppoints.push jp
+    jumppoints
 
   # get neighbours for a particular platform index
   getNeighbors: (pnum) ->

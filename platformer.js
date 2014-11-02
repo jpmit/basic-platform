@@ -637,8 +637,19 @@ Platform = (function() {
     return !(this.xright < xleft || this.xleft > xright);
   };
 
+  Platform.prototype.xMax = function(physics) {
+    return [this.xleft - physics.xmax, this.xright + physics.xmax];
+  };
+
   Platform.prototype.midx = function() {
     return (this.xleft + this.xright) / 2;
+  };
+
+  Platform.prototype.xInPlatform = function(tx) {
+    if (this.xleft < tx && this.xright > tx) {
+      true;
+    }
+    return false;
   };
 
   Platform.prototype.key = function() {
@@ -675,9 +686,8 @@ PhysicsFinder = (function() {
 })();
 
 canReachPlatform = function(p1, p2, physics) {
-  var leftx, rightx;
-  leftx = p1.xleft - physics.xmax;
-  rightx = p1.xright + physics.xmax;
+  var leftx, rightx, _ref;
+  _ref = p1.xMax(physics), leftx = _ref[0], rightx = _ref[1];
   if (p2.overlap(leftx, rightx)) {
     if (p2.y > p1.y) {
       return true;
@@ -710,7 +720,67 @@ PlatformGraph = PlatformGraph = (function() {
     }
     this.platforms = platforms;
     this.neighbors = neighbors;
+    this.jumppoints = this._getJumpPoints();
+    console.log(this.neighbors);
+    console.log(this.jumppoints);
   }
+
+  PlatformGraph.prototype._getJumpPoints = function() {
+    var i, j, jp, jumppoints, p1, p2, point, x, xleft, xright, _i, _j, _k, _l, _ref, _ref1, _ref2, _ref3, _ref4;
+    jumppoints = [];
+    for (i = _i = 0, _ref = this.platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
+      p1 = this.platforms[i];
+      jp = [];
+      for (j = _j = 0, _ref1 = this.neighbors[i].length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; j = 0 <= _ref1 ? ++_j : --_j) {
+        p2 = this.neighbors[i][j];
+        point = {};
+        if (p2.y > p1.y) {
+          point.type = "fall";
+          if (p2.xleft < p1.xleft || p2.xInPlatform(p1.xleft)) {
+            point.dir = "left";
+            point.x = p1.xleft;
+          } else if (p2.xright > p1.xright || p2.xInPlatform(p1.xright)) {
+            point.dir = "right";
+            point.x = p1.xright;
+          } else {
+            console.log("contained platform", p1.xleft, p1.xright, p2.xleft, p2.xright);
+          }
+        } else {
+          point.type = "jump";
+          if (p2.xleft > p1.xright) {
+            point.dir = "right";
+            point.x = p1.xright;
+          } else if (p2.xright < p1.xleft) {
+            point.dir = "left";
+            point.x = p1.xleft;
+          } else {
+            _ref2 = p2.xMax, xleft = _ref2[0], xright = _ref2[1];
+            if (p1.overlap(p2.xright, xright)) {
+              point.dir = "left";
+              for (x = _k = _ref3 = p2.xright; _ref3 <= xright ? _k <= xright : _k >= xright; x = _ref3 <= xright ? ++_k : --_k) {
+                if (p1.xInPlatform(x)) {
+                  point.x = x;
+                  break;
+                }
+              }
+            }
+            if (p1.overlap(xleft, p2.xleft)) {
+              point.dir = "right";
+              for (x = _l = _ref4 = p2.xleft; _l >= xleft; x = _l += -1) {
+                if (p2.xInPlatform(x)) {
+                  point.x = x;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        jp.push(point);
+      }
+      jumppoints.push(jp);
+    }
+    return jumppoints;
+  };
 
   PlatformGraph.prototype.getNeighbors = function(pnum) {
     return this.neighbors[pnum];
