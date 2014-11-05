@@ -610,7 +610,7 @@ module.exports = RigidBodyMixin;
 
 
 },{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./physics-move":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-move.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee":[function(require,module,exports){
-var PhysicsFinder, Platform, PlatformGraph, astar, c, canReachPlatform, _pgraph,
+var PhysicsFinder, Platform, PlatformGraph, astar, c, canReachPlatform, _path, _pgraph,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 c = require('./constants');
@@ -619,10 +619,28 @@ astar = require('./astar');
 
 _pgraph = null;
 
+_path = null;
+
 module.exports.path = null;
 
 module.exports.preProcess = function(level) {
   return _pgraph = new PlatformGraph(level);
+};
+
+module.exports.render = function(ctx) {
+  var i, _i, _ref;
+  ctx.save();
+  ctx.strokeStyle = '#ff0000';
+  ctx.lineWidth = 10;
+  if (_path !== null && _path.length > 1) {
+    ctx.beginPath();
+    for (i = _i = 0, _ref = _path.length - 2; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
+      ctx.moveTo(_path[i].midx() * c.TILE, _path[i].y * c.TILE);
+      ctx.lineTo(_path[i + 1].midx() * c.TILE, _path[i + 1].y * c.TILE);
+    }
+    ctx.stroke();
+  }
+  return ctx.restore();
 };
 
 Platform = (function() {
@@ -846,7 +864,8 @@ module.exports.findpath = function(entity1, entity2) {
     return null;
   }
   a = new astar.Astar;
-  return a.findPath(_pgraph.platforms[pnum1], _pgraph.platforms[pnum2]);
+  _path = a.findPath(_pgraph.platforms[pnum1], _pgraph.platforms[pnum2]);
+  return _path;
 };
 
 
@@ -1121,9 +1140,11 @@ module.exports.stepY = function(entity, level, dt) {
 
 
 },{"./clamp":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/clamp.coffee","./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/renderer.coffee":[function(require,module,exports){
-var c, drawAngle, renderLevel;
+var c, drawAngle, pathfinder, renderLevel;
 
 c = require('./constants');
+
+pathfinder = require('./pathfinder');
 
 renderLevel = function(ctx, level) {
   var cell, x, y, _i, _ref, _results;
@@ -1165,7 +1186,7 @@ drawAngle = function(ctx, sprite) {
 };
 
 module.exports = function(ctx, me, enemies, gun, bullet, level, path) {
-  var entity, gunx, guny, i, _i, _j, _k, _len, _len1, _ref;
+  var entity, gunx, guny, _i, _j, _len, _len1;
   ctx.clearRect(0, 0, level.width, level.height);
   renderLevel(ctx, level);
   ctx.fillStyle = c.COLOR.BLUE;
@@ -1185,25 +1206,12 @@ module.exports = function(ctx, me, enemies, gun, bullet, level, path) {
   guny = me.y + me.height / 2 - Math.cos(gun.angle) * 50;
   ctx.fillRect(gunx - 2, guny - 2, 4, 4);
   drawAngle(ctx, bullet);
-  if (path) {
-    ctx.save();
-    ctx.strokeStyle = '#ff0000';
-    ctx.lineWidth = 10;
-    if (path.length > 1) {
-      ctx.beginPath();
-      for (i = _k = 0, _ref = path.length - 2; 0 <= _ref ? _k <= _ref : _k >= _ref; i = 0 <= _ref ? ++_k : --_k) {
-        ctx.moveTo(path[i].midx() * c.TILE, path[i].y * c.TILE);
-        ctx.lineTo(path[i + 1].midx() * c.TILE, path[i + 1].y * c.TILE);
-      }
-      ctx.stroke();
-    }
-    return ctx.restore();
-  }
+  return pathfinder.render(ctx);
 };
 
 
 
-},{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/screen.coffee":[function(require,module,exports){
+},{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/screen.coffee":[function(require,module,exports){
 module.exports.ratio = window.devicePixelRatio || 1;
 
 module.exports.scale_factor = 1;

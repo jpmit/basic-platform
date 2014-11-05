@@ -2,6 +2,7 @@ c     = require './constants'
 astar = require './astar'
 
 _pgraph = null
+_path = null
 
 # export the path for rendering
 module.exports.path = null
@@ -10,6 +11,17 @@ module.exports.preProcess = (level) ->
   # create graph that connects platforms
   _pgraph = new PlatformGraph(level)
 
+module.exports.render = (ctx) ->
+  ctx.save()
+  ctx.strokeStyle = '#ff0000';
+  ctx.lineWidth = 10;
+  if _path != null and _path.length > 1
+    ctx.beginPath()
+    for i in [0.._path.length - 2]
+      ctx.moveTo _path[i].midx() * c.TILE, _path[i].y * c.TILE
+      ctx.lineTo _path[i + 1].midx() * c.TILE, _path[i + 1].y * c.TILE
+    ctx.stroke()
+  ctx.restore()
 
 class Platform
   constructor: (id, xleft, xright, y) ->
@@ -110,7 +122,7 @@ PlatformGraph = class PlatformGraph
     console.log @jumppoints
 
   _getJumpPoints: () ->
-    jumppoints = [] 
+    jumppoints = []
     for i in [0..@platforms.length - 1]
       p1 = @platforms[i]
       jp = [] # stores jump points for all neighbours of this platform
@@ -225,4 +237,5 @@ module.exports.findpath = (entity1, entity2) ->
   # compute route from pnum1 to pnum2
   a = new astar.Astar
   # return the path
-  a.findPath(_pgraph.platforms[pnum1], _pgraph.platforms[pnum2])
+  _path = a.findPath(_pgraph.platforms[pnum1], _pgraph.platforms[pnum2])
+  _path
