@@ -669,12 +669,14 @@ module.exports.render = function(ctx) {
         cx = xt * c.TILE;
         cy = yt * c.TILE;
         index = cx + "," + cy;
-        if (__indexOf.call(seen, index) >= 0) {
-          cy = cy + seen[index] * 10;
+        if (index in seen) {
+          cy = cy + seen[index] * c.TILE;
+          seen[index] = seen[index] + 1;
+        } else {
+          seen[index] = 1;
         }
-        seen[index] = __indexOf.call(seen, index) >= 0 ? seen[index] + 1 : 1;
-        ctx.fillRect(xt * c.TILE, yt * c.TILE, 4, 4);
-        ctx.fillText(neighbors[i][j].key(), xt * c.TILE + 10, yt * c.TILE);
+        ctx.fillRect(cx, cy, 4, 4);
+        ctx.fillText(neighbors[i][j].key(), cx, cy);
       }
     }
   }

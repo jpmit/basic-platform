@@ -18,7 +18,7 @@ module.exports.preProcess = (level) ->
 # placeholder currently for relevant pathfinding physics.
 class PhysicsFinder
   constructor: () ->
-    # max number of tiles we can move horizontally in x direction          
+    # max number of tiles we can move horizontally in x direction
     @xmax = 5
     # max number of tiles we can move (upwards) in y direction
     @ymax = 10
@@ -60,14 +60,15 @@ module.exports.render = (ctx) ->
         cy = yt * c.TILE
         index = cx + "," + cy
         # have we seen this jump point already?
-        if index in seen
-          cy = cy + seen[index]*10
-        #console.log seen
-        seen[index] = if index in seen then seen[index] + 1 else 1
+        if index of seen
+          cy = cy + seen[index] * c.TILE
+          seen[index] = seen[index] + 1
+        else
+          seen[index] = 1
         
-        ctx.fillRect(xt * c.TILE, yt * c.TILE, 4, 4)
+        ctx.fillRect(cx, cy, 4, 4)
         # write index of platform next to point
-        ctx.fillText(neighbors[i][j].key(), xt * c.TILE + 10, yt * c.TILE)
+        ctx.fillText(neighbors[i][j].key(), cx, cy)
 
   # draw the path from the enemy to the player
   ctx.strokeStyle = '#ff0000';
