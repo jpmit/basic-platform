@@ -633,7 +633,7 @@ module.exports.preProcess = function(level) {
 
 PhysicsFinder = (function() {
   function PhysicsFinder() {
-    this.xmax = 6;
+    this.xmax = 5;
     this.ymax = 10;
   }
 
@@ -704,7 +704,7 @@ Platform = (function() {
   };
 
   Platform.prototype.xMax = function() {
-    return [this.xleft - _physics.xmax, this.xright + _physics.xmax];
+    return [Math.max(0, this.xleft - _physics.xmax), Math.max(0, this.xright + _physics.xmax)];
   };
 
   Platform.prototype.midx = function() {
@@ -743,7 +743,7 @@ Platform = (function() {
 
 canReachPlatform = function(p1, p2) {
   var leftx, rightx, _ref;
-  _ref = p1.xMax, leftx = _ref[0], rightx = _ref[1];
+  _ref = p1.xMax(), leftx = _ref[0], rightx = _ref[1];
   if (p2.overlap(leftx, rightx)) {
     if (p2.y > p1.y) {
       return true;

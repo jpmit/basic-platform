@@ -19,7 +19,7 @@ module.exports.preProcess = (level) ->
 class PhysicsFinder
   constructor: () ->
     # max number of tiles we can move horizontally in x direction          
-    @xmax = 6
+    @xmax = 5
     # max number of tiles we can move (upwards) in y direction
     @ymax = 10
 
@@ -95,7 +95,7 @@ class Platform
 
   # min and max x values can reach / can be reached from this platform
   xMax: () ->
-    [@xleft - _physics.xmax, @xright + _physics.xmax]
+    [Math.max(0, @xleft - _physics.xmax), Math.max(0, @xright + _physics.xmax)]
 
   # middle x tile
   midx: () ->
@@ -130,13 +130,16 @@ class Platform
 # -> p2.
 canReachPlatform = (p1, p2) ->
   # check we can get there horizontally first
-  [leftx, rightx] = p1.xMax
+  [leftx, rightx] = p1.xMax()
+#  console.log p1.xleft, p1.xright, p2.xleft, p2.xright
   if p2.overlap leftx, rightx
     # can we simply drop onto the platform?
     if p2.y > p1.y
+      #console.log "can drop from", p1.key(), "to", p2.key()
       return true
     # can we jump onto it?
     if p2.y + _physics.ymax > p1.y
+      #console.log "can jump from", p1.key(), "to", p2.key()            
       return true
   false
 
