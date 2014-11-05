@@ -1,18 +1,75 @@
 c     = require './constants'
 astar = require './astar'
 
-_pgraph = null
-_path = null
+_pgraph = null # the platform graph 
+_path = null # the current path from enemy to player
+_physics = null
 
 # export the path for rendering
 module.exports.path = null
 
 module.exports.preProcess = (level) ->
+  # the physics for this level
+  _physics = new PhysicsFinder()
+  console.log _physics
   # create graph that connects platforms
   _pgraph = new PlatformGraph(level)
+  
+# placeholder currently for relevant pathfinding physics.
+class PhysicsFinder
+  constructor: () ->
+    # max number of tiles we can move horizontally in x direction          
+    @xmax = 6
+    # max number of tiles we can move (upwards) in y direction
+    @ymax = 10
 
 module.exports.render = (ctx) ->
   ctx.save()
+
+  # draw numbers on each of the platforms
+  ctx.font="30px white Georgia";
+  ctx.fillStyle = "white"
+  platforms = _pgraph.platforms
+  for i in [0..platforms.length - 1]
+    xt = (platforms[i].xleft + platforms[i].xright) / 2
+    yt = platforms[i].y
+    
+    ctx.fillText(i, xt * c.TILE, yt * c.TILE)
+
+  # draw the transition points between platforms
+  if (_pgraph != null)
+    # array of arrays (one array for each platform)
+    jpoints = _pgraph.jumppoints
+    neighbors = _pgraph.neighbors
+    for i in [0..jpoints.length - 1]
+      # array of points for each platform
+      jp = jpoints[i]
+      seen = {}
+      for j in [0..jp.length - 1]
+        # get the x tile on the platform
+        xt = jp[j].x
+        # get the y tile on the platform
+        yt = platforms[i].y
+        # mark fall points as red and jump points as green
+        if jp[j].type == "fall"
+          ctx.fillStyle = '#ff0000'
+        else # .type is "jump"
+          ctx.fillStyle = '#00ff00'
+        # stack the y co-ord in case we have seen this point multiple times
+        cx = xt * c.TILE
+        cy = yt * c.TILE
+        index = cx + "," + cy
+        # have we seen this jump point already?
+        if index in seen
+          cy = cy + seen[index]*10
+        #console.log seen
+        seen[index] = if index in seen then seen[index] + 1 else 1
+        
+        ctx.fillRect(xt * c.TILE, yt * c.TILE, 4, 4)
+        # write index of platform next to point
+        ctx.fillText(neighbors[i][j].key(), xt * c.TILE + 10, yt * c.TILE)
+
+  # draw the path from the enemy to the player
   ctx.strokeStyle = '#ff0000';
   ctx.lineWidth = 10;
   if _path != null and _path.length > 1
@@ -21,6 +78,7 @@ module.exports.render = (ctx) ->
       ctx.moveTo _path[i].midx() * c.TILE, _path[i].y * c.TILE
       ctx.lineTo _path[i + 1].midx() * c.TILE, _path[i + 1].y * c.TILE
     ctx.stroke()
+    
   ctx.restore()
 
 class Platform
@@ -36,8 +94,8 @@ class Platform
     not (@xright < xleft or @xleft > xright)
 
   # min and max x values can reach / can be reached from this platform
-  xMax: (physics) ->
-    [@xleft - physics.xmax, @xright + physics.xmax]
+  xMax: () ->
+    [@xleft - _physics.xmax, @xright + _physics.xmax]
 
   # middle x tile
   midx: () ->
@@ -46,7 +104,7 @@ class Platform
   # is an x tile point within the platform?
   xInPlatform: (tx) ->
     if @xleft < tx and @xright > tx
-      true
+      return true
     false
 
   # used in A* search
@@ -67,37 +125,27 @@ class Platform
   equals: (p2) ->
     @key() == p2.key()
 
-# placeholder currently for relevant pathfinding physics.
-class PhysicsFinder
-  constructor: () ->
-    # max number of tiles we can move horizontally in x direction          
-    @xmax = 6
-    # max number of tiles we can move (upwards) in y direction
-    @ymax = 10
-
 # can we reach platform p2 starting from platform p1?  assume
 # currently for simplicity that no platforms 'block' the path from p1
 # -> p2.
-canReachPlatform = (p1, p2, physics) ->
+canReachPlatform = (p1, p2) ->
   # check we can get there horizontally first
-  [leftx, rightx] = p1.xMax physics
+  [leftx, rightx] = p1.xMax
   if p2.overlap leftx, rightx
     # can we simply drop onto the platform?
     if p2.y > p1.y
       return true
     # can we jump onto it?
-    if p2.y + physics.ymax > p1.y
+    if p2.y + _physics.ymax > p1.y
       return true
   false
 
+# platform graph stores information on the platform linkage, including
+# 'transition points' between platforms
 PlatformGraph = class PlatformGraph
   constructor: (level) ->
 
     platforms = @_getAllPlatforms level
-
-    # create PhysicsFinder object that will enable us to create the
-    # platform graph.
-    physics = new PhysicsFinder()
 
     neighbors = []
     for i in [0..platforms.length - 1]
@@ -109,7 +157,7 @@ PlatformGraph = class PlatformGraph
           # can we reach platform p2 *directly* starting from p1 under
           # the game physics? Note p2 -> p1 does not imply p1 -> p2
           # (i.e., we create a directed graph).
-          if canReachPlatform p1, p2, physics
+          if canReachPlatform p1, p2
             pneighs.push(p2)
       neighbors.push(pneighs)
     @platforms = platforms
@@ -151,18 +199,19 @@ PlatformGraph = class PlatformGraph
             point.dir = "left"
             point.x = p1.xleft 
           else # neighbouring platform is 'partially or fully enclosed'
-            [xleft, xright] = p2.xMax
+            [xleft, xright] = p2.xMax()
+            console.log "jumping platform", xleft, xright, p2.xleft, p2.xright
             # if the region to the right hand side of p2 overlaps p1, we want to jump left
             if p1.overlap(p2.xright, xright)
               point.dir = "left"
-              for x in [p2.xright..xright]
+              for x in [p2.xright + 2..xright]
                 if p1.xInPlatform x
                   point.x = x
                   break
             # not sure why else not allowed here
             if p1.overlap(xleft, p2.xleft)
               point.dir = "right"
-              for x in [p2.xleft..xleft] by -1
+              for x in [p2.xleft - 2..xleft] by -1
                 if p2.xInPlatform x
                   point.x = x
                   break

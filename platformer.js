@@ -610,7 +610,7 @@ module.exports = RigidBodyMixin;
 
 
 },{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./physics-move":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-move.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee":[function(require,module,exports){
-var PhysicsFinder, Platform, PlatformGraph, astar, c, canReachPlatform, _path, _pgraph,
+var PhysicsFinder, Platform, PlatformGraph, astar, c, canReachPlatform, _path, _pgraph, _physics,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 c = require('./constants');
@@ -621,20 +621,68 @@ _pgraph = null;
 
 _path = null;
 
+_physics = null;
+
 module.exports.path = null;
 
 module.exports.preProcess = function(level) {
+  _physics = new PhysicsFinder();
+  console.log(_physics);
   return _pgraph = new PlatformGraph(level);
 };
 
+PhysicsFinder = (function() {
+  function PhysicsFinder() {
+    this.xmax = 6;
+    this.ymax = 10;
+  }
+
+  return PhysicsFinder;
+
+})();
+
 module.exports.render = function(ctx) {
-  var i, _i, _ref;
+  var cx, cy, i, index, j, jp, jpoints, neighbors, platforms, seen, xt, yt, _i, _j, _k, _l, _ref, _ref1, _ref2, _ref3;
   ctx.save();
+  ctx.font = "30px white Georgia";
+  ctx.fillStyle = "white";
+  platforms = _pgraph.platforms;
+  for (i = _i = 0, _ref = platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
+    xt = (platforms[i].xleft + platforms[i].xright) / 2;
+    yt = platforms[i].y;
+    ctx.fillText(i, xt * c.TILE, yt * c.TILE);
+  }
+  if (_pgraph !== null) {
+    jpoints = _pgraph.jumppoints;
+    neighbors = _pgraph.neighbors;
+    for (i = _j = 0, _ref1 = jpoints.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
+      jp = jpoints[i];
+      seen = {};
+      for (j = _k = 0, _ref2 = jp.length - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; j = 0 <= _ref2 ? ++_k : --_k) {
+        xt = jp[j].x;
+        yt = platforms[i].y;
+        if (jp[j].type === "fall") {
+          ctx.fillStyle = '#ff0000';
+        } else {
+          ctx.fillStyle = '#00ff00';
+        }
+        cx = xt * c.TILE;
+        cy = yt * c.TILE;
+        index = cx + "," + cy;
+        if (__indexOf.call(seen, index) >= 0) {
+          cy = cy + seen[index] * 10;
+        }
+        seen[index] = __indexOf.call(seen, index) >= 0 ? seen[index] + 1 : 1;
+        ctx.fillRect(xt * c.TILE, yt * c.TILE, 4, 4);
+        ctx.fillText(neighbors[i][j].key(), xt * c.TILE + 10, yt * c.TILE);
+      }
+    }
+  }
   ctx.strokeStyle = '#ff0000';
   ctx.lineWidth = 10;
   if (_path !== null && _path.length > 1) {
     ctx.beginPath();
-    for (i = _i = 0, _ref = _path.length - 2; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
+    for (i = _l = 0, _ref3 = _path.length - 2; 0 <= _ref3 ? _l <= _ref3 : _l >= _ref3; i = 0 <= _ref3 ? ++_l : --_l) {
       ctx.moveTo(_path[i].midx() * c.TILE, _path[i].y * c.TILE);
       ctx.lineTo(_path[i + 1].midx() * c.TILE, _path[i + 1].y * c.TILE);
     }
@@ -655,8 +703,8 @@ Platform = (function() {
     return !(this.xright < xleft || this.xleft > xright);
   };
 
-  Platform.prototype.xMax = function(physics) {
-    return [this.xleft - physics.xmax, this.xright + physics.xmax];
+  Platform.prototype.xMax = function() {
+    return [this.xleft - _physics.xmax, this.xright + _physics.xmax];
   };
 
   Platform.prototype.midx = function() {
@@ -665,7 +713,7 @@ Platform = (function() {
 
   Platform.prototype.xInPlatform = function(tx) {
     if (this.xleft < tx && this.xright > tx) {
-      true;
+      return true;
     }
     return false;
   };
@@ -693,24 +741,14 @@ Platform = (function() {
 
 })();
 
-PhysicsFinder = (function() {
-  function PhysicsFinder() {
-    this.xmax = 6;
-    this.ymax = 10;
-  }
-
-  return PhysicsFinder;
-
-})();
-
-canReachPlatform = function(p1, p2, physics) {
+canReachPlatform = function(p1, p2) {
   var leftx, rightx, _ref;
-  _ref = p1.xMax(physics), leftx = _ref[0], rightx = _ref[1];
+  _ref = p1.xMax, leftx = _ref[0], rightx = _ref[1];
   if (p2.overlap(leftx, rightx)) {
     if (p2.y > p1.y) {
       return true;
     }
-    if (p2.y + physics.ymax > p1.y) {
+    if (p2.y + _physics.ymax > p1.y) {
       return true;
     }
   }
@@ -719,9 +757,8 @@ canReachPlatform = function(p1, p2, physics) {
 
 PlatformGraph = PlatformGraph = (function() {
   function PlatformGraph(level) {
-    var i, j, neighbors, p1, p2, physics, platforms, pneighs, _i, _j, _ref, _ref1;
+    var i, j, neighbors, p1, p2, platforms, pneighs, _i, _j, _ref, _ref1;
     platforms = this._getAllPlatforms(level);
-    physics = new PhysicsFinder();
     neighbors = [];
     for (i = _i = 0, _ref = platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
       pneighs = [];
@@ -729,7 +766,7 @@ PlatformGraph = PlatformGraph = (function() {
       for (j = _j = 0, _ref1 = platforms.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; j = 0 <= _ref1 ? ++_j : --_j) {
         if (i !== j) {
           p2 = platforms[j];
-          if (canReachPlatform(p1, p2, physics)) {
+          if (canReachPlatform(p1, p2)) {
             pneighs.push(p2);
           }
         }
@@ -772,10 +809,11 @@ PlatformGraph = PlatformGraph = (function() {
             point.dir = "left";
             point.x = p1.xleft;
           } else {
-            _ref2 = p2.xMax, xleft = _ref2[0], xright = _ref2[1];
+            _ref2 = p2.xMax(), xleft = _ref2[0], xright = _ref2[1];
+            console.log("jumping platform", xleft, xright, p2.xleft, p2.xright);
             if (p1.overlap(p2.xright, xright)) {
               point.dir = "left";
-              for (x = _k = _ref3 = p2.xright; _ref3 <= xright ? _k <= xright : _k >= xright; x = _ref3 <= xright ? ++_k : --_k) {
+              for (x = _k = _ref3 = p2.xright + 2; _ref3 <= xright ? _k <= xright : _k >= xright; x = _ref3 <= xright ? ++_k : --_k) {
                 if (p1.xInPlatform(x)) {
                   point.x = x;
                   break;
@@ -784,7 +822,7 @@ PlatformGraph = PlatformGraph = (function() {
             }
             if (p1.overlap(xleft, p2.xleft)) {
               point.dir = "right";
-              for (x = _l = _ref4 = p2.xleft; _l >= xleft; x = _l += -1) {
+              for (x = _l = _ref4 = p2.xleft - 2; _l >= xleft; x = _l += -1) {
                 if (p2.xInPlatform(x)) {
                   point.x = x;
                   break;
