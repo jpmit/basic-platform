@@ -25,7 +25,7 @@ drawAngle = (ctx, sprite) ->
   ctx.restore();
 
 
-module.exports = (ctx, me, enemies, gun, bullet, level, path) ->
+module.exports = (ctx, me, enemies, gun, bullet, level) ->
   ctx.clearRect 0, 0, level.width, level.height
 
   renderLevel ctx, level

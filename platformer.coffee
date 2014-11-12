@@ -117,7 +117,12 @@ frame = ->
   while dt > c.STEP
     dt = dt - c.STEP
     player.step level, c.STEP
-    monster.step(level, c.STEP) for monster in monsters 
+
+    # pathfinding (AI)
+    pathfinder.step monster, player
+    
+    monster.step(level, c.STEP) for monster in monsters
+    
     # update the aiming of the gun
     bulletPhysics.updateGun gun, c.STEP
     
@@ -131,10 +136,7 @@ frame = ->
     # detect (and handle) collision between player and other entities
     collide.entityCollide(player, monster) for monster in monsters
 
-  # pathfinding
-  path = pathfinder.findpath monster, player
-
-  render ctx, player, monsters, gun, bullet, level, path
+  render ctx, player, monsters, gun, bullet, level
 
   
   last = now

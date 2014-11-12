@@ -5,9 +5,7 @@ _pgraph = null # the platform graph
 _path = null # the current path from enemy to player
 _physics = null
 
-# export the path for rendering
-module.exports.path = null
-
+# called in setup
 module.exports.preProcess = (level) ->
   # the physics for this level
   _physics = new PhysicsFinder()
@@ -19,7 +17,7 @@ module.exports.preProcess = (level) ->
 class PhysicsFinder
   constructor: () ->
     # max number of tiles we can move horizontally in x direction
-    @xmax = 5
+    @xmax = 6
     # max number of tiles we can move (upwards) in y direction
     @ymax = 10
 
@@ -279,9 +277,18 @@ PlatformGraph = class PlatformGraph
           return pnum
     # we didn't find the platform
     null
+
+# called every step.  entity1 should be a 'monster', entity2 the player
+module.exports.step = (entity1, entity2) ->
+  # find a path from entity1 to entity2
+  findpath entity1, entity2
+
+  # update the pressed buttons of entity1 (AI)
     
-# find path from entity1 to entity2 given a particular platform graph
-module.exports.findpath = (entity1, entity2) ->
+    
+# find path from entity1 to entity2 given a particular platform graph,
+# store this in _path for later use
+findpath = (entity1, entity2) ->
   pnum1 = _pgraph.getPlatformIndexForEntity(entity1)
   pnum2 = _pgraph.getPlatformIndexForEntity(entity2)
   # we'll only try to find a path if both entities are currently on a platform

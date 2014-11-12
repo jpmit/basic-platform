@@ -610,7 +610,7 @@ module.exports = RigidBodyMixin;
 
 
 },{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./physics-move":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-move.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee":[function(require,module,exports){
-var PhysicsFinder, Platform, PlatformGraph, astar, c, canReachPlatform, _path, _pgraph, _physics,
+var PhysicsFinder, Platform, PlatformGraph, astar, c, canReachPlatform, findpath, _path, _pgraph, _physics,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 c = require('./constants');
@@ -623,8 +623,6 @@ _path = null;
 
 _physics = null;
 
-module.exports.path = null;
-
 module.exports.preProcess = function(level) {
   _physics = new PhysicsFinder();
   console.log(_physics);
@@ -633,7 +631,7 @@ module.exports.preProcess = function(level) {
 
 PhysicsFinder = (function() {
   function PhysicsFinder() {
-    this.xmax = 5;
+    this.xmax = 6;
     this.ymax = 10;
   }
 
@@ -896,7 +894,11 @@ PlatformGraph = PlatformGraph = (function() {
 
 })();
 
-module.exports.findpath = function(entity1, entity2) {
+module.exports.step = function(entity1, entity2) {
+  return findpath(entity1, entity2);
+};
+
+findpath = function(entity1, entity2) {
   var a, pnum1, pnum2;
   pnum1 = _pgraph.getPlatformIndexForEntity(entity1);
   pnum2 = _pgraph.getPlatformIndexForEntity(entity2);
@@ -1225,7 +1227,7 @@ drawAngle = function(ctx, sprite) {
   return ctx.restore();
 };
 
-module.exports = function(ctx, me, enemies, gun, bullet, level, path) {
+module.exports = function(ctx, me, enemies, gun, bullet, level) {
   var entity, gunx, guny, _i, _j, _len, _len1;
   ctx.clearRect(0, 0, level.width, level.height);
   renderLevel(ctx, level);
@@ -6692,7 +6694,7 @@ setup = function() {
 };
 
 frame = function() {
-  var collision, path, _i, _j, _len, _len1;
+  var collision, _i, _j, _len, _len1;
   now = time();
   dt = dt + Math.min(1, (now - last) / 1000);
   if (gun.firing && (!bullet)) {
@@ -6717,6 +6719,7 @@ frame = function() {
   while (dt > c.STEP) {
     dt = dt - c.STEP;
     player.step(level, c.STEP);
+    pathfinder.step(monster, player);
     for (_i = 0, _len = monsters.length; _i < _len; _i++) {
       monster = monsters[_i];
       monster.step(level, c.STEP);
@@ -6734,8 +6737,7 @@ frame = function() {
       collide.entityCollide(player, monster);
     }
   }
-  path = pathfinder.findpath(monster, player);
-  render(ctx, player, monsters, gun, bullet, level, path);
+  render(ctx, player, monsters, gun, bullet, level);
   last = now;
   return raf(frame, canvas);
 };
