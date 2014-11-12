@@ -610,7 +610,7 @@ module.exports = RigidBodyMixin;
 
 
 },{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./physics-move":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-move.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee":[function(require,module,exports){
-var PhysicsFinder, Platform, PlatformGraph, astar, c, canReachPlatform, findpath, _path, _pgraph, _physics,
+var PhysicsFinder, Platform, PlatformGraph, TransitionPoint, astar, c, canReachPlatform, findpath, _DIR_LEFT, _DIR_RIGHT, _TYPE_FALL, _TYPE_JUMP, _path, _pgraph, _physics,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 c = require('./constants');
@@ -640,7 +640,7 @@ PhysicsFinder = (function() {
 })();
 
 module.exports.render = function(ctx) {
-  var cx, cy, i, index, j, jp, jpoints, neighbors, platforms, seen, xt, yt, _i, _j, _k, _l, _ref, _ref1, _ref2, _ref3;
+  var cx, cy, i, index, j, neighbors, platforms, seen, tp, tpoints, xt, yt, _i, _j, _k, _l, _ref, _ref1, _ref2, _ref3;
   ctx.save();
   ctx.font = "30px white Georgia";
   ctx.fillStyle = "white";
@@ -651,15 +651,15 @@ module.exports.render = function(ctx) {
     ctx.fillText(i, xt * c.TILE, yt * c.TILE);
   }
   if (_pgraph !== null) {
-    jpoints = _pgraph.jumppoints;
+    tpoints = _pgraph.transitionPoints;
     neighbors = _pgraph.neighbors;
-    for (i = _j = 0, _ref1 = jpoints.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
-      jp = jpoints[i];
+    for (i = _j = 0, _ref1 = tpoints.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
+      tp = tpoints[i];
       seen = {};
-      for (j = _k = 0, _ref2 = jp.length - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; j = 0 <= _ref2 ? ++_k : --_k) {
-        xt = jp[j].x;
+      for (j = _k = 0, _ref2 = tp.length - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; j = 0 <= _ref2 ? ++_k : --_k) {
+        xt = tp[j].x;
         yt = platforms[i].y;
-        if (jp[j].type === "fall") {
+        if (tp[j].type === "fall") {
           ctx.fillStyle = '#ff0000';
         } else {
           ctx.fillStyle = '#00ff00';
@@ -741,6 +741,25 @@ Platform = (function() {
 
 })();
 
+_TYPE_JUMP = "jump";
+
+_TYPE_FALL = "fall";
+
+_DIR_LEFT = "left";
+
+_DIR_RIGHT = "right";
+
+TransitionPoint = (function() {
+  function TransitionPoint(type, dir, x) {
+    this.type = type;
+    this.dir = dir;
+    this.x = x;
+  }
+
+  return TransitionPoint;
+
+})();
+
 canReachPlatform = function(p1, p2) {
   var leftx, rightx, _ref;
   _ref = p1.xMax(), leftx = _ref[0], rightx = _ref[1];
@@ -775,67 +794,70 @@ PlatformGraph = PlatformGraph = (function() {
     }
     this.platforms = platforms;
     this.neighbors = neighbors;
-    this.jumppoints = this._getJumpPoints();
+    this.transitionPoints = this._getTransitionPoints();
     console.log(this.neighbors);
-    console.log(this.jumppoints);
+    console.log(this.transitionPoints);
   }
 
-  PlatformGraph.prototype._getJumpPoints = function() {
-    var i, j, jp, jumppoints, p1, p2, point, x, xleft, xright, _i, _j, _k, _l, _ref, _ref1, _ref2, _ref3, _ref4;
-    jumppoints = [];
+  PlatformGraph.prototype.getTransitionPoint = function(k1, k2) {
+    return null;
+  };
+
+  PlatformGraph.prototype._getTransitionPoints = function() {
+    var i, j, p1, p2, pdir, ptype, px, tp, transitionPoints, x, xleft, xright, _i, _j, _k, _l, _ref, _ref1, _ref2, _ref3, _ref4;
+    transitionPoints = [];
     for (i = _i = 0, _ref = this.platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
       p1 = this.platforms[i];
-      jp = [];
+      tp = [];
       for (j = _j = 0, _ref1 = this.neighbors[i].length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; j = 0 <= _ref1 ? ++_j : --_j) {
         p2 = this.neighbors[i][j];
-        point = {};
         if (p2.y > p1.y) {
-          point.type = "fall";
+          ptype = _TYPE_FALL;
           if (p2.xleft < p1.xleft || p2.xInPlatform(p1.xleft)) {
-            point.dir = "left";
-            point.x = p1.xleft;
+            pdir = _DIR_LEFT;
+            px = p1.xleft;
           } else if (p2.xright > p1.xright || p2.xInPlatform(p1.xright)) {
-            point.dir = "right";
-            point.x = p1.xright;
+            pdir = _DIR_RIGHT;
+            px = p1.xright;
           } else {
             console.log("contained platform", p1.xleft, p1.xright, p2.xleft, p2.xright);
           }
         } else {
-          point.type = "jump";
+          ptype = _TYPE_JUMP;
           if (p2.xleft > p1.xright) {
-            point.dir = "right";
-            point.x = p1.xright;
+            pdir = _DIR_RIGHT;
+            px = p1.xright;
           } else if (p2.xright < p1.xleft) {
-            point.dir = "left";
-            point.x = p1.xleft;
+            pdir = _DIR_LEFT;
+            px = p1.xleft;
           } else {
             _ref2 = p2.xMax(), xleft = _ref2[0], xright = _ref2[1];
             console.log("jumping platform", xleft, xright, p2.xleft, p2.xright);
             if (p1.overlap(p2.xright, xright)) {
-              point.dir = "left";
+              pdir = _DIR_LEFT;
               for (x = _k = _ref3 = p2.xright + 2; _ref3 <= xright ? _k <= xright : _k >= xright; x = _ref3 <= xright ? ++_k : --_k) {
                 if (p1.xInPlatform(x)) {
-                  point.x = x;
+                  px = x;
                   break;
                 }
               }
             }
             if (p1.overlap(xleft, p2.xleft)) {
-              point.dir = "right";
+              pdir = _DIR_RIGHT;
               for (x = _l = _ref4 = p2.xleft - 2; _l >= xleft; x = _l += -1) {
                 if (p2.xInPlatform(x)) {
-                  point.x = x;
+                  px = x;
                   break;
                 }
               }
             }
           }
         }
-        jp.push(point);
+        tp.push(new TransitionPoint(ptype, pdir, px));
       }
-      jumppoints.push(jp);
+      transitionPoints.push(tp);
     }
-    return jumppoints;
+    return transitionPoints;
   };
 
   PlatformGraph.prototype.getNeighbors = function(pnum) {
@@ -895,7 +917,25 @@ PlatformGraph = PlatformGraph = (function() {
 })();
 
 module.exports.step = function(entity1, entity2) {
-  return findpath(entity1, entity2);
+  var nextPlatform, thisPlatform, tp;
+  findpath(entity1, entity2);
+  if (_pgraph.getPlatformIndexForEntity(entity1) === _pgraph.getPlatformIndexForEntity(entity2)) {
+    if (entity2.x > entity1.x) {
+      entity1.right = true;
+      return entity1.left = false;
+    } else {
+      entity1.left = true;
+      return entity1.right = false;
+    }
+  } else {
+    if (_path.length > 1) {
+      thisPlatform = _path[0];
+      nextPlatform = _path[1];
+      tp = _pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key());
+      entity1.right = false;
+      return entity1.left = false;
+    }
+  }
 };
 
 findpath = function(entity1, entity2) {

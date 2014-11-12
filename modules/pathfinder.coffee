@@ -1,8 +1,8 @@
 c     = require './constants'
 astar = require './astar'
 
-_pgraph = null # the platform graph 
-_path = null # the current path from enemy to player
+_pgraph  = null # the platform graph
+_path    = null # the current path from enemy to player
 _physics = null
 
 # called in setup
@@ -37,19 +37,19 @@ module.exports.render = (ctx) ->
   # draw the transition points between platforms
   if (_pgraph != null)
     # array of arrays (one array for each platform)
-    jpoints = _pgraph.jumppoints
+    tpoints = _pgraph.transitionPoints
     neighbors = _pgraph.neighbors
-    for i in [0..jpoints.length - 1]
+    for i in [0..tpoints.length - 1]
       # array of points for each platform
-      jp = jpoints[i]
+      tp = tpoints[i]
       seen = {}
-      for j in [0..jp.length - 1]
+      for j in [0..tp.length - 1]
         # get the x tile on the platform
-        xt = jp[j].x
+        xt = tp[j].x
         # get the y tile on the platform
         yt = platforms[i].y
         # mark fall points as red and jump points as green
-        if jp[j].type == "fall"
+        if tp[j].type == "fall"
           ctx.fillStyle = '#ff0000'
         else # .type is "jump"
           ctx.fillStyle = '#00ff00'
@@ -124,6 +124,19 @@ class Platform
   equals: (p2) ->
     @key() == p2.key()
 
+# types of transition points
+_TYPE_JUMP = "jump"
+_TYPE_FALL = "fall"
+# directions of transition points
+_DIR_LEFT = "left"
+_DIR_RIGHT = "right"
+
+class TransitionPoint
+  constructor: (type, dir, x) ->
+    @type = type
+    @dir = dir
+    @x = x
+
 # can we reach platform p2 starting from platform p1?  assume
 # currently for simplicity that no platforms 'block' the path from p1
 # -> p2.
@@ -166,63 +179,67 @@ PlatformGraph = class PlatformGraph
     @neighbors = neighbors
 
     # create 'jump points' for pairs of platforms
-    @jumppoints = @_getJumpPoints()
+    @transitionPoints = @_getTransitionPoints()
 
     console.log @neighbors
-    console.log @jumppoints
+    console.log @transitionPoints
 
-  _getJumpPoints: () ->
-    jumppoints = []
+  getTransitionPoint: (k1, k2) ->
+    null
+#    @transitionPoints[k1][k2]
+
+  _getTransitionPoints: () ->
+    transitionPoints = []
     for i in [0..@platforms.length - 1]
       p1 = @platforms[i]
-      jp = [] # stores jump points for all neighbours of this platform
+      tp = [] # stores transition points for all neighbours of this platform
       for j in [0..@neighbors[i].length - 1]
         p2 = @neighbors[i][j]
-        point = {}
         # if neighbouring platform is lower it is a fall point
         if p2.y > p1.y
-          point.type = "fall"
+          ptype = _TYPE_FALL
           if p2.xleft < p1.xleft or p2.xInPlatform(p1.xleft)
             # can fall left (might also be able to fall right, but let's fall left)
-            point.dir = "left"
-            point.x = p1.xleft
+            pdir = _DIR_LEFT
+            px = p1.xleft
           else if p2.xright > p1.xright or p2.xInPlatform(p1.xright)
             # can fall right
-            point.dir = "right"
-            point.x = p1.xright
+            pdir = _DIR_RIGHT
+            px = p1.xright
           else # lower platform is contained within upper platform (case not yet handled)
             console.log "contained platform", p1.xleft, p1.xright, p2.xleft, p2.xright
         else # neighbouring platform is either level or above
-          point.type = "jump"
+          ptype = _TYPE_JUMP
           if p2.xleft > p1.xright
-            point.dir = "right"
-            point.x = p1.xright
+            pdir = _DIR_RIGHT
+            px = p1.xright
           else if p2.xright < p1.xleft
-            point.dir = "left"
-            point.x = p1.xleft 
+            pdir = _DIR_LEFT
+            px = p1.xleft
           else # neighbouring platform is 'partially or fully enclosed'
             [xleft, xright] = p2.xMax()
             console.log "jumping platform", xleft, xright, p2.xleft, p2.xright
             # if the region to the right hand side of p2 overlaps p1, we want to jump left
             if p1.overlap(p2.xright, xright)
-              point.dir = "left"
+              pdir = _DIR_LEFT
               for x in [p2.xright + 2..xright]
                 if p1.xInPlatform x
-                  point.x = x
+                  px = x
                   break
             # not sure why else not allowed here
             if p1.overlap(xleft, p2.xleft)
-              point.dir = "right"
+              pdir = _DIR_RIGHT
               for x in [p2.xleft - 2..xleft] by -1
                 if p2.xInPlatform x
-                  point.x = x
+                  px = x
                   break
         # add the point
-        jp.push point
+        tp.push (new TransitionPoint(ptype, pdir, px))
       
       # add all points to the list
-      jumppoints.push jp
-    jumppoints
+      transitionPoints.push tp
+    # return the transition points
+    transitionPoints
 
   # get neighbours for a particular platform index
   getNeighbors: (pnum) ->
@@ -284,7 +301,25 @@ module.exports.step = (entity1, entity2) ->
   findpath entity1, entity2
 
   # update the pressed buttons of entity1 (AI)
-    
+  if (_pgraph.getPlatformIndexForEntity(entity1) == _pgraph.getPlatformIndexForEntity(entity2))
+    # on same platform
+    if (entity2.x > entity1.x)
+      entity1.right = true
+      entity1.left = false
+    else
+      entity1.left = true
+      entity1.right = false
+  else
+    if (_path.length > 1)
+      # on different platform
+      # platform the enemy is currently on
+      thisPlatform = _path[0]
+      nextPlatform = _path[1]
+      # transition point from thisPlatform to nextPlatform
+      tp = _pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key())
+#    console.log _path
+      entity1.right = false
+      entity1.left = false
     
 # find path from entity1 to entity2 given a particular platform graph,
 # store this in _path for later use
