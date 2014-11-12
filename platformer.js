@@ -658,7 +658,7 @@ module.exports.render = function(ctx) {
       seen = {};
       for (j = _k = 0, _ref2 = tp.length - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; j = 0 <= _ref2 ? ++_k : --_k) {
         if (tp[j] !== null) {
-          xt = tp[j].x;
+          xt = tp[j].tx;
           yt = platforms[i].y;
           if (tp[j].type === "fall") {
             ctx.fillStyle = '#ff0000';
@@ -752,11 +752,15 @@ _DIR_LEFT = "left";
 _DIR_RIGHT = "right";
 
 TransitionPoint = (function() {
-  function TransitionPoint(type, dir, x) {
+  function TransitionPoint(type, dir, tx) {
     this.type = type;
     this.dir = dir;
-    this.x = x;
+    this.tx = tx;
   }
+
+  TransitionPoint.prototype.getXCoord = function() {
+    return this.tx * c.TILE;
+  };
 
   return TransitionPoint;
 
@@ -925,7 +929,7 @@ PlatformGraph = PlatformGraph = (function() {
 })();
 
 module.exports.step = function(entity1, entity2) {
-  var nextPlatform, thisPlatform, tp;
+  var nextPlatform, thisPlatform, tp, xTransition;
   findpath(entity1, entity2);
   if (_pgraph.getPlatformIndexForEntity(entity1) === _pgraph.getPlatformIndexForEntity(entity2)) {
     if (entity2.x > entity1.x) {
@@ -940,8 +944,28 @@ module.exports.step = function(entity1, entity2) {
       thisPlatform = _path[0];
       nextPlatform = _path[1];
       tp = _pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key());
-      entity1.right = false;
-      return entity1.left = false;
+      xTransition = tp.getXCoord();
+      if (entity1.jump) {
+        entity1.jump = false;
+      }
+      if (entity1.x === xTransition && entity1.vx === 0) {
+        return entity1.jump = true;
+      } else {
+        if ((entity1.x > xTransition - 3) && (entity1.x < xTransition + 3)) {
+          entity1.x = xTransition;
+          entity1.vx = 0;
+          entity1.right = false;
+          return entity1.left = false;
+        } else {
+          if (xTransition > entity1.x) {
+            entity1.right = true;
+            return entity1.left = false;
+          } else if (xTransition < entity1.x) {
+            entity1.left = true;
+            return entity1.right = false;
+          }
+        }
+      }
     }
   }
 };
@@ -950,6 +974,7 @@ findpath = function(entity1, entity2) {
   var a, pnum1, pnum2;
   pnum1 = _pgraph.getPlatformIndexForEntity(entity1);
   pnum2 = _pgraph.getPlatformIndexForEntity(entity2);
+  console.log(pnum2);
   if ((pnum1 === null) || (pnum2 === null)) {
     return null;
   }

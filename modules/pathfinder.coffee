@@ -46,7 +46,7 @@ module.exports.render = (ctx) ->
       for j in [0..tp.length - 1]
         if tp[j] != null
           # get the x tile on the platform
-          xt = tp[j].x
+          xt = tp[j].tx
           # get the y tile on the platform
           yt = platforms[i].y
           # mark fall points as red and jump points as green
@@ -107,7 +107,9 @@ class Platform
       return true
     false
 
-  # used in A* search
+  # used in A* search : key returns the id, which is equal to the
+  # index at which the platform is located in the _pgraph.platforms
+  # array
   key: () ->
     @id
 
@@ -133,10 +135,14 @@ _DIR_LEFT = "left"
 _DIR_RIGHT = "right"
 
 class TransitionPoint
-  constructor: (type, dir, x) ->
+  constructor: (type, dir, tx) ->
     @type = type
     @dir = dir
-    @x = x
+    # note tx is the tile co-ordinate
+    @tx = tx
+
+  getXCoord: () ->
+    @tx * c.TILE
 
 # can we reach platform p2 starting from platform p1?  assume
 # currently for simplicity that no platforms 'block' the path from p1
@@ -324,15 +330,39 @@ module.exports.step = (entity1, entity2) ->
       nextPlatform = _path[1]
       # transition point from thisPlatform to nextPlatform
       tp = _pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key())
-#    console.log _path
-      entity1.right = false
-      entity1.left = false
+      # go to the transition point and then stop
+      xTransition = tp.getXCoord()
+
+      if (entity1.jump)
+        entity1.jump = false
+        
+      # are we already at the transition point?  If so, we need to do
+      # something a bit complicated
+      if (entity1.x == xTransition and entity1.vx == 0)
+        entity1.jump = true
+      else
+        # we are not at the transition point, so move towards it!
+
+        # don't jiggle around at the transition point, instead stop
+        if (entity1.x > xTransition - 3) and (entity1.x < xTransition + 3)
+          entity1.x = xTransition
+          entity1.vx = 0
+          entity1.right = false
+          entity1.left = false
+        else                
+          if xTransition > entity1.x
+            entity1.right = true
+            entity1.left = false
+          else if xTransition < entity1.x
+            entity1.left = true
+            entity1.right = false
     
 # find path from entity1 to entity2 given a particular platform graph,
 # store this in _path for later use
 findpath = (entity1, entity2) ->
   pnum1 = _pgraph.getPlatformIndexForEntity(entity1)
   pnum2 = _pgraph.getPlatformIndexForEntity(entity2)
+  console.log pnum2
   # we'll only try to find a path if both entities are currently on a platform
   if (pnum1 == null) or (pnum2 == null)
     return null
