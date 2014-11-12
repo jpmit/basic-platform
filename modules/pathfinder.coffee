@@ -1,9 +1,15 @@
 c     = require './constants'
 astar = require './astar'
 
-_pgraph  = null # the platform graph
-_path    = null # the current path from enemy to player
+# path is currently stored here for rendering in this module (see
+# render) only, hence private _
+_path    = null
+
+pgraph   = null # the platform graph
 _physics = null
+
+module.exports.getPlatformGraph = () ->
+  pgraph
 
 # called in setup
 module.exports.preProcess = (level) ->
@@ -11,23 +17,27 @@ module.exports.preProcess = (level) ->
   _physics = new PhysicsFinder()
   console.log _physics
   # create graph that connects platforms
-  _pgraph = new PlatformGraph(level)
+  pgraph = new PlatformGraph(level)
   
 # placeholder currently for relevant pathfinding physics.
 class PhysicsFinder
   constructor: () ->
     # max number of tiles we can move horizontally in x direction
     @xmax = 6
-    # max number of tiles we can move (upwards) in y direction
+    # max number of tiles we can move (upwards) in y direction (with
+    # any number of jumps)
     @ymax = 10
 
+    @ymaxSingle = @ymax / 2
+
+# rendering is currently for debugging
 module.exports.render = (ctx) ->
   ctx.save()
 
   # draw numbers on each of the platforms
   ctx.font="30px white Georgia";
   ctx.fillStyle = "white"
-  platforms = _pgraph.platforms
+  platforms = pgraph.platforms
   for i in [0..platforms.length - 1]
     xt = (platforms[i].xleft + platforms[i].xright) / 2
     yt = platforms[i].y
@@ -35,10 +45,10 @@ module.exports.render = (ctx) ->
     ctx.fillText(i, xt * c.TILE, yt * c.TILE)
 
   # draw the transition points between platforms
-  if (_pgraph != null)
+  if (pgraph != null)
     # array of arrays (one array for each platform)
-    tpoints = _pgraph.transitionPoints
-    neighbors = _pgraph.neighbors
+    tpoints = pgraph.transitionPoints
+    neighbors = pgraph.neighbors
     for i in [0..tpoints.length - 1]
       # array of points for each platform
       tp = tpoints[i]
@@ -67,7 +77,7 @@ module.exports.render = (ctx) ->
         
           ctx.fillRect(cx, cy, 4, 4)
           # write index of platform next to point
-          ctx.fillText(_pgraph.platforms[j].key(), cx, cy)
+          ctx.fillText(pgraph.platforms[j].key(), cx, cy)
 
   # draw the path from the enemy to the player
   ctx.strokeStyle = '#ff0000';
@@ -108,14 +118,14 @@ class Platform
     false
 
   # used in A* search : key returns the id, which is equal to the
-  # index at which the platform is located in the _pgraph.platforms
+  # index at which the platform is located in the pgraph.platforms
   # array
   key: () ->
     @id
 
   # used in A* search
   getAdjacentNodes: () ->
-    _pgraph.getNeighbors(@id)
+    pgraph.getNeighbors(@id)
 
   # used in A* search
   heuristicDistance: (p2) ->
@@ -135,11 +145,15 @@ _DIR_LEFT = "left"
 _DIR_RIGHT = "right"
 
 class TransitionPoint
-  constructor: (type, dir, tx) ->
+  constructor: (type, dir, tx, p1, p2, njump) ->
     @type = type
     @dir = dir
     # note tx is the tile co-ordinate
     @tx = tx
+    # p1 and p2 are platforms from and to respectively
+    @p1 = p1
+    @p2 = p2
+    @njump = njump
 
   getXCoord: () ->
     @tx * c.TILE
@@ -224,6 +238,13 @@ PlatformGraph = class PlatformGraph
             console.log "contained platform", p1.xleft, p1.xright, p2.xleft, p2.xright
         else # neighbouring platform is either level or above
           ptype = _TYPE_JUMP
+
+          # how many jumps are needed? (either 1 or 2 currently)
+          if p1.y > p2.y + _physics.ymaxSingle
+            njumps = 2
+          else
+            njumps = 1
+            
           if p2.xleft > p1.xright
             pdir = _DIR_RIGHT
             px = p1.xright
@@ -248,7 +269,7 @@ PlatformGraph = class PlatformGraph
                   px = x
                   break
         # add the point
-        transitionPoints[p1.key()][p2.key()] = new TransitionPoint(ptype, pdir, px)
+        transitionPoints[p1.key()][p2.key()] = new TransitionPoint(ptype, pdir, px, p1, p2, njumps || null)
 
     # return the transition points
     console.log transitionPoints
@@ -307,67 +328,16 @@ PlatformGraph = class PlatformGraph
           return pnum
     # we didn't find the platform
     null
-
-# called every step.  entity1 should be a 'monster', entity2 the player
-module.exports.step = (entity1, entity2) ->
-  # find a path from entity1 to entity2
-  findpath entity1, entity2
-
-  # update the pressed buttons of entity1 (AI)
-  if (_pgraph.getPlatformIndexForEntity(entity1) == _pgraph.getPlatformIndexForEntity(entity2))
-    # on same platform
-    if (entity2.x > entity1.x)
-      entity1.right = true
-      entity1.left = false
-    else
-      entity1.left = true
-      entity1.right = false
-  else
-    if (_path.length > 1)
-      # on different platform
-      # platform the enemy is currently on
-      thisPlatform = _path[0]
-      nextPlatform = _path[1]
-      # transition point from thisPlatform to nextPlatform
-      tp = _pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key())
-      # go to the transition point and then stop
-      xTransition = tp.getXCoord()
-
-      if (entity1.jump)
-        entity1.jump = false
-        
-      # are we already at the transition point?  If so, we need to do
-      # something a bit complicated
-      if (entity1.x == xTransition and entity1.vx == 0)
-        entity1.jump = true
-      else
-        # we are not at the transition point, so move towards it!
-
-        # don't jiggle around at the transition point, instead stop
-        if (entity1.x > xTransition - 3) and (entity1.x < xTransition + 3)
-          entity1.x = xTransition
-          entity1.vx = 0
-          entity1.right = false
-          entity1.left = false
-        else                
-          if xTransition > entity1.x
-            entity1.right = true
-            entity1.left = false
-          else if xTransition < entity1.x
-            entity1.left = true
-            entity1.right = false
     
 # find path from entity1 to entity2 given a particular platform graph,
-# store this in _path for later use
-findpath = (entity1, entity2) ->
-  pnum1 = _pgraph.getPlatformIndexForEntity(entity1)
-  pnum2 = _pgraph.getPlatformIndexForEntity(entity2)
-  console.log pnum2
+module.exports.findpath = (entity1, entity2) ->
+  pnum1 = pgraph.getPlatformIndexForEntity(entity1)
+  pnum2 = pgraph.getPlatformIndexForEntity(entity2)
   # we'll only try to find a path if both entities are currently on a platform
   if (pnum1 == null) or (pnum2 == null)
     return null
   # compute route from pnum1 to pnum2
   a = new astar.Astar
   # return the path
-  _path = a.findPath(_pgraph.platforms[pnum1], _pgraph.platforms[pnum2])
+  _path = a.findPath(pgraph.platforms[pnum1], pgraph.platforms[pnum2])
   _path

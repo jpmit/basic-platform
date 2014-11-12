@@ -173,7 +173,93 @@ module.exports = pointInAABB = function(point, box) {
 
 
 
-},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/astar.coffee":[function(require,module,exports){
+},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai.coffee":[function(require,module,exports){
+var AiController, pathfinder;
+
+pathfinder = require('./pathfinder');
+
+AiController = (function() {
+  function AiController(entity1, entity2) {
+    this.entity1 = entity1;
+    this.entity2 = entity2;
+    this.pgraph = pathfinder.getPlatformGraph();
+    console.log('platform graph');
+    console.log(this.pgraph);
+    this.p1Index = null;
+    this.p2Index = null;
+    this.path = null;
+  }
+
+  AiController.prototype.setNavigationOnPlatform = function() {
+    if (this.entity2.x > this.entity1.x) {
+      this.entity1.right = true;
+      return this.entity1.left = false;
+    } else {
+      this.entity1.left = true;
+      return this.entity1.right = false;
+    }
+  };
+
+  AiController.prototype.setNavigationToPlatform = function() {
+    var nextPlatform, thisPlatform, tp, xTransition;
+    console.log('not on same platform!');
+    thisPlatform = this.path[0];
+    nextPlatform = this.path[1];
+    tp = this.pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key());
+    console.log(tp);
+    xTransition = tp.getXCoord();
+    if (this.entity1.jump) {
+      this.entity1.jump = false;
+    }
+    if (this.entity1.x === xTransition && this.entity1.vx === 0) {
+      return this.entity1.jump = true;
+    } else {
+      if ((this.entity1.x > xTransition - 3) && (this.entity1.x < xTransition + 3)) {
+        this.entity1.x = xTransition;
+        this.entity1.vx = 0;
+        this.entity1.right = false;
+        return this.entity1.left = false;
+      } else {
+        if (xTransition > this.entity1.x) {
+          this.entity1.right = true;
+          return this.entity1.left = false;
+        } else if (xTransition < this.entity1.x) {
+          this.entity1.left = true;
+          return this.entity1.right = false;
+        }
+      }
+    }
+  };
+
+  AiController.prototype.step = function() {
+    var p1Index, p2Index;
+    p1Index = this.pgraph.getPlatformIndexForEntity(this.entity1);
+    p2Index = this.pgraph.getPlatformIndexForEntity(this.entity2);
+    if ((p1Index !== this.p1Index) || (p2Index !== this.p2Index)) {
+      if (p1Index !== null && p2Index !== null) {
+        this.path = pathfinder.findpath(this.entity1, this.entity2);
+      }
+    }
+    this.p1Index = p1Index;
+    this.p2Index = p2Index;
+    if (this.path) {
+      if (this.path.length === 1) {
+        return this.setNavigationOnPlatform();
+      } else {
+        return this.setNavigationToPlatform();
+      }
+    }
+  };
+
+  return AiController;
+
+})();
+
+module.exports = AiController;
+
+
+
+},{"./pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/astar.coffee":[function(require,module,exports){
 var AStar;
 
 module.exports.Astar = AStar = (function() {
@@ -610,29 +696,34 @@ module.exports = RigidBodyMixin;
 
 
 },{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./physics-move":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-move.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee":[function(require,module,exports){
-var PhysicsFinder, Platform, PlatformGraph, TransitionPoint, astar, c, canReachPlatform, findpath, _DIR_LEFT, _DIR_RIGHT, _TYPE_FALL, _TYPE_JUMP, _path, _pgraph, _physics,
+var PhysicsFinder, Platform, PlatformGraph, TransitionPoint, astar, c, canReachPlatform, pgraph, _DIR_LEFT, _DIR_RIGHT, _TYPE_FALL, _TYPE_JUMP, _path, _physics,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 c = require('./constants');
 
 astar = require('./astar');
 
-_pgraph = null;
-
 _path = null;
 
+pgraph = null;
+
 _physics = null;
+
+module.exports.getPlatformGraph = function() {
+  return pgraph;
+};
 
 module.exports.preProcess = function(level) {
   _physics = new PhysicsFinder();
   console.log(_physics);
-  return _pgraph = new PlatformGraph(level);
+  return pgraph = new PlatformGraph(level);
 };
 
 PhysicsFinder = (function() {
   function PhysicsFinder() {
     this.xmax = 6;
     this.ymax = 10;
+    this.ymaxSingle = this.ymax / 2;
   }
 
   return PhysicsFinder;
@@ -644,15 +735,15 @@ module.exports.render = function(ctx) {
   ctx.save();
   ctx.font = "30px white Georgia";
   ctx.fillStyle = "white";
-  platforms = _pgraph.platforms;
+  platforms = pgraph.platforms;
   for (i = _i = 0, _ref = platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
     xt = (platforms[i].xleft + platforms[i].xright) / 2;
     yt = platforms[i].y;
     ctx.fillText(i, xt * c.TILE, yt * c.TILE);
   }
-  if (_pgraph !== null) {
-    tpoints = _pgraph.transitionPoints;
-    neighbors = _pgraph.neighbors;
+  if (pgraph !== null) {
+    tpoints = pgraph.transitionPoints;
+    neighbors = pgraph.neighbors;
     for (i = _j = 0, _ref1 = tpoints.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
       tp = tpoints[i];
       seen = {};
@@ -675,7 +766,7 @@ module.exports.render = function(ctx) {
             seen[index] = 1;
           }
           ctx.fillRect(cx, cy, 4, 4);
-          ctx.fillText(_pgraph.platforms[j].key(), cx, cy);
+          ctx.fillText(pgraph.platforms[j].key(), cx, cy);
         }
       }
     }
@@ -725,7 +816,7 @@ Platform = (function() {
   };
 
   Platform.prototype.getAdjacentNodes = function() {
-    return _pgraph.getNeighbors(this.id);
+    return pgraph.getNeighbors(this.id);
   };
 
   Platform.prototype.heuristicDistance = function(p2) {
@@ -752,10 +843,13 @@ _DIR_LEFT = "left";
 _DIR_RIGHT = "right";
 
 TransitionPoint = (function() {
-  function TransitionPoint(type, dir, tx) {
+  function TransitionPoint(type, dir, tx, p1, p2, njump) {
     this.type = type;
     this.dir = dir;
     this.tx = tx;
+    this.p1 = p1;
+    this.p2 = p2;
+    this.njump = njump;
   }
 
   TransitionPoint.prototype.getXCoord = function() {
@@ -810,7 +904,7 @@ PlatformGraph = PlatformGraph = (function() {
   };
 
   PlatformGraph.prototype._getTransitionPoints = function() {
-    var i, j, p1, p2, pdir, ptype, px, tp, transitionPoints, x, xleft, xright, _i, _j, _k, _l, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
+    var i, j, njumps, p1, p2, pdir, ptype, px, tp, transitionPoints, x, xleft, xright, _i, _j, _k, _l, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
     transitionPoints = [];
     for (i = _i = 0, _ref = this.platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
       transitionPoints.push([]);
@@ -836,6 +930,11 @@ PlatformGraph = PlatformGraph = (function() {
           }
         } else {
           ptype = _TYPE_JUMP;
+          if (p1.y > p2.y + _physics.ymaxSingle) {
+            njumps = 2;
+          } else {
+            njumps = 1;
+          }
           if (p2.xleft > p1.xright) {
             pdir = _DIR_RIGHT;
             px = p1.xright;
@@ -865,7 +964,7 @@ PlatformGraph = PlatformGraph = (function() {
             }
           }
         }
-        transitionPoints[p1.key()][p2.key()] = new TransitionPoint(ptype, pdir, px);
+        transitionPoints[p1.key()][p2.key()] = new TransitionPoint(ptype, pdir, px, p1, p2, njumps || null);
       }
     }
     console.log(transitionPoints);
@@ -928,58 +1027,15 @@ PlatformGraph = PlatformGraph = (function() {
 
 })();
 
-module.exports.step = function(entity1, entity2) {
-  var nextPlatform, thisPlatform, tp, xTransition;
-  findpath(entity1, entity2);
-  if (_pgraph.getPlatformIndexForEntity(entity1) === _pgraph.getPlatformIndexForEntity(entity2)) {
-    if (entity2.x > entity1.x) {
-      entity1.right = true;
-      return entity1.left = false;
-    } else {
-      entity1.left = true;
-      return entity1.right = false;
-    }
-  } else {
-    if (_path.length > 1) {
-      thisPlatform = _path[0];
-      nextPlatform = _path[1];
-      tp = _pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key());
-      xTransition = tp.getXCoord();
-      if (entity1.jump) {
-        entity1.jump = false;
-      }
-      if (entity1.x === xTransition && entity1.vx === 0) {
-        return entity1.jump = true;
-      } else {
-        if ((entity1.x > xTransition - 3) && (entity1.x < xTransition + 3)) {
-          entity1.x = xTransition;
-          entity1.vx = 0;
-          entity1.right = false;
-          return entity1.left = false;
-        } else {
-          if (xTransition > entity1.x) {
-            entity1.right = true;
-            return entity1.left = false;
-          } else if (xTransition < entity1.x) {
-            entity1.left = true;
-            return entity1.right = false;
-          }
-        }
-      }
-    }
-  }
-};
-
-findpath = function(entity1, entity2) {
+module.exports.findpath = function(entity1, entity2) {
   var a, pnum1, pnum2;
-  pnum1 = _pgraph.getPlatformIndexForEntity(entity1);
-  pnum2 = _pgraph.getPlatformIndexForEntity(entity2);
-  console.log(pnum2);
+  pnum1 = pgraph.getPlatformIndexForEntity(entity1);
+  pnum2 = pgraph.getPlatformIndexForEntity(entity2);
   if ((pnum1 === null) || (pnum2 === null)) {
     return null;
   }
   a = new astar.Astar;
-  _path = a.findPath(_pgraph.platforms[pnum1], _pgraph.platforms[pnum2]);
+  _path = a.findPath(pgraph.platforms[pnum1], pgraph.platforms[pnum2]);
   return _path;
 };
 
@@ -6638,7 +6694,7 @@ function hasOwnProperty(obj, prop) {
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./support/isBuffer":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/watchify/node_modules/browserify/node_modules/util/support/isBufferBrowser.js","_process":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/watchify/node_modules/browserify/node_modules/process/browser.js","inherits":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/watchify/node_modules/browserify/node_modules/inherits/inherits_browser.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/platformer.coffee":[function(require,module,exports){
-var Entity, Level, RigidBody, assign, bullet, bulletPhysics, bulletUpdates, c, canvas, collide, createEntity, ctx, dt, frame, fs, gun, last, level, mixin, monster, monsters, now, onkey, pathfinder, pgraph, player, raf, render, setup, time, unitVector;
+var AiController, Entity, Level, RigidBody, aicontrollers, assign, bullet, bulletPhysics, bulletUpdates, c, canvas, collide, createEntity, ctx, dt, frame, fs, gun, last, level, mixin, monster, monsters, now, onkey, pathfinder, player, raf, render, setup, time, unitVector;
 
 Entity = require('./modules/entity');
 
@@ -6668,6 +6724,8 @@ unitVector = require('./modules/v2-unit');
 
 pathfinder = require('./modules/pathfinder');
 
+AiController = require('./modules/ai');
+
 canvas = document.getElementById('canvas');
 
 ctx = canvas.getContext('2d');
@@ -6692,7 +6750,7 @@ bullet = null;
 
 bulletUpdates = 3;
 
-pgraph = null;
+aicontrollers = [];
 
 onkey = function(ev, key, down) {
   switch (key) {
@@ -6762,12 +6820,13 @@ setup = function() {
     firing: false,
     sensitivity: 5
   };
+  pathfinder.preProcess(level);
   monsters = [monster];
-  return pathfinder.preProcess(level);
+  return aicontrollers = [new AiController(monster, player)];
 };
 
 frame = function() {
-  var collision, _i, _j, _len, _len1;
+  var ai, collision, _i, _j, _k, _len, _len1, _len2;
   now = time();
   dt = dt + Math.min(1, (now - last) / 1000);
   if (gun.firing && (!bullet)) {
@@ -6792,9 +6851,12 @@ frame = function() {
   while (dt > c.STEP) {
     dt = dt - c.STEP;
     player.step(level, c.STEP);
-    pathfinder.step(monster, player);
-    for (_i = 0, _len = monsters.length; _i < _len; _i++) {
-      monster = monsters[_i];
+    for (_i = 0, _len = aicontrollers.length; _i < _len; _i++) {
+      ai = aicontrollers[_i];
+      ai.step();
+    }
+    for (_j = 0, _len1 = monsters.length; _j < _len1; _j++) {
+      monster = monsters[_j];
       monster.step(level, c.STEP);
     }
     bulletPhysics.updateGun(gun, c.STEP);
@@ -6805,8 +6867,8 @@ frame = function() {
         bullet = null;
       }
     }
-    for (_j = 0, _len1 = monsters.length; _j < _len1; _j++) {
-      monster = monsters[_j];
+    for (_k = 0, _len2 = monsters.length; _k < _len2; _k++) {
+      monster = monsters[_k];
       collide.entityCollide(player, monster);
     }
   }
@@ -6829,4 +6891,4 @@ frame();
 
 
 
-},{"./modules/constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./modules/entity":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/entity.coffee","./modules/level":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/level.coffee","./modules/mixin-rigid-body":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/mixin-rigid-body.coffee","./modules/pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee","./modules/physics-bullet":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-bullet.coffee","./modules/physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./modules/renderer":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/renderer.coffee","./modules/time":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/time.coffee","./modules/v2-unit":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/v2-unit.coffee","lodash.assign":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/index.js","lodash.mixin":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/index.js","raf":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/raf/index.js"}]},{},["/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/platformer.coffee"]);
+},{"./modules/ai":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai.coffee","./modules/constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./modules/entity":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/entity.coffee","./modules/level":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/level.coffee","./modules/mixin-rigid-body":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/mixin-rigid-body.coffee","./modules/pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee","./modules/physics-bullet":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-bullet.coffee","./modules/physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./modules/renderer":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/renderer.coffee","./modules/time":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/time.coffee","./modules/v2-unit":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/v2-unit.coffee","lodash.assign":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/index.js","lodash.mixin":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/index.js","raf":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/raf/index.js"}]},{},["/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/platformer.coffee"]);

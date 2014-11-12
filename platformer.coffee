@@ -12,6 +12,7 @@ render        = require './modules/renderer'
 time          = require './modules/time'
 unitVector    = require './modules/v2-unit'
 pathfinder    = require './modules/pathfinder'
+AiController  = require './modules/ai'
 
 canvas = document.getElementById 'canvas'
 ctx    = canvas.getContext '2d'
@@ -25,7 +26,7 @@ monsters = []
 gun = null
 bullet = null
 bulletUpdates = 3
-pgraph = null
+aicontrollers = []
 
 onkey = (ev, key, down) ->
   switch key
@@ -94,11 +95,15 @@ setup = ->
   # angle is in radians clockwise from horizontal
   gun = { angle: 0.001 , firing: false, sensitivity: 5}
 
+  # pre-process the level for pathfinding (this must be done before
+  # creating aicontrollers)
+  pathfinder.preProcess(level)
+
   # list of all entities other than the player entity
   monsters = [ monster ]
 
-  # pre-process the level for pathfinding
-  pathfinder.preProcess(level)
+  # each non-player entity (monster) has an 'AiController'
+  aicontrollers = [ new AiController(monster, player) ]
 
 frame = ->
   now = time()
@@ -118,8 +123,7 @@ frame = ->
     dt = dt - c.STEP
     player.step level, c.STEP
 
-    # pathfinding (AI)
-    pathfinder.step monster, player
+    ai.step() for ai in aicontrollers
     
     monster.step(level, c.STEP) for monster in monsters
     
