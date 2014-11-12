@@ -44,29 +44,30 @@ module.exports.render = (ctx) ->
       tp = tpoints[i]
       seen = {}
       for j in [0..tp.length - 1]
-        # get the x tile on the platform
-        xt = tp[j].x
-        # get the y tile on the platform
-        yt = platforms[i].y
-        # mark fall points as red and jump points as green
-        if tp[j].type == "fall"
-          ctx.fillStyle = '#ff0000'
-        else # .type is "jump"
-          ctx.fillStyle = '#00ff00'
-        # stack the y co-ord in case we have seen this point multiple times
-        cx = xt * c.TILE
-        cy = yt * c.TILE
-        index = cx + "," + cy
-        # have we seen this jump point already?
-        if index of seen
-          cy = cy + seen[index] * c.TILE
-          seen[index] = seen[index] + 1
-        else
-          seen[index] = 1
+        if tp[j] != null
+          # get the x tile on the platform
+          xt = tp[j].x
+          # get the y tile on the platform
+          yt = platforms[i].y
+          # mark fall points as red and jump points as green
+          if tp[j].type == "fall"
+            ctx.fillStyle = '#ff0000'
+          else # .type is "jump"
+            ctx.fillStyle = '#00ff00'
+          # stack the y co-ord in case we have seen this point multiple times
+          cx = xt * c.TILE
+          cy = yt * c.TILE
+          index = cx + "," + cy
+          # have we seen this jump point already?
+          if index of seen
+            cy = cy + seen[index] * c.TILE
+            seen[index] = seen[index] + 1
+          else
+            seen[index] = 1
         
-        ctx.fillRect(cx, cy, 4, 4)
-        # write index of platform next to point
-        ctx.fillText(neighbors[i][j].key(), cx, cy)
+          ctx.fillRect(cx, cy, 4, 4)
+          # write index of platform next to point
+          ctx.fillText(_pgraph.platforms[j].key(), cx, cy)
 
   # draw the path from the enemy to the player
   ctx.strokeStyle = '#ff0000';
@@ -185,11 +186,18 @@ PlatformGraph = class PlatformGraph
     console.log @transitionPoints
 
   getTransitionPoint: (k1, k2) ->
-    null
-#    @transitionPoints[k1][k2]
+    @transitionPoints[k1][k2]
 
   _getTransitionPoints: () ->
+    # create an empty transitionPoints 'matrix', where
+    # transitionPoints[k1][k2] is either null or a TransitionPoint
     transitionPoints = []
+    for i in [0..@platforms.length - 1]
+      transitionPoints.push([])
+      for j in [0..@platforms.length - 1]
+        transitionPoints[i].push(null)
+
+    # populate the matrix
     for i in [0..@platforms.length - 1]
       p1 = @platforms[i]
       tp = [] # stores transition points for all neighbours of this platform
@@ -234,11 +242,10 @@ PlatformGraph = class PlatformGraph
                   px = x
                   break
         # add the point
-        tp.push (new TransitionPoint(ptype, pdir, px))
-      
-      # add all points to the list
-      transitionPoints.push tp
+        transitionPoints[p1.key()][p2.key()] = new TransitionPoint(ptype, pdir, px)
+
     # return the transition points
+    console.log transitionPoints
     transitionPoints
 
   # get neighbours for a particular platform index

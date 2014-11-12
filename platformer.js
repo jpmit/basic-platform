@@ -657,24 +657,26 @@ module.exports.render = function(ctx) {
       tp = tpoints[i];
       seen = {};
       for (j = _k = 0, _ref2 = tp.length - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; j = 0 <= _ref2 ? ++_k : --_k) {
-        xt = tp[j].x;
-        yt = platforms[i].y;
-        if (tp[j].type === "fall") {
-          ctx.fillStyle = '#ff0000';
-        } else {
-          ctx.fillStyle = '#00ff00';
+        if (tp[j] !== null) {
+          xt = tp[j].x;
+          yt = platforms[i].y;
+          if (tp[j].type === "fall") {
+            ctx.fillStyle = '#ff0000';
+          } else {
+            ctx.fillStyle = '#00ff00';
+          }
+          cx = xt * c.TILE;
+          cy = yt * c.TILE;
+          index = cx + "," + cy;
+          if (index in seen) {
+            cy = cy + seen[index] * c.TILE;
+            seen[index] = seen[index] + 1;
+          } else {
+            seen[index] = 1;
+          }
+          ctx.fillRect(cx, cy, 4, 4);
+          ctx.fillText(_pgraph.platforms[j].key(), cx, cy);
         }
-        cx = xt * c.TILE;
-        cy = yt * c.TILE;
-        index = cx + "," + cy;
-        if (index in seen) {
-          cy = cy + seen[index] * c.TILE;
-          seen[index] = seen[index] + 1;
-        } else {
-          seen[index] = 1;
-        }
-        ctx.fillRect(cx, cy, 4, 4);
-        ctx.fillText(neighbors[i][j].key(), cx, cy);
       }
     }
   }
@@ -800,16 +802,22 @@ PlatformGraph = PlatformGraph = (function() {
   }
 
   PlatformGraph.prototype.getTransitionPoint = function(k1, k2) {
-    return null;
+    return this.transitionPoints[k1][k2];
   };
 
   PlatformGraph.prototype._getTransitionPoints = function() {
-    var i, j, p1, p2, pdir, ptype, px, tp, transitionPoints, x, xleft, xright, _i, _j, _k, _l, _ref, _ref1, _ref2, _ref3, _ref4;
+    var i, j, p1, p2, pdir, ptype, px, tp, transitionPoints, x, xleft, xright, _i, _j, _k, _l, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
     transitionPoints = [];
     for (i = _i = 0, _ref = this.platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
+      transitionPoints.push([]);
+      for (j = _j = 0, _ref1 = this.platforms.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; j = 0 <= _ref1 ? ++_j : --_j) {
+        transitionPoints[i].push(null);
+      }
+    }
+    for (i = _k = 0, _ref2 = this.platforms.length - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; i = 0 <= _ref2 ? ++_k : --_k) {
       p1 = this.platforms[i];
       tp = [];
-      for (j = _j = 0, _ref1 = this.neighbors[i].length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; j = 0 <= _ref1 ? ++_j : --_j) {
+      for (j = _l = 0, _ref3 = this.neighbors[i].length - 1; 0 <= _ref3 ? _l <= _ref3 : _l >= _ref3; j = 0 <= _ref3 ? ++_l : --_l) {
         p2 = this.neighbors[i][j];
         if (p2.y > p1.y) {
           ptype = _TYPE_FALL;
@@ -831,11 +839,11 @@ PlatformGraph = PlatformGraph = (function() {
             pdir = _DIR_LEFT;
             px = p1.xleft;
           } else {
-            _ref2 = p2.xMax(), xleft = _ref2[0], xright = _ref2[1];
+            _ref4 = p2.xMax(), xleft = _ref4[0], xright = _ref4[1];
             console.log("jumping platform", xleft, xright, p2.xleft, p2.xright);
             if (p1.overlap(p2.xright, xright)) {
               pdir = _DIR_LEFT;
-              for (x = _k = _ref3 = p2.xright + 2; _ref3 <= xright ? _k <= xright : _k >= xright; x = _ref3 <= xright ? ++_k : --_k) {
+              for (x = _m = _ref5 = p2.xright + 2; _ref5 <= xright ? _m <= xright : _m >= xright; x = _ref5 <= xright ? ++_m : --_m) {
                 if (p1.xInPlatform(x)) {
                   px = x;
                   break;
@@ -844,7 +852,7 @@ PlatformGraph = PlatformGraph = (function() {
             }
             if (p1.overlap(xleft, p2.xleft)) {
               pdir = _DIR_RIGHT;
-              for (x = _l = _ref4 = p2.xleft - 2; _l >= xleft; x = _l += -1) {
+              for (x = _n = _ref6 = p2.xleft - 2; _n >= xleft; x = _n += -1) {
                 if (p2.xInPlatform(x)) {
                   px = x;
                   break;
@@ -853,10 +861,10 @@ PlatformGraph = PlatformGraph = (function() {
             }
           }
         }
-        tp.push(new TransitionPoint(ptype, pdir, px));
+        transitionPoints[p1.key()][p2.key()] = new TransitionPoint(ptype, pdir, px);
       }
-      transitionPoints.push(tp);
     }
+    console.log(transitionPoints);
     return transitionPoints;
   };
 
