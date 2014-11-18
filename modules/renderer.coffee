@@ -1,5 +1,5 @@
 c          = require './constants'
-pathfinder = require './pathfinder'
+pathfinder = require './physics-pathfinder'
 
 renderLevel = (ctx, level) ->
   for y in [0..level.rows-1]

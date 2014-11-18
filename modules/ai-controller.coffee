@@ -1,4 +1,4 @@
-pathfinder = require './pathfinder'
+pathfinder = require './physics-pathfinder'
 c          = require './constants'
 
 # class to control an entity moving between two platforms
@@ -94,13 +94,14 @@ class AiController
     # figure out which platforms entity1 and entity2 are on
     p1Index = @pgraph.getPlatformIndexForEntity(@entity1)
     p2Index = @pgraph.getPlatformIndexForEntity(@entity2)
-
+    console.log p1Index, p2Index
     # only perform pathfinding if at least one platform has changed
     if (p1Index != @p1Index) or (p2Index != @p2Index)
       # indices can be null if entity not on platform
       if (p1Index != null and p2Index != null)
         # compute new path from entity1 to entity2
-        @path = pathfinder.findpath @entity1, @entity2
+        p2Pos = @pgraph.getEntityPosForPlatform(@entity2)
+        @path = pathfinder.findpath @entity1, p2Pos
         @reachedTransitionPoint = false
         @p1Index = p1Index
         @p2Index = p2Index

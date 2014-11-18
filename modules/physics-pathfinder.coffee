@@ -119,7 +119,7 @@ canReachPlatform = (p1, p2) ->
 
 # platform graph stores information on the platform linkage, including
 # 'transition points' between platforms.
-PlatformGraph = class PlatformGraph
+class PlatformGraph
   constructor: (level) ->
 
     platforms = @_getAllPlatforms level
@@ -247,18 +247,25 @@ PlatformGraph = class PlatformGraph
         
     platforms
 
-  getPlatformIndexForEntity: (entity) ->
-    if (not entity.onfloor)
-      return null
-    ty = entity.ytile
+  # return the co-ordinate of an entity used to determine the platform
+  # the entity is on.
+  getEntityPosForPlatform: (entity) ->
     # warning: this assignment for the x tile the entity is on might
     # cause problems for player on edges of platform (far left edge in
     # particular)
-    tx = Math.floor((entity.x  + entity.render_width / 2) / c.TILE)
+    return { x: entity.x + entity.width / 2, y: entity.ytile * c.TILE }
 
-    # figure out which platform entity is on.  note it might be better
-    # to integrate this into the collision routine and store the
-    # platform index for use here.
+  getPlatformIndexForEntity: (entity) ->
+    if (not entity.onfloor)
+      return null
+    return @getPlatformIndexForPosition(@getEntityPosForPlatform(entity))
+
+  getPlatformIndexForPosition: (pos) ->
+    ty = Math.floor(pos.y / c.TILE)
+    tx = Math.floor(pos.x / c.TILE)
+    # figure out which platform this tile co-ord is on.  note it might
+    # be better to integrate this into the collision routine and store
+    # the platform index for use here.
     for pnum in [0..@platforms.length - 1]
       p = @platforms[pnum]
       if (p.y == ty)
@@ -268,9 +275,9 @@ PlatformGraph = class PlatformGraph
     null
     
 # find path from entity1 to entity2 given a particular platform graph,
-module.exports.findpath = (entity1, entity2) ->
-  pnum1 = _pgraph.getPlatformIndexForEntity(entity1)
-  pnum2 = _pgraph.getPlatformIndexForEntity(entity2)
+module.exports.findpath = (entity, destination) ->
+  pnum1 = _pgraph.getPlatformIndexForEntity(entity)
+  pnum2 = _pgraph.getPlatformIndexForPosition(destination)
   # we'll only try to find a path if both entities are currently on a platform
   if (pnum1 == null) or (pnum2 == null)
     return null

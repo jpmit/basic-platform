@@ -173,10 +173,10 @@ module.exports = pointInAABB = function(point, box) {
 
 
 
-},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai.coffee":[function(require,module,exports){
+},{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai-controller.coffee":[function(require,module,exports){
 var AiController, PathController, c, pathfinder;
 
-pathfinder = require('./pathfinder');
+pathfinder = require('./physics-pathfinder');
 
 c = require('./constants');
 
@@ -278,12 +278,14 @@ AiController = (function() {
   };
 
   AiController.prototype.step = function() {
-    var nextPlatform, p1Index, p2Index, thisPlatform;
+    var nextPlatform, p1Index, p2Index, p2Pos, thisPlatform;
     p1Index = this.pgraph.getPlatformIndexForEntity(this.entity1);
     p2Index = this.pgraph.getPlatformIndexForEntity(this.entity2);
+    console.log(p1Index, p2Index);
     if ((p1Index !== this.p1Index) || (p2Index !== this.p2Index)) {
       if (p1Index !== null && p2Index !== null) {
-        this.path = pathfinder.findpath(this.entity1, this.entity2);
+        p2Pos = this.pgraph.getEntityPosForPlatform(this.entity2);
+        this.path = pathfinder.findpath(this.entity1, p2Pos);
         this.reachedTransitionPoint = false;
         this.p1Index = p1Index;
         this.p2Index = p2Index;
@@ -315,7 +317,7 @@ module.exports = AiController;
 
 
 
-},{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/astar.coffee":[function(require,module,exports){
+},{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-pathfinder.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/astar.coffee":[function(require,module,exports){
 var AStar;
 
 module.exports.Astar = AStar = (function() {
@@ -751,354 +753,7 @@ module.exports = RigidBodyMixin;
 
 
 
-},{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./physics-move":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-move.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee":[function(require,module,exports){
-var PhysicsFinder, Platform, PlatformGraph, TransitionPoint, astar, c, canReachPlatform, _DIR_LEFT, _DIR_RIGHT, _TYPE_FALL, _TYPE_JUMP, _path, _pgraph, _physics,
-  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
-
-c = require('./constants');
-
-astar = require('./astar');
-
-_path = null;
-
-_pgraph = null;
-
-_physics = null;
-
-module.exports.getPlatformGraph = function() {
-  return _pgraph;
-};
-
-module.exports.preProcess = function(level) {
-  _physics = new PhysicsFinder();
-  return _pgraph = new PlatformGraph(level);
-};
-
-PhysicsFinder = (function() {
-  function PhysicsFinder() {
-    this.xmax = 6;
-    this.ymax = 9;
-    this.ymaxSingle = this.ymax / 3;
-  }
-
-  return PhysicsFinder;
-
-})();
-
-Platform = (function() {
-  function Platform(id, xleft, xright, y) {
-    this.id = id;
-    this.xleft = xleft;
-    this.xright = xright;
-    this.y = y;
-  }
-
-  Platform.prototype.overlap = function(xleft, xright) {
-    return !(this.xright < xleft || this.xleft > xright);
-  };
-
-  Platform.prototype.xMax = function() {
-    return [Math.max(0, this.xleft - _physics.xmax), Math.max(0, this.xright + _physics.xmax)];
-  };
-
-  Platform.prototype.midx = function() {
-    return (this.xleft + this.xright) / 2;
-  };
-
-  Platform.prototype.xInPlatform = function(tx) {
-    if (this.xleft < tx && this.xright > tx) {
-      return true;
-    }
-    return false;
-  };
-
-  Platform.prototype.key = function() {
-    return this.id;
-  };
-
-  Platform.prototype.getAdjacentNodes = function() {
-    return _pgraph.getNeighbors(this.id);
-  };
-
-  Platform.prototype.heuristicDistance = function(p2) {
-    var dx, dy;
-    dx = this.midx() - p2.midx();
-    dy = this.y - p2.y;
-    return dx * dx + dy * dy;
-  };
-
-  Platform.prototype.equals = function(p2) {
-    return this.key() === p2.key();
-  };
-
-  return Platform;
-
-})();
-
-_TYPE_JUMP = "jump";
-
-_TYPE_FALL = "fall";
-
-_DIR_LEFT = "left";
-
-_DIR_RIGHT = "right";
-
-module.exports.DIR_LEFT = _DIR_LEFT;
-
-module.exports.DIR_RIGHT = _DIR_RIGHT;
-
-TransitionPoint = (function() {
-  function TransitionPoint(type, dir, tx, p1, p2, njump) {
-    this.type = type;
-    this.dir = dir;
-    this.tx = tx;
-    this.p1 = p1;
-    this.p2 = p2;
-    this.njump = njump;
-  }
-
-  TransitionPoint.prototype.getXCoord = function() {
-    return this.tx * c.TILE;
-  };
-
-  return TransitionPoint;
-
-})();
-
-canReachPlatform = function(p1, p2) {
-  var leftx, rightx, _ref;
-  _ref = p1.xMax(), leftx = _ref[0], rightx = _ref[1];
-  if (p2.overlap(leftx, rightx)) {
-    if (p2.y > p1.y) {
-      return true;
-    }
-    if (p2.y + _physics.ymax > p1.y) {
-      return true;
-    }
-  }
-  return false;
-};
-
-PlatformGraph = PlatformGraph = (function() {
-  function PlatformGraph(level) {
-    var i, j, neighbors, p1, p2, platforms, pneighs, _i, _j, _ref, _ref1;
-    platforms = this._getAllPlatforms(level);
-    neighbors = [];
-    for (i = _i = 0, _ref = platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
-      pneighs = [];
-      p1 = platforms[i];
-      for (j = _j = 0, _ref1 = platforms.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; j = 0 <= _ref1 ? ++_j : --_j) {
-        if (i !== j) {
-          p2 = platforms[j];
-          if (canReachPlatform(p1, p2)) {
-            pneighs.push(p2);
-          }
-        }
-      }
-      neighbors.push(pneighs);
-    }
-    this.platforms = platforms;
-    this.neighbors = neighbors;
-    this.transitionPoints = this._getTransitionPoints();
-  }
-
-  PlatformGraph.prototype.getTransitionPoint = function(k1, k2) {
-    return this.transitionPoints[k1][k2];
-  };
-
-  PlatformGraph.prototype._getTransitionPoints = function() {
-    var i, j, njumps, p1, p2, pdir, ptype, px, tp, transitionPoints, x, xleft, xright, _i, _j, _k, _l, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
-    transitionPoints = [];
-    for (i = _i = 0, _ref = this.platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
-      transitionPoints.push([]);
-      for (j = _j = 0, _ref1 = this.platforms.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; j = 0 <= _ref1 ? ++_j : --_j) {
-        transitionPoints[i].push(null);
-      }
-    }
-    for (i = _k = 0, _ref2 = this.platforms.length - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; i = 0 <= _ref2 ? ++_k : --_k) {
-      p1 = this.platforms[i];
-      tp = [];
-      for (j = _l = 0, _ref3 = this.neighbors[i].length - 1; 0 <= _ref3 ? _l <= _ref3 : _l >= _ref3; j = 0 <= _ref3 ? ++_l : --_l) {
-        p2 = this.neighbors[i][j];
-        if (p2.y > p1.y) {
-          ptype = _TYPE_FALL;
-          if (p2.xleft < p1.xleft || p2.xInPlatform(p1.xleft)) {
-            pdir = _DIR_LEFT;
-            px = p1.xleft;
-          } else if (p2.xright > p1.xright || p2.xInPlatform(p1.xright)) {
-            pdir = _DIR_RIGHT;
-            px = p1.xright;
-          } else {
-            console.log("contained platform", p1.xleft, p1.xright, p2.xleft, p2.xright);
-          }
-        } else {
-          ptype = _TYPE_JUMP;
-          if (p1.y > p2.y + 2 * _physics.ymaxSingle) {
-            njumps = 3;
-          } else if (p1.y > p2.y + _physics.ymaxSingle) {
-            njumps = 2;
-          } else {
-            njumps = 1;
-          }
-          if (p2.xleft > p1.xright) {
-            pdir = _DIR_RIGHT;
-            px = p1.xright;
-          } else if (p2.xright < p1.xleft) {
-            pdir = _DIR_LEFT;
-            px = p1.xleft;
-          } else {
-            _ref4 = p2.xMax(), xleft = _ref4[0], xright = _ref4[1];
-            console.log("enclosed platform", xleft, xright, p2.xleft, p2.xright);
-            if (p1.overlap(p2.xright, xright)) {
-              pdir = _DIR_LEFT;
-              for (x = _m = _ref5 = p2.xright + 2; _ref5 <= xright ? _m <= xright : _m >= xright; x = _ref5 <= xright ? ++_m : --_m) {
-                if (p1.xInPlatform(x)) {
-                  px = x;
-                  break;
-                }
-              }
-            } else if (p1.overlap(xleft, p2.xleft)) {
-              pdir = _DIR_RIGHT;
-              for (x = _n = _ref6 = p2.xleft - 2; _n >= xleft; x = _n += -1) {
-                if (p2.xInPlatform(x)) {
-                  px = x;
-                  break;
-                }
-              }
-            }
-          }
-        }
-        transitionPoints[p1.key()][p2.key()] = new TransitionPoint(ptype, pdir, px, p1, p2, njumps || null);
-      }
-    }
-    return transitionPoints;
-  };
-
-  PlatformGraph.prototype.getNeighbors = function(pnum) {
-    return this.neighbors[pnum];
-  };
-
-  PlatformGraph.prototype._getAllPlatforms = function(level) {
-    var col, platforms, row, t, xend, xstart, y, _i, _j, _ref, _ref1;
-    platforms = [];
-    xstart = null;
-    y = null;
-    for (row = _i = 0, _ref = level.rows - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; row = 0 <= _ref ? ++_i : --_i) {
-      for (col = _j = 0, _ref1 = level.cols - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; col = 0 <= _ref1 ? ++_j : --_j) {
-        t = level.tileToValue(col, row);
-        if (__indexOf.call(c.COLTILES, t) >= 0 && t !== c.BTILE) {
-          if (xstart === null) {
-            xstart = col;
-            y = row;
-          }
-        } else {
-          if (xstart !== null) {
-            xend = col - 1;
-            platforms.push(new Platform(platforms.length, xstart, xend, y));
-            xstart = null;
-          }
-        }
-      }
-      if (xstart !== null) {
-        xend = level.cols - 1;
-        platforms.push(new Platform(platforms.length, xstart, xend, y));
-        xstart = null;
-      }
-    }
-    return platforms;
-  };
-
-  PlatformGraph.prototype.getPlatformIndexForEntity = function(entity) {
-    var p, pnum, tx, ty, _i, _ref;
-    if (!entity.onfloor) {
-      return null;
-    }
-    ty = entity.ytile;
-    tx = Math.floor((entity.x + entity.render_width / 2) / c.TILE);
-    for (pnum = _i = 0, _ref = this.platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; pnum = 0 <= _ref ? ++_i : --_i) {
-      p = this.platforms[pnum];
-      if (p.y === ty) {
-        if (tx >= p.xleft && tx <= p.xright) {
-          return pnum;
-        }
-      }
-    }
-    return null;
-  };
-
-  return PlatformGraph;
-
-})();
-
-module.exports.findpath = function(entity1, entity2) {
-  var a, pnum1, pnum2;
-  pnum1 = _pgraph.getPlatformIndexForEntity(entity1);
-  pnum2 = _pgraph.getPlatformIndexForEntity(entity2);
-  if ((pnum1 === null) || (pnum2 === null)) {
-    return null;
-  }
-  a = new astar.Astar;
-  _path = a.findPath(_pgraph.platforms[pnum1], _pgraph.platforms[pnum2]);
-  return _path;
-};
-
-module.exports.render = function(ctx) {
-  var cx, cy, i, index, j, neighbors, platforms, seen, tp, tpoints, xt, yt, _i, _j, _k, _l, _ref, _ref1, _ref2, _ref3;
-  ctx.save();
-  ctx.font = "30px white Georgia";
-  ctx.fillStyle = "white";
-  platforms = _pgraph.platforms;
-  for (i = _i = 0, _ref = platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
-    xt = (platforms[i].xleft + platforms[i].xright) / 2;
-    yt = platforms[i].y;
-    ctx.fillText(i, xt * c.TILE, yt * c.TILE);
-  }
-  if (_pgraph !== null) {
-    tpoints = _pgraph.transitionPoints;
-    neighbors = _pgraph.neighbors;
-    for (i = _j = 0, _ref1 = tpoints.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
-      tp = tpoints[i];
-      seen = {};
-      for (j = _k = 0, _ref2 = tp.length - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; j = 0 <= _ref2 ? ++_k : --_k) {
-        if (tp[j] !== null) {
-          xt = tp[j].tx;
-          yt = platforms[i].y;
-          if (tp[j].type === "fall") {
-            ctx.fillStyle = '#ff0000';
-          } else {
-            ctx.fillStyle = '#00ff00';
-          }
-          cx = xt * c.TILE;
-          cy = yt * c.TILE;
-          index = cx + "," + cy;
-          if (index in seen) {
-            cy = cy + seen[index] * c.TILE;
-            seen[index] = seen[index] + 1;
-          } else {
-            seen[index] = 1;
-          }
-          ctx.fillRect(cx, cy, 4, 4);
-          ctx.fillText(_pgraph.platforms[j].key(), cx, cy);
-        }
-      }
-    }
-  }
-  ctx.strokeStyle = '#ff0000';
-  ctx.lineWidth = 10;
-  if (_path !== null && _path.length > 1) {
-    ctx.beginPath();
-    for (i = _l = 0, _ref3 = _path.length - 2; 0 <= _ref3 ? _l <= _ref3 : _l >= _ref3; i = 0 <= _ref3 ? ++_l : --_l) {
-      ctx.moveTo(_path[i].midx() * c.TILE, _path[i].y * c.TILE);
-      ctx.lineTo(_path[i + 1].midx() * c.TILE, _path[i + 1].y * c.TILE);
-    }
-    ctx.stroke();
-  }
-  return ctx.restore();
-};
-
-
-
-},{"./astar":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/astar.coffee","./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-bullet.coffee":[function(require,module,exports){
+},{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./physics-move":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-move.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-bullet.coffee":[function(require,module,exports){
 var c, findNearestCollision, inAABB, intersectLine, toAABB;
 
 c = require('./constants');
@@ -1368,12 +1023,370 @@ module.exports.stepY = function(entity, level, dt) {
 
 
 
-},{"./clamp":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/clamp.coffee","./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/renderer.coffee":[function(require,module,exports){
+},{"./clamp":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/clamp.coffee","./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-pathfinder.coffee":[function(require,module,exports){
+var PhysicsFinder, Platform, PlatformGraph, TransitionPoint, astar, c, canReachPlatform, _DIR_LEFT, _DIR_RIGHT, _TYPE_FALL, _TYPE_JUMP, _path, _pgraph, _physics,
+  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
+c = require('./constants');
+
+astar = require('./astar');
+
+_path = null;
+
+_pgraph = null;
+
+_physics = null;
+
+module.exports.getPlatformGraph = function() {
+  return _pgraph;
+};
+
+module.exports.preProcess = function(level) {
+  _physics = new PhysicsFinder();
+  return _pgraph = new PlatformGraph(level);
+};
+
+PhysicsFinder = (function() {
+  function PhysicsFinder() {
+    this.xmax = 6;
+    this.ymax = 9;
+    this.ymaxSingle = this.ymax / 3;
+  }
+
+  return PhysicsFinder;
+
+})();
+
+Platform = (function() {
+  function Platform(id, xleft, xright, y) {
+    this.id = id;
+    this.xleft = xleft;
+    this.xright = xright;
+    this.y = y;
+  }
+
+  Platform.prototype.overlap = function(xleft, xright) {
+    return !(this.xright < xleft || this.xleft > xright);
+  };
+
+  Platform.prototype.xMax = function() {
+    return [Math.max(0, this.xleft - _physics.xmax), Math.max(0, this.xright + _physics.xmax)];
+  };
+
+  Platform.prototype.midx = function() {
+    return (this.xleft + this.xright) / 2;
+  };
+
+  Platform.prototype.xInPlatform = function(tx) {
+    if (this.xleft < tx && this.xright > tx) {
+      return true;
+    }
+    return false;
+  };
+
+  Platform.prototype.key = function() {
+    return this.id;
+  };
+
+  Platform.prototype.getAdjacentNodes = function() {
+    return _pgraph.getNeighbors(this.id);
+  };
+
+  Platform.prototype.heuristicDistance = function(p2) {
+    var dx, dy;
+    dx = this.midx() - p2.midx();
+    dy = this.y - p2.y;
+    return dx * dx + dy * dy;
+  };
+
+  Platform.prototype.equals = function(p2) {
+    return this.key() === p2.key();
+  };
+
+  return Platform;
+
+})();
+
+_TYPE_JUMP = "jump";
+
+_TYPE_FALL = "fall";
+
+_DIR_LEFT = "left";
+
+_DIR_RIGHT = "right";
+
+module.exports.DIR_LEFT = _DIR_LEFT;
+
+module.exports.DIR_RIGHT = _DIR_RIGHT;
+
+TransitionPoint = (function() {
+  function TransitionPoint(type, dir, tx, p1, p2, njump) {
+    this.type = type;
+    this.dir = dir;
+    this.tx = tx;
+    this.p1 = p1;
+    this.p2 = p2;
+    this.njump = njump;
+  }
+
+  TransitionPoint.prototype.getXCoord = function() {
+    return this.tx * c.TILE;
+  };
+
+  return TransitionPoint;
+
+})();
+
+canReachPlatform = function(p1, p2) {
+  var leftx, rightx, _ref;
+  _ref = p1.xMax(), leftx = _ref[0], rightx = _ref[1];
+  if (p2.overlap(leftx, rightx)) {
+    if (p2.y > p1.y) {
+      return true;
+    }
+    if (p2.y + _physics.ymax > p1.y) {
+      return true;
+    }
+  }
+  return false;
+};
+
+PlatformGraph = (function() {
+  function PlatformGraph(level) {
+    var i, j, neighbors, p1, p2, platforms, pneighs, _i, _j, _ref, _ref1;
+    platforms = this._getAllPlatforms(level);
+    neighbors = [];
+    for (i = _i = 0, _ref = platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
+      pneighs = [];
+      p1 = platforms[i];
+      for (j = _j = 0, _ref1 = platforms.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; j = 0 <= _ref1 ? ++_j : --_j) {
+        if (i !== j) {
+          p2 = platforms[j];
+          if (canReachPlatform(p1, p2)) {
+            pneighs.push(p2);
+          }
+        }
+      }
+      neighbors.push(pneighs);
+    }
+    this.platforms = platforms;
+    this.neighbors = neighbors;
+    this.transitionPoints = this._getTransitionPoints();
+  }
+
+  PlatformGraph.prototype.getTransitionPoint = function(k1, k2) {
+    return this.transitionPoints[k1][k2];
+  };
+
+  PlatformGraph.prototype._getTransitionPoints = function() {
+    var i, j, njumps, p1, p2, pdir, ptype, px, tp, transitionPoints, x, xleft, xright, _i, _j, _k, _l, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
+    transitionPoints = [];
+    for (i = _i = 0, _ref = this.platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
+      transitionPoints.push([]);
+      for (j = _j = 0, _ref1 = this.platforms.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; j = 0 <= _ref1 ? ++_j : --_j) {
+        transitionPoints[i].push(null);
+      }
+    }
+    for (i = _k = 0, _ref2 = this.platforms.length - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; i = 0 <= _ref2 ? ++_k : --_k) {
+      p1 = this.platforms[i];
+      tp = [];
+      for (j = _l = 0, _ref3 = this.neighbors[i].length - 1; 0 <= _ref3 ? _l <= _ref3 : _l >= _ref3; j = 0 <= _ref3 ? ++_l : --_l) {
+        p2 = this.neighbors[i][j];
+        if (p2.y > p1.y) {
+          ptype = _TYPE_FALL;
+          if (p2.xleft < p1.xleft || p2.xInPlatform(p1.xleft)) {
+            pdir = _DIR_LEFT;
+            px = p1.xleft;
+          } else if (p2.xright > p1.xright || p2.xInPlatform(p1.xright)) {
+            pdir = _DIR_RIGHT;
+            px = p1.xright;
+          } else {
+            console.log("contained platform", p1.xleft, p1.xright, p2.xleft, p2.xright);
+          }
+        } else {
+          ptype = _TYPE_JUMP;
+          if (p1.y > p2.y + 2 * _physics.ymaxSingle) {
+            njumps = 3;
+          } else if (p1.y > p2.y + _physics.ymaxSingle) {
+            njumps = 2;
+          } else {
+            njumps = 1;
+          }
+          if (p2.xleft > p1.xright) {
+            pdir = _DIR_RIGHT;
+            px = p1.xright;
+          } else if (p2.xright < p1.xleft) {
+            pdir = _DIR_LEFT;
+            px = p1.xleft;
+          } else {
+            _ref4 = p2.xMax(), xleft = _ref4[0], xright = _ref4[1];
+            console.log("enclosed platform", xleft, xright, p2.xleft, p2.xright);
+            if (p1.overlap(p2.xright, xright)) {
+              pdir = _DIR_LEFT;
+              for (x = _m = _ref5 = p2.xright + 2; _ref5 <= xright ? _m <= xright : _m >= xright; x = _ref5 <= xright ? ++_m : --_m) {
+                if (p1.xInPlatform(x)) {
+                  px = x;
+                  break;
+                }
+              }
+            } else if (p1.overlap(xleft, p2.xleft)) {
+              pdir = _DIR_RIGHT;
+              for (x = _n = _ref6 = p2.xleft - 2; _n >= xleft; x = _n += -1) {
+                if (p2.xInPlatform(x)) {
+                  px = x;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        transitionPoints[p1.key()][p2.key()] = new TransitionPoint(ptype, pdir, px, p1, p2, njumps || null);
+      }
+    }
+    return transitionPoints;
+  };
+
+  PlatformGraph.prototype.getNeighbors = function(pnum) {
+    return this.neighbors[pnum];
+  };
+
+  PlatformGraph.prototype._getAllPlatforms = function(level) {
+    var col, platforms, row, t, xend, xstart, y, _i, _j, _ref, _ref1;
+    platforms = [];
+    xstart = null;
+    y = null;
+    for (row = _i = 0, _ref = level.rows - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; row = 0 <= _ref ? ++_i : --_i) {
+      for (col = _j = 0, _ref1 = level.cols - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; col = 0 <= _ref1 ? ++_j : --_j) {
+        t = level.tileToValue(col, row);
+        if (__indexOf.call(c.COLTILES, t) >= 0 && t !== c.BTILE) {
+          if (xstart === null) {
+            xstart = col;
+            y = row;
+          }
+        } else {
+          if (xstart !== null) {
+            xend = col - 1;
+            platforms.push(new Platform(platforms.length, xstart, xend, y));
+            xstart = null;
+          }
+        }
+      }
+      if (xstart !== null) {
+        xend = level.cols - 1;
+        platforms.push(new Platform(platforms.length, xstart, xend, y));
+        xstart = null;
+      }
+    }
+    return platforms;
+  };
+
+  PlatformGraph.prototype.getEntityPosForPlatform = function(entity) {
+    return {
+      x: entity.x + entity.width / 2,
+      y: entity.ytile * c.TILE
+    };
+  };
+
+  PlatformGraph.prototype.getPlatformIndexForEntity = function(entity) {
+    if (!entity.onfloor) {
+      return null;
+    }
+    return this.getPlatformIndexForPosition(this.getEntityPosForPlatform(entity));
+  };
+
+  PlatformGraph.prototype.getPlatformIndexForPosition = function(pos) {
+    var p, pnum, tx, ty, _i, _ref;
+    ty = Math.floor(pos.y / c.TILE);
+    tx = Math.floor(pos.x / c.TILE);
+    for (pnum = _i = 0, _ref = this.platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; pnum = 0 <= _ref ? ++_i : --_i) {
+      p = this.platforms[pnum];
+      if (p.y === ty) {
+        if (tx >= p.xleft && tx <= p.xright) {
+          return pnum;
+        }
+      }
+    }
+    return null;
+  };
+
+  return PlatformGraph;
+
+})();
+
+module.exports.findpath = function(entity, destination) {
+  var a, pnum1, pnum2;
+  pnum1 = _pgraph.getPlatformIndexForEntity(entity);
+  pnum2 = _pgraph.getPlatformIndexForPosition(destination);
+  if ((pnum1 === null) || (pnum2 === null)) {
+    return null;
+  }
+  a = new astar.Astar;
+  _path = a.findPath(_pgraph.platforms[pnum1], _pgraph.platforms[pnum2]);
+  return _path;
+};
+
+module.exports.render = function(ctx) {
+  var cx, cy, i, index, j, neighbors, platforms, seen, tp, tpoints, xt, yt, _i, _j, _k, _l, _ref, _ref1, _ref2, _ref3;
+  ctx.save();
+  ctx.font = "30px white Georgia";
+  ctx.fillStyle = "white";
+  platforms = _pgraph.platforms;
+  for (i = _i = 0, _ref = platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
+    xt = (platforms[i].xleft + platforms[i].xright) / 2;
+    yt = platforms[i].y;
+    ctx.fillText(i, xt * c.TILE, yt * c.TILE);
+  }
+  if (_pgraph !== null) {
+    tpoints = _pgraph.transitionPoints;
+    neighbors = _pgraph.neighbors;
+    for (i = _j = 0, _ref1 = tpoints.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
+      tp = tpoints[i];
+      seen = {};
+      for (j = _k = 0, _ref2 = tp.length - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; j = 0 <= _ref2 ? ++_k : --_k) {
+        if (tp[j] !== null) {
+          xt = tp[j].tx;
+          yt = platforms[i].y;
+          if (tp[j].type === "fall") {
+            ctx.fillStyle = '#ff0000';
+          } else {
+            ctx.fillStyle = '#00ff00';
+          }
+          cx = xt * c.TILE;
+          cy = yt * c.TILE;
+          index = cx + "," + cy;
+          if (index in seen) {
+            cy = cy + seen[index] * c.TILE;
+            seen[index] = seen[index] + 1;
+          } else {
+            seen[index] = 1;
+          }
+          ctx.fillRect(cx, cy, 4, 4);
+          ctx.fillText(_pgraph.platforms[j].key(), cx, cy);
+        }
+      }
+    }
+  }
+  ctx.strokeStyle = '#ff0000';
+  ctx.lineWidth = 10;
+  if (_path !== null && _path.length > 1) {
+    ctx.beginPath();
+    for (i = _l = 0, _ref3 = _path.length - 2; 0 <= _ref3 ? _l <= _ref3 : _l >= _ref3; i = 0 <= _ref3 ? ++_l : --_l) {
+      ctx.moveTo(_path[i].midx() * c.TILE, _path[i].y * c.TILE);
+      ctx.lineTo(_path[i + 1].midx() * c.TILE, _path[i + 1].y * c.TILE);
+    }
+    ctx.stroke();
+  }
+  return ctx.restore();
+};
+
+
+
+},{"./astar":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/astar.coffee","./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/renderer.coffee":[function(require,module,exports){
 var c, drawAngle, pathfinder, renderLevel;
 
 c = require('./constants');
 
-pathfinder = require('./pathfinder');
+pathfinder = require('./physics-pathfinder');
 
 renderLevel = function(ctx, level) {
   var cell, x, y, _i, _ref, _results;
@@ -1440,7 +1453,7 @@ module.exports = function(ctx, me, enemies, gun, bullet, level) {
 
 
 
-},{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/screen.coffee":[function(require,module,exports){
+},{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-pathfinder.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/screen.coffee":[function(require,module,exports){
 module.exports.ratio = window.devicePixelRatio || 1;
 
 module.exports.scale_factor = 1;
@@ -6780,9 +6793,9 @@ time = require('./modules/time');
 
 unitVector = require('./modules/v2-unit');
 
-pathfinder = require('./modules/pathfinder');
+pathfinder = require('./modules/physics-pathfinder');
 
-AiController = require('./modules/ai');
+AiController = require('./modules/ai-controller');
 
 canvas = document.getElementById('canvas');
 
@@ -6950,4 +6963,4 @@ frame();
 
 
 
-},{"./modules/ai":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai.coffee","./modules/constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./modules/entity":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/entity.coffee","./modules/level":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/level.coffee","./modules/mixin-rigid-body":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/mixin-rigid-body.coffee","./modules/pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee","./modules/physics-bullet":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-bullet.coffee","./modules/physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./modules/renderer":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/renderer.coffee","./modules/time":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/time.coffee","./modules/v2-unit":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/v2-unit.coffee","lodash.assign":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/index.js","lodash.mixin":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/index.js","raf":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/raf/index.js"}]},{},["/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/platformer.coffee"]);
+},{"./modules/ai-controller":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai-controller.coffee","./modules/constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./modules/entity":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/entity.coffee","./modules/level":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/level.coffee","./modules/mixin-rigid-body":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/mixin-rigid-body.coffee","./modules/physics-bullet":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-bullet.coffee","./modules/physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./modules/physics-pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-pathfinder.coffee","./modules/renderer":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/renderer.coffee","./modules/time":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/time.coffee","./modules/v2-unit":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/v2-unit.coffee","lodash.assign":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/index.js","lodash.mixin":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/index.js","raf":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/raf/index.js"}]},{},["/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/platformer.coffee"]);
