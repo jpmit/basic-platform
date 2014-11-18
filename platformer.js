@@ -174,18 +174,27 @@ module.exports = pointInAABB = function(point, box) {
 
 
 },{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai.coffee":[function(require,module,exports){
-var AiController, PathController, pathfinder;
+var AiController, PathController, c, pathfinder;
 
 pathfinder = require('./pathfinder');
 
+c = require('./constants');
+
 PathController = (function() {
-  function PathController(entity, tPoint) {
+  function PathController(entity, tPoint, aimPoint) {
     this.entity = entity;
     this.tPoint = tPoint;
+    this.aimPoint = aimPoint;
     this.njumps = 0;
     this.justJumped = false;
     this.njumpsNeeded = this.tPoint.njump;
     console.log(this.tPoint.dir);
+    if (this.tPoint.dir === "left") {
+      this.xTo = this.tPoint.p2.xright * c.TILE;
+    } else if (this.tPoint.dir === "right") {
+      this.xTo = this.tPoint.p2.xleft * c.TILE;
+    }
+    this.yTo = this.tPoint.p2.y * c.TILE;
   }
 
   PathController.prototype.step = function() {
@@ -194,13 +203,17 @@ PathController = (function() {
     }
     if (!this.entity.jumping) {
       if (this.njumps < this.njumpsNeeded) {
-        return this.makeJump();
-      } else {
-        if (this.tPoint.dir === "left") {
-          return this.entity.left = true;
-        } else if (this.tPoint.dir === "right") {
-          return this.entity.right = true;
-        }
+        this.makeJump();
+      }
+    }
+    if (this.xTo < this.entity.x) {
+      console.log(this.xTo, this.entity.x);
+      if ((this.entity.y < this.yTo) || (this.xTo + 100 < this.entity.x)) {
+        return this.entity.left = true;
+      }
+    } else {
+      if ((this.entity.y < this.yTo) || (this.xTo + 100 > this.entity.x)) {
+        return this.entity.right = true;
       }
     }
   };
@@ -262,7 +275,7 @@ AiController = (function() {
   };
 
   AiController.prototype.setNavigationToPlatform = function() {
-    var nextPlatform, thisPlatform, tp, transX;
+    var aimp, nextPlatform, thisPlatform, tp, transX;
     thisPlatform = this.path[0];
     nextPlatform = this.path[1];
     tp = this.pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key());
@@ -274,8 +287,9 @@ AiController = (function() {
         this.entity1.right = false;
         this.entity1.left = false;
         this.reachedTransitionPoint = true;
+        aimp = this.pgraph.getTransitionPoint(nextPlatform.key(), thisPlatform.key());
         console.log('new path controller!');
-        return this.pController = new PathController(this.entity1, tp);
+        return this.pController = new PathController(this.entity1, tp, aimp);
       } else {
         return this.toTransitionPoint(transX);
       }
@@ -317,7 +331,7 @@ module.exports = AiController;
 
 
 
-},{"./pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/astar.coffee":[function(require,module,exports){
+},{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/astar.coffee":[function(require,module,exports){
 var AStar;
 
 module.exports.Astar = AStar = (function() {
@@ -1003,6 +1017,7 @@ PlatformGraph = PlatformGraph = (function() {
           } else {
             _ref4 = p2.xMax(), xleft = _ref4[0], xright = _ref4[1];
             console.log("jumping platform", xleft, xright, p2.xleft, p2.xright);
+            console.log("from", p1.key(), "to", p2.key());
             if (p1.overlap(p2.xright, xright)) {
               pdir = _DIR_LEFT;
               for (x = _m = _ref5 = p2.xright + 2; _ref5 <= xright ? _m <= xright : _m >= xright; x = _ref5 <= xright ? ++_m : --_m) {
@@ -1011,8 +1026,7 @@ PlatformGraph = PlatformGraph = (function() {
                   break;
                 }
               }
-            }
-            if (p1.overlap(xleft, p2.xleft)) {
+            } else if (p1.overlap(xleft, p2.xleft)) {
               pdir = _DIR_RIGHT;
               for (x = _n = _ref6 = p2.xleft - 2; _n >= xleft; x = _n += -1) {
                 if (p2.xInPlatform(x)) {

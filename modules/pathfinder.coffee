@@ -255,6 +255,7 @@ PlatformGraph = class PlatformGraph
           else # neighbouring platform is 'partially or fully enclosed'
             [xleft, xright] = p2.xMax()
             console.log "jumping platform", xleft, xright, p2.xleft, p2.xright
+            console.log "from", p1.key(), "to", p2.key()
             # if the region to the right hand side of p2 overlaps p1, we want to jump left
             if p1.overlap(p2.xright, xright)
               pdir = _DIR_LEFT
@@ -263,7 +264,7 @@ PlatformGraph = class PlatformGraph
                   px = x
                   break
             # not sure why else not allowed here
-            if p1.overlap(xleft, p2.xleft)
+            else if p1.overlap(xleft, p2.xleft)
               pdir = _DIR_RIGHT
               for x in [p2.xleft - 2..xleft] by -1
                 if p2.xInPlatform x

@@ -1,30 +1,38 @@
 pathfinder = require './pathfinder'
+c          = require './constants'
 
 # class to control an entity moving between two platforms
 class PathController
-  constructor: (@entity, @tPoint) ->
+  constructor: (@entity, @tPoint, @aimPoint) ->
     @njumps = 0
     @justJumped = false;
     # work out how many jumps (1, 2, or 3) needed
     @njumpsNeeded = @tPoint.njump
     console.log @tPoint.dir
+    # co-ords to: always target the 'corner' of the platform
+    if (@tPoint.dir == "left")
+      @xTo = @tPoint.p2.xright * c.TILE
+    else if (@tPoint.dir == "right")
+      @xTo = @tPoint.p2.xleft * c.TILE
+    @yTo = @tPoint.p2.y * c.TILE
+
   step: ->
+
+    # vertical motion
     if (@justJumped)
       @entity.jump = false
-
-    # very simple algo currently: we simply jump vertically upwards
-    # (not going left or right) the required number of times, then at
-    # the top of the jump we move left or right to get to the
-    # platform.
-    
     if (!@entity.jumping) # on the way down
       if (@njumps < @njumpsNeeded) # jump again
         @makeJump()
-      else # move left or right to
-        if @tPoint.dir == "left"
-          @entity.left = true
-        else if @tPoint.dir == "right"
-          @entity.right = true
+
+    # horizontal motion
+    if (@xTo < @entity.x)
+      console.log @xTo, @entity.x
+      if (@entity.y < @yTo) or (@xTo + 100 < @entity.x)
+        @entity.left = true
+    else
+      if (@entity.y < @yTo) or (@xTo + 100 > @entity.x)            
+        @entity.right = true
 
   makeJump: ->
     @entity.jump = true
@@ -94,9 +102,11 @@ class AiController
         @entity1.right = false
         @entity1.left = false
         @reachedTransitionPoint = true;
+        # the point we are 'aiming for' on the other platform
+        aimp = @pgraph.getTransitionPoint(nextPlatform.key(), thisPlatform.key())
         # set up the platform controller to navigate to next platform!
         console.log 'new path controller!'
-        @pController = new PathController(@entity1, tp)
+        @pController = new PathController(@entity1, tp, aimp)
       else
         @toTransitionPoint(transX)
     else
