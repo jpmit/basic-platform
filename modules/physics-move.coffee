@@ -65,6 +65,7 @@ module.exports.stepY = (entity, level, dt) ->
     else
       entity.ddy = entity.ddy - entity.impulse # an instant big force impulse
     entity.jumping = true
+    entity.falling = false
     entity.onfloor = false
     entity.jumpcount++
 
