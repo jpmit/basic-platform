@@ -2,21 +2,22 @@ c     = require './constants'
 astar = require './astar'
 
 # path is currently stored here for rendering in this module (see
-# render) only, hence private _
-_path    = null
+# render) only, this can be deleted later.
+_path     = null
 
-pgraph   = null # the platform graph
-physics = null
+_pgraph   = null # the platform graph
+_physics  = null # game physics information (only used in this module)
 
+# the ai module calls this function
 module.exports.getPlatformGraph = () ->
-  pgraph
+  _pgraph
 
-# called in setup
+# called in game setup (initialization)
 module.exports.preProcess = (level) ->
   # the physics for this level
-  physics = new PhysicsFinder()
+  _physics = new PhysicsFinder()
   # create graph that connects platforms
-  pgraph = new PlatformGraph(level)
+  _pgraph = new PlatformGraph(level)
   
 # placeholder currently for relevant pathfinding physics.
 class PhysicsFinder
@@ -26,70 +27,10 @@ class PhysicsFinder
     # max number of tiles we can move (upwards) in y direction (with
     # any number of jumps)
     @ymax = 9
-
     @ymaxSingle = @ymax / 3
 
-# rendering is currently for debugging
-module.exports.render = (ctx) ->
-  ctx.save()
-
-  # draw numbers on each of the platforms
-  ctx.font="30px white Georgia";
-  ctx.fillStyle = "white"
-  platforms = pgraph.platforms
-  for i in [0..platforms.length - 1]
-    xt = (platforms[i].xleft + platforms[i].xright) / 2
-    yt = platforms[i].y
-    
-    ctx.fillText(i, xt * c.TILE, yt * c.TILE)
-
-  # draw the transition points between platforms
-  if (pgraph != null)
-    # array of arrays (one array for each platform)
-    tpoints = pgraph.transitionPoints
-    neighbors = pgraph.neighbors
-    for i in [0..tpoints.length - 1]
-      # array of points for each platform
-      tp = tpoints[i]
-      seen = {}
-      for j in [0..tp.length - 1]
-        if tp[j] != null
-          # get the x tile on the platform
-          xt = tp[j].tx
-          # get the y tile on the platform
-          yt = platforms[i].y
-          # mark fall points as red and jump points as green
-          if tp[j].type == "fall"
-            ctx.fillStyle = '#ff0000'
-          else # .type is "jump"
-            ctx.fillStyle = '#00ff00'
-          # stack the y co-ord in case we have seen this point multiple times
-          cx = xt * c.TILE
-          cy = yt * c.TILE
-          index = cx + "," + cy
-          # have we seen this jump point already?
-          if index of seen
-            cy = cy + seen[index] * c.TILE
-            seen[index] = seen[index] + 1
-          else
-            seen[index] = 1
-        
-          ctx.fillRect(cx, cy, 4, 4)
-          # write index of platform next to point
-          ctx.fillText(pgraph.platforms[j].key(), cx, cy)
-
-  # draw the path from the enemy to the player
-  ctx.strokeStyle = '#ff0000';
-  ctx.lineWidth = 10;
-  if _path != null and _path.length > 1
-    ctx.beginPath()
-    for i in [0.._path.length - 2]
-      ctx.moveTo _path[i].midx() * c.TILE, _path[i].y * c.TILE
-      ctx.lineTo _path[i + 1].midx() * c.TILE, _path[i + 1].y * c.TILE
-    ctx.stroke()
-    
-  ctx.restore()
-
+# each platform has an id which is returned with @key(); the id is
+# also an index into the platform graph.
 class Platform
   constructor: (id, xleft, xright, y) ->
     @id = id
@@ -104,7 +45,7 @@ class Platform
 
   # min and max x values can reach / can be reached from this platform
   xMax: () ->
-    [Math.max(0, @xleft - physics.xmax), Math.max(0, @xright + physics.xmax)]
+    [Math.max(0, @xleft - _physics.xmax), Math.max(0, @xright + _physics.xmax)]
 
   # middle x tile
   midx: () ->
@@ -124,11 +65,11 @@ class Platform
 
   # used in A* search
   getAdjacentNodes: () ->
-    pgraph.getNeighbors(@id)
+    _pgraph.getNeighbors(@id)
 
   # used in A* search
   heuristicDistance: (p2) ->
-    # will need to think about this one a bit more
+    # might need to think about this one a bit more
     dx = @midx() - p2.midx()
     dy = @y - p2.y
     dx * dx + dy * dy
@@ -142,6 +83,9 @@ _TYPE_FALL = "fall"
 # directions of transition points
 _DIR_LEFT = "left"
 _DIR_RIGHT = "right"
+# these constants are needed by the ai module
+module.exports.DIR_LEFT = _DIR_LEFT
+module.exports.DIR_RIGHT = _DIR_RIGHT
 
 class TransitionPoint
   constructor: (type, dir, tx, p1, p2, njump) ->
@@ -152,6 +96,7 @@ class TransitionPoint
     # p1 and p2 are platforms from and to respectively
     @p1 = p1
     @p2 = p2
+    # number of jumps needed to get from p1 to p2
     @njump = njump
 
   getXCoord: () ->
@@ -163,20 +108,17 @@ class TransitionPoint
 canReachPlatform = (p1, p2) ->
   # check we can get there horizontally first
   [leftx, rightx] = p1.xMax()
-#  console.log p1.xleft, p1.xright, p2.xleft, p2.xright
   if p2.overlap leftx, rightx
     # can we simply drop onto the platform?
     if p2.y > p1.y
-      #console.log "can drop from", p1.key(), "to", p2.key()
       return true
     # can we jump onto it?
-    if p2.y + physics.ymax > p1.y
-      #console.log "can jump from", p1.key(), "to", p2.key()            
+    if p2.y + _physics.ymax > p1.y
       return true
   false
 
 # platform graph stores information on the platform linkage, including
-# 'transition points' between platforms
+# 'transition points' between platforms.
 PlatformGraph = class PlatformGraph
   constructor: (level) ->
 
@@ -198,17 +140,14 @@ PlatformGraph = class PlatformGraph
     @platforms = platforms
     @neighbors = neighbors
 
-    # create 'jump points' for pairs of platforms
+    # create 'transition points' for pairs of connected platforms
     @transitionPoints = @_getTransitionPoints()
-
-    console.log @neighbors
-    console.log @transitionPoints
 
   getTransitionPoint: (k1, k2) ->
     @transitionPoints[k1][k2]
 
   _getTransitionPoints: () ->
-    # create an empty transitionPoints 'matrix', where
+    # first create an empty transitionPoints 'matrix', where
     # transitionPoints[k1][k2] is either null or a TransitionPoint
     transitionPoints = []
     for i in [0..@platforms.length - 1]
@@ -239,9 +178,9 @@ PlatformGraph = class PlatformGraph
           ptype = _TYPE_JUMP
 
           # how many jumps are needed? (either 1 or 2 currently)
-          if p1.y > p2.y + 2 * physics.ymaxSingle
+          if p1.y > p2.y + 2 * _physics.ymaxSingle
             njumps = 3
-          else if p1.y > p2.y + physics.ymaxSingle
+          else if p1.y > p2.y + _physics.ymaxSingle
             njumps = 2
           else
             njumps = 1
@@ -254,8 +193,7 @@ PlatformGraph = class PlatformGraph
             px = p1.xleft
           else # neighbouring platform is 'partially or fully enclosed'
             [xleft, xright] = p2.xMax()
-            console.log "jumping platform", xleft, xright, p2.xleft, p2.xright
-            console.log "from", p1.key(), "to", p2.key()
+            console.log "enclosed platform", xleft, xright, p2.xleft, p2.xright
             # if the region to the right hand side of p2 overlaps p1, we want to jump left
             if p1.overlap(p2.xright, xright)
               pdir = _DIR_LEFT
@@ -263,7 +201,6 @@ PlatformGraph = class PlatformGraph
                 if p1.xInPlatform x
                   px = x
                   break
-            # not sure why else not allowed here
             else if p1.overlap(xleft, p2.xleft)
               pdir = _DIR_RIGHT
               for x in [p2.xleft - 2..xleft] by -1
@@ -274,7 +211,6 @@ PlatformGraph = class PlatformGraph
         transitionPoints[p1.key()][p2.key()] = new TransitionPoint(ptype, pdir, px, p1, p2, njumps || null)
 
     # return the transition points
-    console.log transitionPoints
     transitionPoints
 
   # get neighbours for a particular platform index
@@ -333,13 +269,72 @@ PlatformGraph = class PlatformGraph
     
 # find path from entity1 to entity2 given a particular platform graph,
 module.exports.findpath = (entity1, entity2) ->
-  pnum1 = pgraph.getPlatformIndexForEntity(entity1)
-  pnum2 = pgraph.getPlatformIndexForEntity(entity2)
+  pnum1 = _pgraph.getPlatformIndexForEntity(entity1)
+  pnum2 = _pgraph.getPlatformIndexForEntity(entity2)
   # we'll only try to find a path if both entities are currently on a platform
   if (pnum1 == null) or (pnum2 == null)
     return null
   # compute route from pnum1 to pnum2
   a = new astar.Astar
   # return the path
-  _path = a.findPath(pgraph.platforms[pnum1], pgraph.platforms[pnum2])
+  _path = a.findPath(_pgraph.platforms[pnum1], _pgraph.platforms[pnum2])
   _path
+
+# rendering is currently for debugging
+module.exports.render = (ctx) ->
+  ctx.save()
+
+  # draw numbers on each of the platforms
+  ctx.font="30px white Georgia";
+  ctx.fillStyle = "white"
+  platforms = _pgraph.platforms
+  for i in [0..platforms.length - 1]
+    xt = (platforms[i].xleft + platforms[i].xright) / 2
+    yt = platforms[i].y
+    ctx.fillText(i, xt * c.TILE, yt * c.TILE)
+
+  # draw the transition points between platforms
+  if (_pgraph != null)
+    # array of arrays (one array for each platform)
+    tpoints = _pgraph.transitionPoints
+    neighbors = _pgraph.neighbors
+    for i in [0..tpoints.length - 1]
+      # array of points for each platform
+      tp = tpoints[i]
+      seen = {}
+      for j in [0..tp.length - 1]
+        if tp[j] != null
+          # get the x tile on the platform
+          xt = tp[j].tx
+          # get the y tile on the platform
+          yt = platforms[i].y
+          # mark fall points as red and jump points as green
+          if tp[j].type == "fall"
+            ctx.fillStyle = '#ff0000'
+          else # .type is "jump"
+            ctx.fillStyle = '#00ff00'
+          # stack the y co-ord in case we have seen this point multiple times
+          cx = xt * c.TILE
+          cy = yt * c.TILE
+          index = cx + "," + cy
+          # have we seen this jump point already?
+          if index of seen
+            cy = cy + seen[index] * c.TILE
+            seen[index] = seen[index] + 1
+          else
+            seen[index] = 1
+        
+          ctx.fillRect(cx, cy, 4, 4)
+          # write index of platform next to point
+          ctx.fillText(_pgraph.platforms[j].key(), cx, cy)
+
+  # draw the path from the enemy to the player
+  ctx.strokeStyle = '#ff0000';
+  ctx.lineWidth = 10;
+  if _path != null and _path.length > 1
+    ctx.beginPath()
+    for i in [0.._path.length - 2]
+      ctx.moveTo _path[i].midx() * c.TILE, _path[i].y * c.TILE
+      ctx.lineTo _path[i + 1].midx() * c.TILE, _path[i + 1].y * c.TILE
+    ctx.stroke()
+  ctx.restore()

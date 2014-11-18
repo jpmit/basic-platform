@@ -3,21 +3,18 @@ c          = require './constants'
 
 # class to control an entity moving between two platforms
 class PathController
-  constructor: (@entity, @tPoint, @aimPoint) ->
+  constructor: (@entity, @tPoint) ->
     @njumps = 0
     @justJumped = false;
-    # work out how many jumps (1, 2, or 3) needed
     @njumpsNeeded = @tPoint.njump
-    console.log @tPoint.dir
     # co-ords to: always target the 'corner' of the platform
-    if (@tPoint.dir == "left")
+    if (@tPoint.dir == pathfinder.DIR_LEFT)
       @xTo = @tPoint.p2.xright * c.TILE
-    else if (@tPoint.dir == "right")
+    else if (@tPoint.dir == pathfinder.DIR_RIGHT)
       @xTo = @tPoint.p2.xleft * c.TILE
     @yTo = @tPoint.p2.y * c.TILE
 
   step: ->
-
     # vertical motion
     if (@justJumped)
       @entity.jump = false
@@ -25,9 +22,9 @@ class PathController
       if (@njumps < @njumpsNeeded) # jump again
         @makeJump()
 
-    # horizontal motion
+    # horizontal motion: the + 100 here means that we don't hit the
+    # platform from underneath
     if (@xTo < @entity.x)
-      console.log @xTo, @entity.x
       if (@entity.y < @yTo) or (@xTo + 100 < @entity.x)
         @entity.left = true
     else
@@ -44,15 +41,16 @@ class PathController
 class AiController
   constructor: (@entity1, @entity2) ->
     @pgraph = pathfinder.getPlatformGraph()
-    console.log 'platform graph'
-    console.log @pgraph
-    # platforms indices that tell us which platform entity1 and entity2 are on
+    # platform indices that tell us which platform entity1 and entity2
+    # *were last seen on* (they may not actually be currently on these
+    # platforms, since one entity may be e.g. mid jump)
     @p1Index = null
     @p2Index = null
     # path from entity1 to entity2
     @path = null
-
-    @reachedTransitionPoint = false;
+    @reachedTransitionPoint = false
+    @transPoint = null
+    @transX = null
 
   # set navigation of entity1 when on same platform as entity2
   setNavigationOnPlatform: ->
@@ -67,48 +65,28 @@ class AiController
   toTransitionPoint: (transX) ->
     if transX > @entity1.x
       @entity1.right = true
-      @entity1.left = false
     else if transX < @entity1.x
       @entity1.left = true
-      @entity1.right = false
 
   # are we at the transition point?
   atTransitionPoint: (transX) ->
+    # the constant here ensures we don't 'jiggle' back and forth
     return (@entity1.x > transX - 3) and (@entity1.x < transX + 3)
-
-  # go from transition point to next platform: p1 is platform from and
-  # p2 is platform to
-  toNextPlatform: (p1, p2) ->
-    if (!@entity1.jump)
-      @entity1.jump = true;
-    else
-      
-    return false
 
   # set navigation of entity1 when on different platform to entity2
   setNavigationToPlatform: ->
-    # on different platform
-    # platform the enemy is currently on
-    thisPlatform = @path[0]
-    nextPlatform = @path[1]
-    # transition point from thisPlatform to nextPlatform
-    tp = @pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key())
-    transX = tp.getXCoord()
-
     if (!@reachedTransitionPoint)
-      if @atTransitionPoint(transX)
-        @entity1.x = transX
+      if @atTransitionPoint(@transX)
+        @entity1.x = @transX
         @entity1.dx = 0
         @entity1.right = false
         @entity1.left = false
         @reachedTransitionPoint = true;
-        # the point we are 'aiming for' on the other platform
-        aimp = @pgraph.getTransitionPoint(nextPlatform.key(), thisPlatform.key())
-        # set up the platform controller to navigate to next platform!
-        console.log 'new path controller!'
-        @pController = new PathController(@entity1, tp, aimp)
+        # set up the platform controller to jump to next platform!
+        @pController = new PathController(@entity1, @transPoint)
       else
-        @toTransitionPoint(transX)
+        # move towards the transition point
+        @toTransitionPoint(@transX)
     else
       @pController.step()
 
@@ -121,22 +99,26 @@ class AiController
     if (p1Index != @p1Index) or (p2Index != @p2Index)
       # indices can be null if entity not on platform
       if (p1Index != null and p2Index != null)
-        # compute new path is from entity1 to entity2
-        console.log p1Index, p2Index
+        # compute new path from entity1 to entity2
         @path = pathfinder.findpath @entity1, @entity2
         @reachedTransitionPoint = false
         @p1Index = p1Index
         @p2Index = p2Index
+        if (@path.length > 1)
+          # get transition point to next platform
+          thisPlatform = @path[0]
+          nextPlatform = @path[1]
+          @transPoint = @pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key())
+          @transX = @transPoint.getXCoord()
 
-    # set controls of entity1 (the one we are controlling) to false
+    # set controls of entity1 for later simplicity
     @entity1.left = false
     @entity1.right = false
     @entity1.jump = false
 
     # path can be null at start of level only (before both entities
     # have touched ground once)
-    if (@path)
-      # 'press' the movement keys for entity1 that will get it to entity2
+    if (@path != null)
       if (@path.length == 1)
         @setNavigationOnPlatform()
       else

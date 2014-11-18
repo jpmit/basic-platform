@@ -181,17 +181,15 @@ pathfinder = require('./pathfinder');
 c = require('./constants');
 
 PathController = (function() {
-  function PathController(entity, tPoint, aimPoint) {
+  function PathController(entity, tPoint) {
     this.entity = entity;
     this.tPoint = tPoint;
-    this.aimPoint = aimPoint;
     this.njumps = 0;
     this.justJumped = false;
     this.njumpsNeeded = this.tPoint.njump;
-    console.log(this.tPoint.dir);
-    if (this.tPoint.dir === "left") {
+    if (this.tPoint.dir === pathfinder.DIR_LEFT) {
       this.xTo = this.tPoint.p2.xright * c.TILE;
-    } else if (this.tPoint.dir === "right") {
+    } else if (this.tPoint.dir === pathfinder.DIR_RIGHT) {
       this.xTo = this.tPoint.p2.xleft * c.TILE;
     }
     this.yTo = this.tPoint.p2.y * c.TILE;
@@ -207,7 +205,6 @@ PathController = (function() {
       }
     }
     if (this.xTo < this.entity.x) {
-      console.log(this.xTo, this.entity.x);
       if ((this.entity.y < this.yTo) || (this.xTo + 100 < this.entity.x)) {
         return this.entity.left = true;
       }
@@ -233,12 +230,12 @@ AiController = (function() {
     this.entity1 = entity1;
     this.entity2 = entity2;
     this.pgraph = pathfinder.getPlatformGraph();
-    console.log('platform graph');
-    console.log(this.pgraph);
     this.p1Index = null;
     this.p2Index = null;
     this.path = null;
     this.reachedTransitionPoint = false;
+    this.transPoint = null;
+    this.transX = null;
   }
 
   AiController.prototype.setNavigationOnPlatform = function() {
@@ -253,11 +250,9 @@ AiController = (function() {
 
   AiController.prototype.toTransitionPoint = function(transX) {
     if (transX > this.entity1.x) {
-      this.entity1.right = true;
-      return this.entity1.left = false;
+      return this.entity1.right = true;
     } else if (transX < this.entity1.x) {
-      this.entity1.left = true;
-      return this.entity1.right = false;
+      return this.entity1.left = true;
     }
   };
 
@@ -265,33 +260,17 @@ AiController = (function() {
     return (this.entity1.x > transX - 3) && (this.entity1.x < transX + 3);
   };
 
-  AiController.prototype.toNextPlatform = function(p1, p2) {
-    if (!this.entity1.jump) {
-      this.entity1.jump = true;
-    } else {
-
-    }
-    return false;
-  };
-
   AiController.prototype.setNavigationToPlatform = function() {
-    var aimp, nextPlatform, thisPlatform, tp, transX;
-    thisPlatform = this.path[0];
-    nextPlatform = this.path[1];
-    tp = this.pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key());
-    transX = tp.getXCoord();
     if (!this.reachedTransitionPoint) {
-      if (this.atTransitionPoint(transX)) {
-        this.entity1.x = transX;
+      if (this.atTransitionPoint(this.transX)) {
+        this.entity1.x = this.transX;
         this.entity1.dx = 0;
         this.entity1.right = false;
         this.entity1.left = false;
         this.reachedTransitionPoint = true;
-        aimp = this.pgraph.getTransitionPoint(nextPlatform.key(), thisPlatform.key());
-        console.log('new path controller!');
-        return this.pController = new PathController(this.entity1, tp, aimp);
+        return this.pController = new PathController(this.entity1, this.transPoint);
       } else {
-        return this.toTransitionPoint(transX);
+        return this.toTransitionPoint(this.transX);
       }
     } else {
       return this.pController.step();
@@ -299,22 +278,27 @@ AiController = (function() {
   };
 
   AiController.prototype.step = function() {
-    var p1Index, p2Index;
+    var nextPlatform, p1Index, p2Index, thisPlatform;
     p1Index = this.pgraph.getPlatformIndexForEntity(this.entity1);
     p2Index = this.pgraph.getPlatformIndexForEntity(this.entity2);
     if ((p1Index !== this.p1Index) || (p2Index !== this.p2Index)) {
       if (p1Index !== null && p2Index !== null) {
-        console.log(p1Index, p2Index);
         this.path = pathfinder.findpath(this.entity1, this.entity2);
         this.reachedTransitionPoint = false;
         this.p1Index = p1Index;
         this.p2Index = p2Index;
+        if (this.path.length > 1) {
+          thisPlatform = this.path[0];
+          nextPlatform = this.path[1];
+          this.transPoint = this.pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key());
+          this.transX = this.transPoint.getXCoord();
+        }
       }
     }
     this.entity1.left = false;
     this.entity1.right = false;
     this.entity1.jump = false;
-    if (this.path) {
+    if (this.path !== null) {
       if (this.path.length === 1) {
         return this.setNavigationOnPlatform();
       } else {
@@ -768,7 +752,7 @@ module.exports = RigidBodyMixin;
 
 
 },{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./physics-move":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-move.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee":[function(require,module,exports){
-var PhysicsFinder, Platform, PlatformGraph, TransitionPoint, astar, c, canReachPlatform, pgraph, physics, _DIR_LEFT, _DIR_RIGHT, _TYPE_FALL, _TYPE_JUMP, _path,
+var PhysicsFinder, Platform, PlatformGraph, TransitionPoint, astar, c, canReachPlatform, _DIR_LEFT, _DIR_RIGHT, _TYPE_FALL, _TYPE_JUMP, _path, _pgraph, _physics,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 c = require('./constants');
@@ -777,17 +761,17 @@ astar = require('./astar');
 
 _path = null;
 
-pgraph = null;
+_pgraph = null;
 
-physics = null;
+_physics = null;
 
 module.exports.getPlatformGraph = function() {
-  return pgraph;
+  return _pgraph;
 };
 
 module.exports.preProcess = function(level) {
-  physics = new PhysicsFinder();
-  return pgraph = new PlatformGraph(level);
+  _physics = new PhysicsFinder();
+  return _pgraph = new PlatformGraph(level);
 };
 
 PhysicsFinder = (function() {
@@ -800,60 +784,6 @@ PhysicsFinder = (function() {
   return PhysicsFinder;
 
 })();
-
-module.exports.render = function(ctx) {
-  var cx, cy, i, index, j, neighbors, platforms, seen, tp, tpoints, xt, yt, _i, _j, _k, _l, _ref, _ref1, _ref2, _ref3;
-  ctx.save();
-  ctx.font = "30px white Georgia";
-  ctx.fillStyle = "white";
-  platforms = pgraph.platforms;
-  for (i = _i = 0, _ref = platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
-    xt = (platforms[i].xleft + platforms[i].xright) / 2;
-    yt = platforms[i].y;
-    ctx.fillText(i, xt * c.TILE, yt * c.TILE);
-  }
-  if (pgraph !== null) {
-    tpoints = pgraph.transitionPoints;
-    neighbors = pgraph.neighbors;
-    for (i = _j = 0, _ref1 = tpoints.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
-      tp = tpoints[i];
-      seen = {};
-      for (j = _k = 0, _ref2 = tp.length - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; j = 0 <= _ref2 ? ++_k : --_k) {
-        if (tp[j] !== null) {
-          xt = tp[j].tx;
-          yt = platforms[i].y;
-          if (tp[j].type === "fall") {
-            ctx.fillStyle = '#ff0000';
-          } else {
-            ctx.fillStyle = '#00ff00';
-          }
-          cx = xt * c.TILE;
-          cy = yt * c.TILE;
-          index = cx + "," + cy;
-          if (index in seen) {
-            cy = cy + seen[index] * c.TILE;
-            seen[index] = seen[index] + 1;
-          } else {
-            seen[index] = 1;
-          }
-          ctx.fillRect(cx, cy, 4, 4);
-          ctx.fillText(pgraph.platforms[j].key(), cx, cy);
-        }
-      }
-    }
-  }
-  ctx.strokeStyle = '#ff0000';
-  ctx.lineWidth = 10;
-  if (_path !== null && _path.length > 1) {
-    ctx.beginPath();
-    for (i = _l = 0, _ref3 = _path.length - 2; 0 <= _ref3 ? _l <= _ref3 : _l >= _ref3; i = 0 <= _ref3 ? ++_l : --_l) {
-      ctx.moveTo(_path[i].midx() * c.TILE, _path[i].y * c.TILE);
-      ctx.lineTo(_path[i + 1].midx() * c.TILE, _path[i + 1].y * c.TILE);
-    }
-    ctx.stroke();
-  }
-  return ctx.restore();
-};
 
 Platform = (function() {
   function Platform(id, xleft, xright, y) {
@@ -868,7 +798,7 @@ Platform = (function() {
   };
 
   Platform.prototype.xMax = function() {
-    return [Math.max(0, this.xleft - physics.xmax), Math.max(0, this.xright + physics.xmax)];
+    return [Math.max(0, this.xleft - _physics.xmax), Math.max(0, this.xright + _physics.xmax)];
   };
 
   Platform.prototype.midx = function() {
@@ -887,7 +817,7 @@ Platform = (function() {
   };
 
   Platform.prototype.getAdjacentNodes = function() {
-    return pgraph.getNeighbors(this.id);
+    return _pgraph.getNeighbors(this.id);
   };
 
   Platform.prototype.heuristicDistance = function(p2) {
@@ -912,6 +842,10 @@ _TYPE_FALL = "fall";
 _DIR_LEFT = "left";
 
 _DIR_RIGHT = "right";
+
+module.exports.DIR_LEFT = _DIR_LEFT;
+
+module.exports.DIR_RIGHT = _DIR_RIGHT;
 
 TransitionPoint = (function() {
   function TransitionPoint(type, dir, tx, p1, p2, njump) {
@@ -938,7 +872,7 @@ canReachPlatform = function(p1, p2) {
     if (p2.y > p1.y) {
       return true;
     }
-    if (p2.y + physics.ymax > p1.y) {
+    if (p2.y + _physics.ymax > p1.y) {
       return true;
     }
   }
@@ -966,8 +900,6 @@ PlatformGraph = PlatformGraph = (function() {
     this.platforms = platforms;
     this.neighbors = neighbors;
     this.transitionPoints = this._getTransitionPoints();
-    console.log(this.neighbors);
-    console.log(this.transitionPoints);
   }
 
   PlatformGraph.prototype.getTransitionPoint = function(k1, k2) {
@@ -1001,9 +933,9 @@ PlatformGraph = PlatformGraph = (function() {
           }
         } else {
           ptype = _TYPE_JUMP;
-          if (p1.y > p2.y + 2 * physics.ymaxSingle) {
+          if (p1.y > p2.y + 2 * _physics.ymaxSingle) {
             njumps = 3;
-          } else if (p1.y > p2.y + physics.ymaxSingle) {
+          } else if (p1.y > p2.y + _physics.ymaxSingle) {
             njumps = 2;
           } else {
             njumps = 1;
@@ -1016,8 +948,7 @@ PlatformGraph = PlatformGraph = (function() {
             px = p1.xleft;
           } else {
             _ref4 = p2.xMax(), xleft = _ref4[0], xright = _ref4[1];
-            console.log("jumping platform", xleft, xright, p2.xleft, p2.xright);
-            console.log("from", p1.key(), "to", p2.key());
+            console.log("enclosed platform", xleft, xright, p2.xleft, p2.xright);
             if (p1.overlap(p2.xright, xright)) {
               pdir = _DIR_LEFT;
               for (x = _m = _ref5 = p2.xright + 2; _ref5 <= xright ? _m <= xright : _m >= xright; x = _ref5 <= xright ? ++_m : --_m) {
@@ -1040,7 +971,6 @@ PlatformGraph = PlatformGraph = (function() {
         transitionPoints[p1.key()][p2.key()] = new TransitionPoint(ptype, pdir, px, p1, p2, njumps || null);
       }
     }
-    console.log(transitionPoints);
     return transitionPoints;
   };
 
@@ -1102,14 +1032,68 @@ PlatformGraph = PlatformGraph = (function() {
 
 module.exports.findpath = function(entity1, entity2) {
   var a, pnum1, pnum2;
-  pnum1 = pgraph.getPlatformIndexForEntity(entity1);
-  pnum2 = pgraph.getPlatformIndexForEntity(entity2);
+  pnum1 = _pgraph.getPlatformIndexForEntity(entity1);
+  pnum2 = _pgraph.getPlatformIndexForEntity(entity2);
   if ((pnum1 === null) || (pnum2 === null)) {
     return null;
   }
   a = new astar.Astar;
-  _path = a.findPath(pgraph.platforms[pnum1], pgraph.platforms[pnum2]);
+  _path = a.findPath(_pgraph.platforms[pnum1], _pgraph.platforms[pnum2]);
   return _path;
+};
+
+module.exports.render = function(ctx) {
+  var cx, cy, i, index, j, neighbors, platforms, seen, tp, tpoints, xt, yt, _i, _j, _k, _l, _ref, _ref1, _ref2, _ref3;
+  ctx.save();
+  ctx.font = "30px white Georgia";
+  ctx.fillStyle = "white";
+  platforms = _pgraph.platforms;
+  for (i = _i = 0, _ref = platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
+    xt = (platforms[i].xleft + platforms[i].xright) / 2;
+    yt = platforms[i].y;
+    ctx.fillText(i, xt * c.TILE, yt * c.TILE);
+  }
+  if (_pgraph !== null) {
+    tpoints = _pgraph.transitionPoints;
+    neighbors = _pgraph.neighbors;
+    for (i = _j = 0, _ref1 = tpoints.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
+      tp = tpoints[i];
+      seen = {};
+      for (j = _k = 0, _ref2 = tp.length - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; j = 0 <= _ref2 ? ++_k : --_k) {
+        if (tp[j] !== null) {
+          xt = tp[j].tx;
+          yt = platforms[i].y;
+          if (tp[j].type === "fall") {
+            ctx.fillStyle = '#ff0000';
+          } else {
+            ctx.fillStyle = '#00ff00';
+          }
+          cx = xt * c.TILE;
+          cy = yt * c.TILE;
+          index = cx + "," + cy;
+          if (index in seen) {
+            cy = cy + seen[index] * c.TILE;
+            seen[index] = seen[index] + 1;
+          } else {
+            seen[index] = 1;
+          }
+          ctx.fillRect(cx, cy, 4, 4);
+          ctx.fillText(_pgraph.platforms[j].key(), cx, cy);
+        }
+      }
+    }
+  }
+  ctx.strokeStyle = '#ff0000';
+  ctx.lineWidth = 10;
+  if (_path !== null && _path.length > 1) {
+    ctx.beginPath();
+    for (i = _l = 0, _ref3 = _path.length - 2; 0 <= _ref3 ? _l <= _ref3 : _l >= _ref3; i = 0 <= _ref3 ? ++_l : --_l) {
+      ctx.moveTo(_path[i].midx() * c.TILE, _path[i].y * c.TILE);
+      ctx.lineTo(_path[i + 1].midx() * c.TILE, _path[i + 1].y * c.TILE);
+    }
+    ctx.stroke();
+  }
+  return ctx.restore();
 };
 
 
