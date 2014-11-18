@@ -174,9 +174,46 @@ module.exports = pointInAABB = function(point, box) {
 
 
 },{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai.coffee":[function(require,module,exports){
-var AiController, pathfinder;
+var AiController, PathController, pathfinder;
 
 pathfinder = require('./pathfinder');
+
+PathController = (function() {
+  function PathController(entity, tPoint) {
+    this.entity = entity;
+    this.tPoint = tPoint;
+    this.njumps = 0;
+    this.justJumped = false;
+    this.njumpsNeeded = this.tPoint.njump;
+    console.log(this.tPoint.dir);
+  }
+
+  PathController.prototype.step = function() {
+    if (this.justJumped) {
+      this.entity.jump = false;
+    }
+    if (!this.entity.jumping) {
+      if (this.njumps < this.njumpsNeeded) {
+        return this.makeJump();
+      } else {
+        if (this.tPoint.dir === "left") {
+          return this.entity.left = true;
+        } else if (this.tPoint.dir === "right") {
+          return this.entity.right = true;
+        }
+      }
+    }
+  };
+
+  PathController.prototype.makeJump = function() {
+    this.entity.jump = true;
+    this.justJumped = true;
+    return this.njumps += 1;
+  };
+
+  return PathController;
+
+})();
 
 AiController = (function() {
   function AiController(entity1, entity2) {
@@ -188,6 +225,7 @@ AiController = (function() {
     this.p1Index = null;
     this.p2Index = null;
     this.path = null;
+    this.reachedTransitionPoint = false;
   }
 
   AiController.prototype.setNavigationOnPlatform = function() {
@@ -200,34 +238,49 @@ AiController = (function() {
     }
   };
 
+  AiController.prototype.toTransitionPoint = function(transX) {
+    if (transX > this.entity1.x) {
+      this.entity1.right = true;
+      return this.entity1.left = false;
+    } else if (transX < this.entity1.x) {
+      this.entity1.left = true;
+      return this.entity1.right = false;
+    }
+  };
+
+  AiController.prototype.atTransitionPoint = function(transX) {
+    return (this.entity1.x > transX - 3) && (this.entity1.x < transX + 3);
+  };
+
+  AiController.prototype.toNextPlatform = function(p1, p2) {
+    if (!this.entity1.jump) {
+      this.entity1.jump = true;
+    } else {
+
+    }
+    return false;
+  };
+
   AiController.prototype.setNavigationToPlatform = function() {
-    var nextPlatform, thisPlatform, tp, xTransition;
-    console.log('not on same platform!');
+    var nextPlatform, thisPlatform, tp, transX;
     thisPlatform = this.path[0];
     nextPlatform = this.path[1];
     tp = this.pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key());
-    console.log(tp);
-    xTransition = tp.getXCoord();
-    if (this.entity1.jump) {
-      this.entity1.jump = false;
-    }
-    if (this.entity1.x === xTransition && this.entity1.vx === 0) {
-      return this.entity1.jump = true;
-    } else {
-      if ((this.entity1.x > xTransition - 3) && (this.entity1.x < xTransition + 3)) {
-        this.entity1.x = xTransition;
-        this.entity1.vx = 0;
+    transX = tp.getXCoord();
+    if (!this.reachedTransitionPoint) {
+      if (this.atTransitionPoint(transX)) {
+        this.entity1.x = transX;
+        this.entity1.dx = 0;
         this.entity1.right = false;
-        return this.entity1.left = false;
+        this.entity1.left = false;
+        this.reachedTransitionPoint = true;
+        console.log('new path controller!');
+        return this.pController = new PathController(this.entity1, tp);
       } else {
-        if (xTransition > this.entity1.x) {
-          this.entity1.right = true;
-          return this.entity1.left = false;
-        } else if (xTransition < this.entity1.x) {
-          this.entity1.left = true;
-          return this.entity1.right = false;
-        }
+        return this.toTransitionPoint(transX);
       }
+    } else {
+      return this.pController.step();
     }
   };
 
@@ -237,11 +290,16 @@ AiController = (function() {
     p2Index = this.pgraph.getPlatformIndexForEntity(this.entity2);
     if ((p1Index !== this.p1Index) || (p2Index !== this.p2Index)) {
       if (p1Index !== null && p2Index !== null) {
+        console.log(p1Index, p2Index);
         this.path = pathfinder.findpath(this.entity1, this.entity2);
+        this.reachedTransitionPoint = false;
+        this.p1Index = p1Index;
+        this.p2Index = p2Index;
       }
     }
-    this.p1Index = p1Index;
-    this.p2Index = p2Index;
+    this.entity1.left = false;
+    this.entity1.right = false;
+    this.entity1.jump = false;
     if (this.path) {
       if (this.path.length === 1) {
         return this.setNavigationOnPlatform();
@@ -696,7 +754,7 @@ module.exports = RigidBodyMixin;
 
 
 },{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./physics-move":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-move.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/pathfinder.coffee":[function(require,module,exports){
-var PhysicsFinder, Platform, PlatformGraph, TransitionPoint, astar, c, canReachPlatform, pgraph, _DIR_LEFT, _DIR_RIGHT, _TYPE_FALL, _TYPE_JUMP, _path, _physics,
+var PhysicsFinder, Platform, PlatformGraph, TransitionPoint, astar, c, canReachPlatform, pgraph, physics, _DIR_LEFT, _DIR_RIGHT, _TYPE_FALL, _TYPE_JUMP, _path,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 c = require('./constants');
@@ -707,23 +765,22 @@ _path = null;
 
 pgraph = null;
 
-_physics = null;
+physics = null;
 
 module.exports.getPlatformGraph = function() {
   return pgraph;
 };
 
 module.exports.preProcess = function(level) {
-  _physics = new PhysicsFinder();
-  console.log(_physics);
+  physics = new PhysicsFinder();
   return pgraph = new PlatformGraph(level);
 };
 
 PhysicsFinder = (function() {
   function PhysicsFinder() {
     this.xmax = 6;
-    this.ymax = 10;
-    this.ymaxSingle = this.ymax / 2;
+    this.ymax = 9;
+    this.ymaxSingle = this.ymax / 3;
   }
 
   return PhysicsFinder;
@@ -797,7 +854,7 @@ Platform = (function() {
   };
 
   Platform.prototype.xMax = function() {
-    return [Math.max(0, this.xleft - _physics.xmax), Math.max(0, this.xright + _physics.xmax)];
+    return [Math.max(0, this.xleft - physics.xmax), Math.max(0, this.xright + physics.xmax)];
   };
 
   Platform.prototype.midx = function() {
@@ -867,7 +924,7 @@ canReachPlatform = function(p1, p2) {
     if (p2.y > p1.y) {
       return true;
     }
-    if (p2.y + _physics.ymax > p1.y) {
+    if (p2.y + physics.ymax > p1.y) {
       return true;
     }
   }
@@ -930,7 +987,9 @@ PlatformGraph = PlatformGraph = (function() {
           }
         } else {
           ptype = _TYPE_JUMP;
-          if (p1.y > p2.y + _physics.ymaxSingle) {
+          if (p1.y > p2.y + 2 * physics.ymaxSingle) {
+            njumps = 3;
+          } else if (p1.y > p2.y + physics.ymaxSingle) {
             njumps = 2;
           } else {
             njumps = 1;
@@ -1297,6 +1356,7 @@ module.exports.stepY = function(entity, level, dt) {
       entity.ddy = entity.ddy - entity.impulse;
     }
     entity.jumping = true;
+    entity.falling = false;
     entity.onfloor = false;
     entity.jumpcount++;
   }
@@ -6815,6 +6875,7 @@ setup = function() {
   player = createEntity(level_data.layers[1].objects[0]);
   player.maxjumpcount = 3;
   monster = createEntity(level_data.layers[1].objects[1]);
+  monster.maxjumpcount = 3;
   gun = {
     angle: 0.001,
     firing: false,

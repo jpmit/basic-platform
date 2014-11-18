@@ -6,7 +6,7 @@ astar = require './astar'
 _path    = null
 
 pgraph   = null # the platform graph
-_physics = null
+physics = null
 
 module.exports.getPlatformGraph = () ->
   pgraph
@@ -14,8 +14,7 @@ module.exports.getPlatformGraph = () ->
 # called in setup
 module.exports.preProcess = (level) ->
   # the physics for this level
-  _physics = new PhysicsFinder()
-  console.log _physics
+  physics = new PhysicsFinder()
   # create graph that connects platforms
   pgraph = new PlatformGraph(level)
   
@@ -26,9 +25,9 @@ class PhysicsFinder
     @xmax = 6
     # max number of tiles we can move (upwards) in y direction (with
     # any number of jumps)
-    @ymax = 10
+    @ymax = 9
 
-    @ymaxSingle = @ymax / 2
+    @ymaxSingle = @ymax / 3
 
 # rendering is currently for debugging
 module.exports.render = (ctx) ->
@@ -105,7 +104,7 @@ class Platform
 
   # min and max x values can reach / can be reached from this platform
   xMax: () ->
-    [Math.max(0, @xleft - _physics.xmax), Math.max(0, @xright + _physics.xmax)]
+    [Math.max(0, @xleft - physics.xmax), Math.max(0, @xright + physics.xmax)]
 
   # middle x tile
   midx: () ->
@@ -171,7 +170,7 @@ canReachPlatform = (p1, p2) ->
       #console.log "can drop from", p1.key(), "to", p2.key()
       return true
     # can we jump onto it?
-    if p2.y + _physics.ymax > p1.y
+    if p2.y + physics.ymax > p1.y
       #console.log "can jump from", p1.key(), "to", p2.key()            
       return true
   false
@@ -240,7 +239,9 @@ PlatformGraph = class PlatformGraph
           ptype = _TYPE_JUMP
 
           # how many jumps are needed? (either 1 or 2 currently)
-          if p1.y > p2.y + _physics.ymaxSingle
+          if p1.y > p2.y + 2 * physics.ymaxSingle
+            njumps = 3
+          else if p1.y > p2.y + physics.ymaxSingle
             njumps = 2
           else
             njumps = 1

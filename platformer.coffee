@@ -90,6 +90,7 @@ setup = ->
   player.maxjumpcount = 3
 
   monster = createEntity level_data.layers[1].objects[1]
+  monster.maxjumpcount = 3
 
   # added gun with rudimentary aiming with up and down arrow keys;
   # angle is in radians clockwise from horizontal
