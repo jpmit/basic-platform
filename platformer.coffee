@@ -11,7 +11,8 @@ raf           = require 'raf'
 render        = require './modules/renderer'
 time          = require './modules/time'
 unitVector    = require './modules/v2-unit'
-
+pathfinder    = require './modules/physics-pathfinder'
+AiController  = require './modules/ai-controller'
 
 canvas = document.getElementById 'canvas'
 ctx    = canvas.getContext '2d'
@@ -25,6 +26,7 @@ monsters = []
 gun = null
 bullet = null
 bulletUpdates = 3
+aicontrollers = []
 
 onkey = (ev, key, down) ->
   switch key
@@ -88,14 +90,21 @@ setup = ->
   player.maxjumpcount = 3
 
   monster = createEntity level_data.layers[1].objects[1]
+  monster.maxjumpcount = 3
 
   # added gun with rudimentary aiming with up and down arrow keys;
   # angle is in radians clockwise from horizontal
   gun = { angle: 0.001 , firing: false, sensitivity: 5}
 
+  # pre-process the level for pathfinding (this must be done before
+  # creating aicontrollers)
+  pathfinder.preProcess(level)
+
   # list of all entities other than the player entity
   monsters = [ monster ]
 
+  # each non-player entity (monster) has an 'AiController'
+  aicontrollers = [ new AiController(monster, player) ]
 
 frame = ->
   now = time()
@@ -114,7 +123,11 @@ frame = ->
   while dt > c.STEP
     dt = dt - c.STEP
     player.step level, c.STEP
-    monster.step(level, c.STEP) for monster in monsters 
+
+    ai.step() for ai in aicontrollers
+    
+    monster.step(level, c.STEP) for monster in monsters
+    
     # update the aiming of the gun
     bulletPhysics.updateGun gun, c.STEP
     
@@ -129,6 +142,8 @@ frame = ->
     collide.entityCollide(player, monster) for monster in monsters
 
   render ctx, player, monsters, gun, bullet, level
+
+  
   last = now
   raf frame, canvas
 

@@ -1,5 +1,5 @@
-c = require './constants'
-
+c          = require './constants'
+pathfinder = require './physics-pathfinder'
 
 renderLevel = (ctx, level) ->
   for y in [0..level.rows-1]
@@ -53,3 +53,5 @@ module.exports = (ctx, me, enemies, gun, bullet, level) ->
 
   # draw the bullet (if there is one)
   drawAngle ctx, bullet
+
+  pathfinder.render ctx
