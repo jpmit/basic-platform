@@ -1,5 +1,7 @@
+AiController  = require './modules/ai-controller'
 Entity        = require './modules/entity'
 Level         = require './modules/level'
+PlatformGraph = require('./modules/physics-pathfinder').PlatformGraph
 RigidBody     = require './modules/mixin-rigid-body'
 assign        = require 'lodash.assign'
 bulletPhysics = require './modules/physics-bullet'
@@ -11,8 +13,7 @@ raf           = require 'raf'
 render        = require './modules/renderer'
 time          = require './modules/time'
 unitVector    = require './modules/v2-unit'
-pathfinder    = require './modules/physics-pathfinder'
-AiController  = require './modules/ai-controller'
+
 
 canvas = document.getElementById 'canvas'
 ctx    = canvas.getContext '2d'
@@ -27,6 +28,7 @@ gun = null
 bullet = null
 bulletUpdates = 3
 aicontrollers = []
+graph = null
 
 onkey = (ev, key, down) ->
   switch key
@@ -98,7 +100,7 @@ setup = ->
 
   # pre-process the level for pathfinding (this must be done before
   # creating aicontrollers)
-  pathfinder.preProcess(level)
+  graph = new PlatformGraph level
 
   # list of all entities other than the player entity
   monsters = [ monster ]
@@ -124,7 +126,7 @@ frame = ->
     dt = dt - c.STEP
     player.step level, c.STEP
 
-    ai.step() for ai in aicontrollers
+    ai.step(graph) for ai in aicontrollers
     
     monster.step(level, c.STEP) for monster in monsters
     
@@ -141,7 +143,7 @@ frame = ->
     # detect (and handle) collision between player and other entities
     collide.entityCollide(player, monster) for monster in monsters
 
-  render ctx, player, monsters, gun, bullet, level
+  render ctx, player, monsters, gun, bullet, level, graph
 
   
   last = now

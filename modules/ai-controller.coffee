@@ -40,7 +40,6 @@ class PathController
 # (typically player)
 class AiController
   constructor: (@entity1, @entity2) ->
-    @pgraph = pathfinder.getPlatformGraph()
     # platform indices that tell us which platform entity1 and entity2
     # *were last seen on* (they may not actually be currently on these
     # platforms, since one entity may be e.g. mid jump)
@@ -90,18 +89,18 @@ class AiController
     else
       @pController.step()
 
-  step: ->
+  step: (pgraph) ->
     # figure out which platforms entity1 and entity2 are on
-    p1Index = @pgraph.getPlatformIndexForEntity(@entity1)
-    p2Index = @pgraph.getPlatformIndexForEntity(@entity2)
-    console.log p1Index, p2Index
+    p1Index = pgraph.getPlatformIndexForEntity @entity1
+    p2Index = pgraph.getPlatformIndexForEntity @entity2
+    #console.log p1Index, p2Index
     # only perform pathfinding if at least one platform has changed
     if (p1Index != @p1Index) or (p2Index != @p2Index)
       # indices can be null if entity not on platform
       if (p1Index != null and p2Index != null)
         # compute new path from entity1 to entity2
-        p2Pos = @pgraph.getEntityPosForPlatform(@entity2)
-        @path = pathfinder.findpath @entity1, p2Pos
+        p2Pos = pgraph.getEntityPosForPlatform @entity2
+        @path = pgraph.findpath @entity1, p2Pos
         @reachedTransitionPoint = false
         @p1Index = p1Index
         @p2Index = p2Index
@@ -109,7 +108,7 @@ class AiController
           # get transition point to next platform
           thisPlatform = @path[0]
           nextPlatform = @path[1]
-          @transPoint = @pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key())
+          @transPoint = pgraph.getTransitionPoint thisPlatform.key(), nextPlatform.key()
           @transX = @transPoint.getXCoord()
 
     # set controls of entity1 for later simplicity

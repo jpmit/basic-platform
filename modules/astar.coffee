@@ -57,7 +57,7 @@ module.exports.Astar = class AStar
       @closedNodes[node.key()] = node
 
       # Expand our current node
-      for n in node.getAdjacentNodes() when (!@closedNodes[n.key()]) && (!@openNodes[n.key()]) 
+      for n in node.neighbors when (!@closedNodes[n.key()]) && (!@openNodes[n.key()]) 
         # console.log(n.key())
         n.f = @heuristic(n, destination)
         n.parentKey = node.key()

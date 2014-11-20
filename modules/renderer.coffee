@@ -25,7 +25,7 @@ drawAngle = (ctx, sprite) ->
   ctx.restore();
 
 
-module.exports = (ctx, me, enemies, gun, bullet, level) ->
+module.exports = (ctx, me, enemies, gun, bullet, level, pgraph) ->
   ctx.clearRect 0, 0, level.width, level.height
 
   renderLevel ctx, level
@@ -54,4 +54,4 @@ module.exports = (ctx, me, enemies, gun, bullet, level) ->
   # draw the bullet (if there is one)
   drawAngle ctx, bullet
 
-  pathfinder.render ctx
+  pgraph.render ctx

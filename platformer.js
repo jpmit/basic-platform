@@ -229,7 +229,6 @@ AiController = (function() {
   function AiController(entity1, entity2) {
     this.entity1 = entity1;
     this.entity2 = entity2;
-    this.pgraph = pathfinder.getPlatformGraph();
     this.p1Index = null;
     this.p2Index = null;
     this.path = null;
@@ -277,22 +276,21 @@ AiController = (function() {
     }
   };
 
-  AiController.prototype.step = function() {
+  AiController.prototype.step = function(pgraph) {
     var nextPlatform, p1Index, p2Index, p2Pos, thisPlatform;
-    p1Index = this.pgraph.getPlatformIndexForEntity(this.entity1);
-    p2Index = this.pgraph.getPlatformIndexForEntity(this.entity2);
-    console.log(p1Index, p2Index);
+    p1Index = pgraph.getPlatformIndexForEntity(this.entity1);
+    p2Index = pgraph.getPlatformIndexForEntity(this.entity2);
     if ((p1Index !== this.p1Index) || (p2Index !== this.p2Index)) {
       if (p1Index !== null && p2Index !== null) {
-        p2Pos = this.pgraph.getEntityPosForPlatform(this.entity2);
-        this.path = pathfinder.findpath(this.entity1, p2Pos);
+        p2Pos = pgraph.getEntityPosForPlatform(this.entity2);
+        this.path = pgraph.findpath(this.entity1, p2Pos);
         this.reachedTransitionPoint = false;
         this.p1Index = p1Index;
         this.p2Index = p2Index;
         if (this.path.length > 1) {
           thisPlatform = this.path[0];
           nextPlatform = this.path[1];
-          this.transPoint = this.pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key());
+          this.transPoint = pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key());
           this.transX = this.transPoint.getXCoord();
         }
       }
@@ -356,7 +354,7 @@ module.exports.Astar = AStar = (function() {
       }
       delete this.openNodes[node.key()];
       this.closedNodes[node.key()] = node;
-      _ref1 = node.getAdjacentNodes();
+      _ref1 = node.neighbors;
       for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
         n = _ref1[_i];
         if (!((!this.closedNodes[n.key()]) && (!this.openNodes[n.key()]))) {
@@ -1024,7 +1022,7 @@ module.exports.stepY = function(entity, level, dt) {
 
 
 },{"./clamp":"/Users/michaelreinstein/wwwroot/basic-platform/modules/clamp.coffee","./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics-pathfinder.coffee":[function(require,module,exports){
-var PhysicsFinder, Platform, PlatformGraph, TransitionPoint, astar, c, canReachPlatform, _DIR_LEFT, _DIR_RIGHT, _TYPE_FALL, _TYPE_JUMP, _path, _pgraph, _physics,
+var PhysicsFinder, Platform, PlatformGraph, TransitionPoint, astar, c, _DIR_LEFT, _DIR_RIGHT, _TYPE_FALL, _TYPE_JUMP, _path, _physics,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 c = require('./constants');
@@ -1033,18 +1031,15 @@ astar = require('./astar');
 
 _path = null;
 
-_pgraph = null;
-
 _physics = null;
 
-module.exports.getPlatformGraph = function() {
-  return _pgraph;
-};
+_TYPE_JUMP = "jump";
 
-module.exports.preProcess = function(level) {
-  _physics = new PhysicsFinder();
-  return _pgraph = new PlatformGraph(level);
-};
+_TYPE_FALL = "fall";
+
+_DIR_LEFT = "left";
+
+_DIR_RIGHT = "right";
 
 PhysicsFinder = (function() {
   function PhysicsFinder() {
@@ -1057,39 +1052,33 @@ PhysicsFinder = (function() {
 
 })();
 
+_physics = new PhysicsFinder();
+
 Platform = (function() {
   function Platform(id, xleft, xright, y) {
     this.id = id;
     this.xleft = xleft;
     this.xright = xright;
     this.y = y;
+    this.neighbors = [];
   }
 
-  Platform.prototype.overlap = function(xleft, xright) {
-    return !(this.xright < xleft || this.xleft > xright);
-  };
-
-  Platform.prototype.xMax = function() {
-    return [Math.max(0, this.xleft - _physics.xmax), Math.max(0, this.xright + _physics.xmax)];
-  };
-
-  Platform.prototype.midx = function() {
-    return (this.xleft + this.xright) / 2;
-  };
-
-  Platform.prototype.xInPlatform = function(tx) {
-    if (this.xleft < tx && this.xright > tx) {
-      return true;
+  Platform.prototype.canReachPlatform = function(p2) {
+    var leftx, rightx, _ref;
+    _ref = this.xMax(), leftx = _ref[0], rightx = _ref[1];
+    if (p2.overlap(leftx, rightx)) {
+      if (p2.y > this.y) {
+        return true;
+      }
+      if (p2.y + _physics.ymax > this.y) {
+        return true;
+      }
     }
     return false;
   };
 
-  Platform.prototype.key = function() {
-    return this.id;
-  };
-
-  Platform.prototype.getAdjacentNodes = function() {
-    return _pgraph.getNeighbors(this.id);
+  Platform.prototype.equals = function(p2) {
+    return this.key() === p2.key();
   };
 
   Platform.prototype.heuristicDistance = function(p2) {
@@ -1099,25 +1088,32 @@ Platform = (function() {
     return dx * dx + dy * dy;
   };
 
-  Platform.prototype.equals = function(p2) {
-    return this.key() === p2.key();
+  Platform.prototype.key = function() {
+    return this.id;
+  };
+
+  Platform.prototype.midx = function() {
+    return (this.xleft + this.xright) / 2;
+  };
+
+  Platform.prototype.overlap = function(xleft, xright) {
+    return !(this.xright < xleft || this.xleft > xright);
+  };
+
+  Platform.prototype.xInPlatform = function(tx) {
+    if (this.xleft < tx && this.xright > tx) {
+      return true;
+    }
+    return false;
+  };
+
+  Platform.prototype.xMax = function() {
+    return [Math.max(0, this.xleft - _physics.xmax), Math.max(0, this.xright + _physics.xmax)];
   };
 
   return Platform;
 
 })();
-
-_TYPE_JUMP = "jump";
-
-_TYPE_FALL = "fall";
-
-_DIR_LEFT = "left";
-
-_DIR_RIGHT = "right";
-
-module.exports.DIR_LEFT = _DIR_LEFT;
-
-module.exports.DIR_RIGHT = _DIR_RIGHT;
 
 TransitionPoint = (function() {
   function TransitionPoint(type, dir, tx, p1, p2, njump) {
@@ -1137,49 +1133,152 @@ TransitionPoint = (function() {
 
 })();
 
-canReachPlatform = function(p1, p2) {
-  var leftx, rightx, _ref;
-  _ref = p1.xMax(), leftx = _ref[0], rightx = _ref[1];
-  if (p2.overlap(leftx, rightx)) {
-    if (p2.y > p1.y) {
-      return true;
-    }
-    if (p2.y + _physics.ymax > p1.y) {
-      return true;
-    }
-  }
-  return false;
-};
-
 PlatformGraph = (function() {
   function PlatformGraph(level) {
-    var i, j, neighbors, p1, p2, platforms, pneighs, _i, _j, _ref, _ref1;
+    var i, j, p1, p2, platforms, _i, _j, _ref, _ref1;
     platforms = this._getAllPlatforms(level);
-    neighbors = [];
     for (i = _i = 0, _ref = platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
-      pneighs = [];
       p1 = platforms[i];
       for (j = _j = 0, _ref1 = platforms.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; j = 0 <= _ref1 ? ++_j : --_j) {
         if (i !== j) {
           p2 = platforms[j];
-          if (canReachPlatform(p1, p2)) {
-            pneighs.push(p2);
+          if (p1.canReachPlatform(p2)) {
+            p1.neighbors.push(p2);
           }
         }
       }
-      neighbors.push(pneighs);
     }
     this.platforms = platforms;
-    this.neighbors = neighbors;
     this.transitionPoints = this._getTransitionPoints();
   }
+
+  PlatformGraph.prototype.findpath = function(entity, destination) {
+    var a, pnum1, pnum2;
+    pnum1 = this.getPlatformIndexForEntity(entity);
+    pnum2 = this.getPlatformIndexForPosition(destination);
+    if ((pnum1 === null) || (pnum2 === null)) {
+      return null;
+    }
+    a = new astar.Astar;
+    return _path = a.findPath(this.platforms[pnum1], this.platforms[pnum2]);
+  };
+
+  PlatformGraph.prototype.getEntityPosForPlatform = function(entity) {
+    return {
+      x: entity.x + entity.width / 2,
+      y: entity.ytile * c.TILE
+    };
+  };
+
+  PlatformGraph.prototype.getPlatformIndexForEntity = function(entity) {
+    if (!entity.onfloor) {
+      return null;
+    }
+    return this.getPlatformIndexForPosition(this.getEntityPosForPlatform(entity));
+  };
+
+  PlatformGraph.prototype.getPlatformIndexForPosition = function(pos) {
+    var p, pnum, tx, ty, _i, _ref;
+    ty = Math.floor(pos.y / c.TILE);
+    tx = Math.floor(pos.x / c.TILE);
+    for (pnum = _i = 0, _ref = this.platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; pnum = 0 <= _ref ? ++_i : --_i) {
+      p = this.platforms[pnum];
+      if (p.y === ty) {
+        if (tx >= p.xleft && tx <= p.xright) {
+          return pnum;
+        }
+      }
+    }
+    return null;
+  };
 
   PlatformGraph.prototype.getTransitionPoint = function(k1, k2) {
     return this.transitionPoints[k1][k2];
   };
 
+  PlatformGraph.prototype.render = function(ctx) {
+    var cx, cy, i, index, j, platforms, seen, tp, tpoints, xt, yt, _i, _j, _k, _l, _ref, _ref1, _ref2, _ref3;
+    ctx.save();
+    ctx.font = "30px white Georgia";
+    ctx.fillStyle = "white";
+    platforms = this.platforms;
+    for (i = _i = 0, _ref = platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
+      xt = (platforms[i].xleft + platforms[i].xright) / 2;
+      yt = platforms[i].y;
+      ctx.fillText(i, xt * c.TILE, yt * c.TILE);
+    }
+    tpoints = this.transitionPoints;
+    for (i = _j = 0, _ref1 = tpoints.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
+      tp = tpoints[i];
+      seen = {};
+      for (j = _k = 0, _ref2 = tp.length - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; j = 0 <= _ref2 ? ++_k : --_k) {
+        if (tp[j] !== null) {
+          xt = tp[j].tx;
+          yt = platforms[i].y;
+          if (tp[j].type === "fall") {
+            ctx.fillStyle = '#ff0000';
+          } else {
+            ctx.fillStyle = '#00ff00';
+          }
+          cx = xt * c.TILE;
+          cy = yt * c.TILE;
+          index = cx + "," + cy;
+          if (index in seen) {
+            cy = cy + seen[index] * c.TILE;
+            seen[index] = seen[index] + 1;
+          } else {
+            seen[index] = 1;
+          }
+          ctx.fillRect(cx, cy, 4, 4);
+          ctx.fillText(this.platforms[j].key(), cx, cy);
+        }
+      }
+    }
+    ctx.strokeStyle = '#ff0000';
+    ctx.lineWidth = 10;
+    if (_path !== null && _path.length > 1) {
+      ctx.beginPath();
+      for (i = _l = 0, _ref3 = _path.length - 2; 0 <= _ref3 ? _l <= _ref3 : _l >= _ref3; i = 0 <= _ref3 ? ++_l : --_l) {
+        ctx.moveTo(_path[i].midx() * c.TILE, _path[i].y * c.TILE);
+        ctx.lineTo(_path[i + 1].midx() * c.TILE, _path[i + 1].y * c.TILE);
+      }
+      ctx.stroke();
+    }
+    return ctx.restore();
+  };
+
+  PlatformGraph.prototype._getAllPlatforms = function(level) {
+    var col, platforms, row, t, xend, xstart, y, _i, _j, _ref, _ref1;
+    platforms = [];
+    xstart = null;
+    y = null;
+    for (row = _i = 0, _ref = level.rows - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; row = 0 <= _ref ? ++_i : --_i) {
+      for (col = _j = 0, _ref1 = level.cols - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; col = 0 <= _ref1 ? ++_j : --_j) {
+        t = level.tileToValue(col, row);
+        if (__indexOf.call(c.COLTILES, t) >= 0 && t !== c.BTILE) {
+          if (xstart === null) {
+            xstart = col;
+            y = row;
+          }
+        } else {
+          if (xstart !== null) {
+            xend = col - 1;
+            platforms.push(new Platform(platforms.length, xstart, xend, y));
+            xstart = null;
+          }
+        }
+      }
+      if (xstart !== null) {
+        xend = level.cols - 1;
+        platforms.push(new Platform(platforms.length, xstart, xend, y));
+        xstart = null;
+      }
+    }
+    return platforms;
+  };
+
   PlatformGraph.prototype._getTransitionPoints = function() {
-    var i, j, njumps, p1, p2, pdir, ptype, px, tp, transitionPoints, x, xleft, xright, _i, _j, _k, _l, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
+    var i, j, njumps, p1, p2, pdir, ptype, px, tp, transitionPoints, x, xleft, xright, _i, _j, _k, _l, _len, _len1, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
     transitionPoints = [];
     for (i = _i = 0, _ref = this.platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
       transitionPoints.push([]);
@@ -1187,11 +1286,13 @@ PlatformGraph = (function() {
         transitionPoints[i].push(null);
       }
     }
-    for (i = _k = 0, _ref2 = this.platforms.length - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; i = 0 <= _ref2 ? ++_k : --_k) {
-      p1 = this.platforms[i];
+    _ref2 = this.platforms;
+    for (_k = 0, _len = _ref2.length; _k < _len; _k++) {
+      p1 = _ref2[_k];
       tp = [];
-      for (j = _l = 0, _ref3 = this.neighbors[i].length - 1; 0 <= _ref3 ? _l <= _ref3 : _l >= _ref3; j = 0 <= _ref3 ? ++_l : --_l) {
-        p2 = this.neighbors[i][j];
+      _ref3 = p1.neighbors;
+      for (_l = 0, _len1 = _ref3.length; _l < _len1; _l++) {
+        p2 = _ref3[_l];
         if (p2.y > p1.y) {
           ptype = _TYPE_FALL;
           if (p2.xleft < p1.xleft || p2.xInPlatform(p1.xleft)) {
@@ -1246,138 +1347,15 @@ PlatformGraph = (function() {
     return transitionPoints;
   };
 
-  PlatformGraph.prototype.getNeighbors = function(pnum) {
-    return this.neighbors[pnum];
-  };
-
-  PlatformGraph.prototype._getAllPlatforms = function(level) {
-    var col, platforms, row, t, xend, xstart, y, _i, _j, _ref, _ref1;
-    platforms = [];
-    xstart = null;
-    y = null;
-    for (row = _i = 0, _ref = level.rows - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; row = 0 <= _ref ? ++_i : --_i) {
-      for (col = _j = 0, _ref1 = level.cols - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; col = 0 <= _ref1 ? ++_j : --_j) {
-        t = level.tileToValue(col, row);
-        if (__indexOf.call(c.COLTILES, t) >= 0 && t !== c.BTILE) {
-          if (xstart === null) {
-            xstart = col;
-            y = row;
-          }
-        } else {
-          if (xstart !== null) {
-            xend = col - 1;
-            platforms.push(new Platform(platforms.length, xstart, xend, y));
-            xstart = null;
-          }
-        }
-      }
-      if (xstart !== null) {
-        xend = level.cols - 1;
-        platforms.push(new Platform(platforms.length, xstart, xend, y));
-        xstart = null;
-      }
-    }
-    return platforms;
-  };
-
-  PlatformGraph.prototype.getEntityPosForPlatform = function(entity) {
-    return {
-      x: entity.x + entity.width / 2,
-      y: entity.ytile * c.TILE
-    };
-  };
-
-  PlatformGraph.prototype.getPlatformIndexForEntity = function(entity) {
-    if (!entity.onfloor) {
-      return null;
-    }
-    return this.getPlatformIndexForPosition(this.getEntityPosForPlatform(entity));
-  };
-
-  PlatformGraph.prototype.getPlatformIndexForPosition = function(pos) {
-    var p, pnum, tx, ty, _i, _ref;
-    ty = Math.floor(pos.y / c.TILE);
-    tx = Math.floor(pos.x / c.TILE);
-    for (pnum = _i = 0, _ref = this.platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; pnum = 0 <= _ref ? ++_i : --_i) {
-      p = this.platforms[pnum];
-      if (p.y === ty) {
-        if (tx >= p.xleft && tx <= p.xright) {
-          return pnum;
-        }
-      }
-    }
-    return null;
-  };
-
   return PlatformGraph;
 
 })();
 
-module.exports.findpath = function(entity, destination) {
-  var a, pnum1, pnum2;
-  pnum1 = _pgraph.getPlatformIndexForEntity(entity);
-  pnum2 = _pgraph.getPlatformIndexForPosition(destination);
-  if ((pnum1 === null) || (pnum2 === null)) {
-    return null;
-  }
-  a = new astar.Astar;
-  _path = a.findPath(_pgraph.platforms[pnum1], _pgraph.platforms[pnum2]);
-  return _path;
-};
+module.exports.PlatformGraph = PlatformGraph;
 
-module.exports.render = function(ctx) {
-  var cx, cy, i, index, j, neighbors, platforms, seen, tp, tpoints, xt, yt, _i, _j, _k, _l, _ref, _ref1, _ref2, _ref3;
-  ctx.save();
-  ctx.font = "30px white Georgia";
-  ctx.fillStyle = "white";
-  platforms = _pgraph.platforms;
-  for (i = _i = 0, _ref = platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
-    xt = (platforms[i].xleft + platforms[i].xright) / 2;
-    yt = platforms[i].y;
-    ctx.fillText(i, xt * c.TILE, yt * c.TILE);
-  }
-  if (_pgraph !== null) {
-    tpoints = _pgraph.transitionPoints;
-    neighbors = _pgraph.neighbors;
-    for (i = _j = 0, _ref1 = tpoints.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
-      tp = tpoints[i];
-      seen = {};
-      for (j = _k = 0, _ref2 = tp.length - 1; 0 <= _ref2 ? _k <= _ref2 : _k >= _ref2; j = 0 <= _ref2 ? ++_k : --_k) {
-        if (tp[j] !== null) {
-          xt = tp[j].tx;
-          yt = platforms[i].y;
-          if (tp[j].type === "fall") {
-            ctx.fillStyle = '#ff0000';
-          } else {
-            ctx.fillStyle = '#00ff00';
-          }
-          cx = xt * c.TILE;
-          cy = yt * c.TILE;
-          index = cx + "," + cy;
-          if (index in seen) {
-            cy = cy + seen[index] * c.TILE;
-            seen[index] = seen[index] + 1;
-          } else {
-            seen[index] = 1;
-          }
-          ctx.fillRect(cx, cy, 4, 4);
-          ctx.fillText(_pgraph.platforms[j].key(), cx, cy);
-        }
-      }
-    }
-  }
-  ctx.strokeStyle = '#ff0000';
-  ctx.lineWidth = 10;
-  if (_path !== null && _path.length > 1) {
-    ctx.beginPath();
-    for (i = _l = 0, _ref3 = _path.length - 2; 0 <= _ref3 ? _l <= _ref3 : _l >= _ref3; i = 0 <= _ref3 ? ++_l : --_l) {
-      ctx.moveTo(_path[i].midx() * c.TILE, _path[i].y * c.TILE);
-      ctx.lineTo(_path[i + 1].midx() * c.TILE, _path[i + 1].y * c.TILE);
-    }
-    ctx.stroke();
-  }
-  return ctx.restore();
-};
+module.exports.DIR_LEFT = _DIR_LEFT;
+
+module.exports.DIR_RIGHT = _DIR_RIGHT;
 
 
 
@@ -1427,7 +1405,7 @@ drawAngle = function(ctx, sprite) {
   return ctx.restore();
 };
 
-module.exports = function(ctx, me, enemies, gun, bullet, level) {
+module.exports = function(ctx, me, enemies, gun, bullet, level, pgraph) {
   var entity, gunx, guny, _i, _j, _len, _len1;
   ctx.clearRect(0, 0, level.width, level.height);
   renderLevel(ctx, level);
@@ -1448,7 +1426,7 @@ module.exports = function(ctx, me, enemies, gun, bullet, level) {
   guny = me.y + me.height / 2 - Math.cos(gun.angle) * 50;
   ctx.fillRect(gunx - 2, guny - 2, 4, 4);
   drawAngle(ctx, bullet);
-  return pathfinder.render(ctx);
+  return pgraph.render(ctx);
 };
 
 
@@ -4451,7 +4429,7 @@ function xor(a, b) {
 }
 }).call(this,require("buffer").Buffer)
 },{"buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/aesid.json":[function(require,module,exports){
-module.exports={"2.16.840.1.101.3.4.1.1": "aes-128-ecb",
+module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports={"2.16.840.1.101.3.4.1.1": "aes-128-ecb",
 "2.16.840.1.101.3.4.1.2": "aes-128-cbc",
 "2.16.840.1.101.3.4.1.3": "aes-128-ofb",
 "2.16.840.1.101.3.4.1.4": "aes-128-cfb",
@@ -12244,7 +12222,7 @@ if (typeof Object.create === 'function') {
 }
 
 },{}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/package.json":[function(require,module,exports){
-module.exports={
+module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports={
   "name": "elliptic",
   "version": "0.15.14",
   "description": "EC cryptography",
@@ -12952,7 +12930,7 @@ MillerRabin.prototype.getDivisor = function getDivisor(n, k) {
 },{"bn.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/diffie-hellman/node_modules/bn.js/lib/bn.js","brorand":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/diffie-hellman/node_modules/miller-rabin/node_modules/brorand/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/diffie-hellman/node_modules/miller-rabin/node_modules/brorand/index.js":[function(require,module,exports){
 module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/brorand/index.js")
 },{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/brorand/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/brorand/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/diffie-hellman/primes.json":[function(require,module,exports){
-module.exports={
+module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports={
     "modp1": {
         "gen": "02",
         "prime": "ffffffffffffffffc90fdaa22168c234c4c6628b80dc1cd129024e088a67cc74020bbea63b139b22514a08798e3404ddef9519b3cd3a431b302b0a6df25f14374fe1356d6d51c245e485b576625e7ec6f44c42e9a63a3620ffffffffffffffff"
@@ -17964,11 +17942,7 @@ module.exports = baseCreateWrapper;
 
 },{"lodash._basecreate":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/index.js","lodash._setbinddata":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js","lodash._slice":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js","lodash.isobject":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
 module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js":[function(require,module,exports){
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js":[function(require,module,exports){
 module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js")
 },{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js":[function(require,module,exports){
 /**
@@ -18114,8 +18088,8 @@ module.exports = support;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"lodash._isnative":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -18176,8 +18150,8 @@ var keys = !nativeKeys ? shimKeys : function(object) {
 module.exports = keys;
 
 },{"lodash._isnative":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._isnative/index.js","lodash._shimkeys":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js","lodash.isobject":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -18218,8 +18192,8 @@ var shimKeys = function(object) {
 module.exports = shimKeys;
 
 },{"lodash._objecttypes":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -18368,41 +18342,7 @@ module.exports = forEach;
 
 },{"lodash._basecreatecallback":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/index.js","lodash.forown":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/index.js":[function(require,module,exports){
 module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/index.js":[function(require,module,exports){
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -18458,11 +18398,7 @@ module.exports = forOwn;
 module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js")
 },{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash.keys/index.js":[function(require,module,exports){
 module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash.keys/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/index.js":[function(require,module,exports){
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -18558,50 +18494,14 @@ var forIn = function(collection, callback, thisArg) {
 module.exports = forIn;
 
 },{"lodash._basecreatecallback":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/index.js","lodash._objecttypes":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._objecttypes/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.isfunction/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash._objecttypes/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash._objecttypes/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash._objecttypes/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.isfunction/index.js":[function(require,module,exports){
 module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js")
 },{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.isobject/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.isobject/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/node-uuid/uuid.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/node-uuid/uuid.js":[function(require,module,exports){
 (function (Buffer){
 //     uuid.js
 //
@@ -18973,11 +18873,15 @@ module.exports.cancel = function() {
 
 }).call(this,require('_process'))
 },{"_process":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/process/browser.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/platformer.coffee":[function(require,module,exports){
-var AiController, Entity, Level, RigidBody, aicontrollers, assign, bullet, bulletPhysics, bulletUpdates, c, canvas, collide, createEntity, ctx, dt, frame, fs, gun, last, level, mixin, monster, monsters, now, onkey, pathfinder, player, raf, render, setup, time, unitVector;
+var AiController, Entity, Level, PlatformGraph, RigidBody, aicontrollers, assign, bullet, bulletPhysics, bulletUpdates, c, canvas, collide, createEntity, ctx, dt, frame, fs, graph, gun, last, level, mixin, monster, monsters, now, onkey, player, raf, render, setup, time, unitVector;
+
+AiController = require('./modules/ai-controller');
 
 Entity = require('./modules/entity');
 
 Level = require('./modules/level');
+
+PlatformGraph = require('./modules/physics-pathfinder').PlatformGraph;
 
 RigidBody = require('./modules/mixin-rigid-body');
 
@@ -19000,10 +18904,6 @@ render = require('./modules/renderer');
 time = require('./modules/time');
 
 unitVector = require('./modules/v2-unit');
-
-pathfinder = require('./modules/physics-pathfinder');
-
-AiController = require('./modules/ai-controller');
 
 canvas = document.getElementById('canvas');
 
@@ -19030,6 +18930,8 @@ bullet = null;
 bulletUpdates = 3;
 
 aicontrollers = [];
+
+graph = null;
 
 onkey = function(ev, key, down) {
   switch (key) {
@@ -19100,7 +19002,7 @@ setup = function() {
     firing: false,
     sensitivity: 5
   };
-  pathfinder.preProcess(level);
+  graph = new PlatformGraph(level);
   monsters = [monster];
   return aicontrollers = [new AiController(monster, player)];
 };
@@ -19133,7 +19035,7 @@ frame = function() {
     player.step(level, c.STEP);
     for (_i = 0, _len = aicontrollers.length; _i < _len; _i++) {
       ai = aicontrollers[_i];
-      ai.step();
+      ai.step(graph);
     }
     for (_j = 0, _len1 = monsters.length; _j < _len1; _j++) {
       monster = monsters[_j];
@@ -19152,7 +19054,7 @@ frame = function() {
       collide.entityCollide(player, monster);
     }
   }
-  render(ctx, player, monsters, gun, bullet, level);
+  render(ctx, player, monsters, gun, bullet, level, graph);
   last = now;
   return raf(frame, canvas);
 };
