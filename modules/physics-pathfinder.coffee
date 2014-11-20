@@ -2,9 +2,6 @@ c     = require './constants'
 astar = require './astar'
 
 
-_path     = null # render ai path for debug purposes. delete later
-_physics  = null # game physics information (only used in this module)
-
 # types of transition points
 _TYPE_JUMP = "jump"
 _TYPE_FALL = "fall"
@@ -12,7 +9,6 @@ _TYPE_FALL = "fall"
 _DIR_LEFT = "left"
 _DIR_RIGHT = "right"
 
-  
 # placeholder currently for relevant pathfinding physics.
 class PhysicsFinder
   constructor: () ->
@@ -23,7 +19,9 @@ class PhysicsFinder
     @ymax = 9
     @ymaxSingle = @ymax / 3
 
-# the physics for this level
+_path    = null # render ai path for debug purposes. delete later
+
+# game physics information (only used in this module)
 _physics = new PhysicsFinder()
 
 
@@ -105,21 +103,7 @@ class TransitionPoint
 # 'transition points' between platforms.
 class PlatformGraph
   constructor: (level) ->
-    platforms = @_getAllPlatforms level
-    for i in [0..platforms.length - 1]
-      p1 = platforms[i]
-      for j in [0..platforms.length - 1]
-        if i != j
-          p2 = platforms[j]
-          # can we reach platform p2 *directly* starting from p1 under the game
-          # physics? Note p2 -> p1 does not imply p1 -> p2 (i.e., we create a directed graph)
-          # .
-          if p1.canReachPlatform(p2)
-            p1.neighbors.push p2
-    @platforms = platforms
-
-    # create 'transition points' for pairs of connected platforms
-    @transitionPoints = @_getTransitionPoints()
+    @update level
 
 
   # find path from entity1 to destination given a particular platform graph
@@ -225,6 +209,22 @@ class PlatformGraph
     ctx.restore()
 
 
+  update: (level) ->
+    platforms = @_getAllPlatforms level
+    for p1 in platforms
+      for p2 in platforms
+        if p1.id isnt p2.id
+          # can we reach platform p2 *directly* starting from p1 under the game
+          # physics? Note p2 -> p1 does not imply p1 -> p2 (i.e., we create a directed graph)
+          # .
+          if p1.canReachPlatform(p2)
+            p1.neighbors.push p2
+    @platforms = platforms
+
+    # create 'transition points' for pairs of connected platforms
+    @transitionPoints = @_getTransitionPoints()
+
+
   # return list of all platforms in level
   _getAllPlatforms: (level) ->
     # compute all platforms from the level data
@@ -260,10 +260,10 @@ class PlatformGraph
     # first create an empty transitionPoints 'matrix', where
     # transitionPoints[k1][k2] is either null or a TransitionPoint
     transitionPoints = []
-    for i in [0..@platforms.length - 1]
-      transitionPoints.push([])
-      for j in [0..@platforms.length - 1]
-        transitionPoints[i].push(null)
+    for p1 in @platforms
+      points = []
+      points.push(null) for p2 in @platforms
+      transitionPoints.push points
 
     # populate the matrix
     for p1 in @platforms
@@ -326,3 +326,4 @@ module.exports.PlatformGraph = PlatformGraph
 # these constants are needed by the ai module
 module.exports.DIR_LEFT = _DIR_LEFT
 module.exports.DIR_RIGHT = _DIR_RIGHT
+

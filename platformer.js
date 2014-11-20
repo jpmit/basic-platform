@@ -1029,10 +1029,6 @@ c = require('./constants');
 
 astar = require('./astar');
 
-_path = null;
-
-_physics = null;
-
 _TYPE_JUMP = "jump";
 
 _TYPE_FALL = "fall";
@@ -1051,6 +1047,8 @@ PhysicsFinder = (function() {
   return PhysicsFinder;
 
 })();
+
+_path = null;
 
 _physics = new PhysicsFinder();
 
@@ -1135,21 +1133,7 @@ TransitionPoint = (function() {
 
 PlatformGraph = (function() {
   function PlatformGraph(level) {
-    var i, j, p1, p2, platforms, _i, _j, _ref, _ref1;
-    platforms = this._getAllPlatforms(level);
-    for (i = _i = 0, _ref = platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
-      p1 = platforms[i];
-      for (j = _j = 0, _ref1 = platforms.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; j = 0 <= _ref1 ? ++_j : --_j) {
-        if (i !== j) {
-          p2 = platforms[j];
-          if (p1.canReachPlatform(p2)) {
-            p1.neighbors.push(p2);
-          }
-        }
-      }
-    }
-    this.platforms = platforms;
-    this.transitionPoints = this._getTransitionPoints();
+    this.update(level);
   }
 
   PlatformGraph.prototype.findpath = function(entity, destination) {
@@ -1247,6 +1231,24 @@ PlatformGraph = (function() {
     return ctx.restore();
   };
 
+  PlatformGraph.prototype.update = function(level) {
+    var p1, p2, platforms, _i, _j, _len, _len1;
+    platforms = this._getAllPlatforms(level);
+    for (_i = 0, _len = platforms.length; _i < _len; _i++) {
+      p1 = platforms[_i];
+      for (_j = 0, _len1 = platforms.length; _j < _len1; _j++) {
+        p2 = platforms[_j];
+        if (p1.id !== p2.id) {
+          if (p1.canReachPlatform(p2)) {
+            p1.neighbors.push(p2);
+          }
+        }
+      }
+    }
+    this.platforms = platforms;
+    return this.transitionPoints = this._getTransitionPoints();
+  };
+
   PlatformGraph.prototype._getAllPlatforms = function(level) {
     var col, platforms, row, t, xend, xstart, y, _i, _j, _ref, _ref1;
     platforms = [];
@@ -1278,20 +1280,25 @@ PlatformGraph = (function() {
   };
 
   PlatformGraph.prototype._getTransitionPoints = function() {
-    var i, j, njumps, p1, p2, pdir, ptype, px, tp, transitionPoints, x, xleft, xright, _i, _j, _k, _l, _len, _len1, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
+    var njumps, p1, p2, pdir, points, ptype, px, tp, transitionPoints, x, xleft, xright, _i, _j, _k, _l, _len, _len1, _len2, _len3, _m, _n, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
     transitionPoints = [];
-    for (i = _i = 0, _ref = this.platforms.length - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
-      transitionPoints.push([]);
-      for (j = _j = 0, _ref1 = this.platforms.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; j = 0 <= _ref1 ? ++_j : --_j) {
-        transitionPoints[i].push(null);
+    _ref = this.platforms;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      p1 = _ref[_i];
+      points = [];
+      _ref1 = this.platforms;
+      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+        p2 = _ref1[_j];
+        points.push(null);
       }
+      transitionPoints.push(points);
     }
     _ref2 = this.platforms;
-    for (_k = 0, _len = _ref2.length; _k < _len; _k++) {
+    for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
       p1 = _ref2[_k];
       tp = [];
       _ref3 = p1.neighbors;
-      for (_l = 0, _len1 = _ref3.length; _l < _len1; _l++) {
+      for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
         p2 = _ref3[_l];
         if (p2.y > p1.y) {
           ptype = _TYPE_FALL;
@@ -4429,7 +4436,7 @@ function xor(a, b) {
 }
 }).call(this,require("buffer").Buffer)
 },{"buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/aesid.json":[function(require,module,exports){
-module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports={"2.16.840.1.101.3.4.1.1": "aes-128-ecb",
+module.exports=module.exports=module.exports=module.exports={"2.16.840.1.101.3.4.1.1": "aes-128-ecb",
 "2.16.840.1.101.3.4.1.2": "aes-128-cbc",
 "2.16.840.1.101.3.4.1.3": "aes-128-ofb",
 "2.16.840.1.101.3.4.1.4": "aes-128-cfb",
@@ -12222,7 +12229,7 @@ if (typeof Object.create === 'function') {
 }
 
 },{}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/package.json":[function(require,module,exports){
-module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports={
+module.exports=module.exports=module.exports=module.exports={
   "name": "elliptic",
   "version": "0.15.14",
   "description": "EC cryptography",
@@ -12930,7 +12937,7 @@ MillerRabin.prototype.getDivisor = function getDivisor(n, k) {
 },{"bn.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/diffie-hellman/node_modules/bn.js/lib/bn.js","brorand":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/diffie-hellman/node_modules/miller-rabin/node_modules/brorand/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/diffie-hellman/node_modules/miller-rabin/node_modules/brorand/index.js":[function(require,module,exports){
 module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/brorand/index.js")
 },{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/brorand/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/brorand/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/diffie-hellman/primes.json":[function(require,module,exports){
-module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports={
+module.exports=module.exports=module.exports=module.exports={
     "modp1": {
         "gen": "02",
         "prime": "ffffffffffffffffc90fdaa22168c234c4c6628b80dc1cd129024e088a67cc74020bbea63b139b22514a08798e3404ddef9519b3cd3a431b302b0a6df25f14374fe1356d6d51c245e485b576625e7ec6f44c42e9a63a3620ffffffffffffffff"
