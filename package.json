@@ -12,6 +12,8 @@
     "browserify-shim": "^3.4.1",
     "coffeeify": "^0.7.0",
     "lodash.assign": "^2.4.1",
+    "lodash.mixin": "^2.4.1",
+    "node-uuid": "^1.4.1",
     "raf": "^2.0.1",
     "watchify": "^1.0.3"
   },
