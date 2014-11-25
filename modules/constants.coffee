@@ -19,7 +19,6 @@ FPS  = 60
 module.exports =
   TILE: TILE         # the size of each tile (in game pixels)
   METER    : TILE    # abitrary choice for 1m
-  BTILE    : 5       # boundary tile
   WTILE    : 6       # value of water tile
   LTILE    : 7       # value of ladder tile
   COLTILES : [1..5]  # values of tiles that are collidable

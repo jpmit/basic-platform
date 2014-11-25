@@ -231,10 +231,14 @@ class PlatformGraph
     platforms = []
     xstart = null
     y = null
-    for row in [0..level.rows - 1]
-      for col in [0..level.cols - 1]
+    # here we are assuming that the boundary of the level is a box
+    # surrounding the level, hence the indices (we don't allow the
+    # top row, or the two edge columns of the level to be part of
+    # platforms).
+    for row in [1..level.rows - 1]
+      for col in [1..level.cols - 2]
         t = level.tileToValue col, row
-        if t in c.COLTILES and t != c.BTILE
+        if t in c.COLTILES
           if (xstart == null)
             xstart = col
             y = row
@@ -249,7 +253,7 @@ class PlatformGraph
             
       # reached right hand side of screen, end platform if necessary
       if (xstart != null)
-        xend = level.cols - 1
+        xend = level.cols - 2
         platforms.push(new Platform(platforms.length, xstart, xend, y))
         xstart = null
         
