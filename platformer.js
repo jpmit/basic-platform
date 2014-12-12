@@ -1021,7 +1021,7 @@ module.exports.levelCollideX = function(entity, level, xnew) {
 };
 
 module.exports.levelCollideY = function(entity, level, ynew) {
-  var tentity, xold, xtile, xtileleft, xtileright, yold, ytilenew, ytileold, _i, _ref, _results;
+  var hitFloor, tentity, xold, xtile, xtileleft, xtileright, yold, ytilenew, ytileold, _i, _ref;
   xold = entity.x;
   yold = entity.y;
   entity.y = ynew;
@@ -1034,10 +1034,10 @@ module.exports.levelCollideY = function(entity, level, ynew) {
   } else {
     ytileold = ytilenew = null;
   }
+  hitFloor = false;
   if (ytileold !== ytilenew) {
     xtileleft = level.pixelToTile(xold);
     xtileright = level.pixelToTile(xold + entity.width - 1);
-    _results = [];
     for (xtile = _i = xtileleft; xtileleft <= xtileright ? _i <= xtileright : _i >= xtileright; xtile = xtileleft <= xtileright ? ++_i : --_i) {
       tentity = level.tileEntity(xtile, ytilenew);
       if (tentity && (_ref = tentity.value, __indexOf.call(c.COLTILES, _ref) >= 0)) {
@@ -1047,17 +1047,15 @@ module.exports.levelCollideY = function(entity, level, ynew) {
           entity.y = tentity.y + tentity.height;
         } else {
           entity.y = tentity.y - entity.height;
-          entity.onfloor = true;
           entity.ytile = ytilenew;
           entity.jumpcount = 0;
+          hitFloor = true;
         }
         break;
-      } else {
-        _results.push(void 0);
       }
     }
-    return _results;
   }
+  return entity.onfloor = hitFloor;
 };
 
 module.exports.entityCollide = function(entity1, entity2) {
@@ -3375,6 +3373,7 @@ module.exports = isArray || function (val) {
 
 },{}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/create-hash.js":[function(require,module,exports){
 (function (Buffer){
+'use strict';
 var createHash = require('sha.js')
 
 var md5 = require('./md5')
@@ -3461,6 +3460,7 @@ Hash.prototype.digest = function (enc) {
 }).call(this,require("buffer").Buffer)
 },{"./md5":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/md5.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","ripemd160":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/ripemd160/lib/ripemd160.js","sha.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/index.js","stream":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/stream-browserify/index.js","util":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/util/util.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/create-hmac.js":[function(require,module,exports){
 (function (Buffer){
+'use strict';
 var createHash = require('./create-hash')
 var Transform = require('stream').Transform;
 var inherits = require('util').inherits
@@ -3476,7 +3476,7 @@ function Hmac (alg, key) {
   this._opad = opad
   this._alg = alg
 
-  var blocksize = (alg === 'sha512') ? 128 : 64
+  var blocksize = (alg === 'sha512' || alg === 'sha384') ? 128 : 64
 
   key = this._key = !Buffer.isBuffer(key) ? new Buffer(key) : key
 
@@ -3530,6 +3530,7 @@ Hmac.prototype.digest = function (enc) {
 }).call(this,require("buffer").Buffer)
 },{"./create-hash":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/create-hash.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","stream":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/stream-browserify/index.js","util":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/util/util.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/helpers.js":[function(require,module,exports){
 (function (Buffer){
+'use strict';
 var intSize = 4;
 var zeroBuffer = new Buffer(intSize); zeroBuffer.fill(0);
 var chrsz = 8;
@@ -3568,6 +3569,7 @@ module.exports = { hash: hash };
 }).call(this,require("buffer").Buffer)
 },{"buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/index.js":[function(require,module,exports){
 (function (Buffer){
+'use strict';
 var rng = require('./rng')
 
 function error () {
@@ -3597,9 +3599,9 @@ function each(a, f) {
   for(var i in a)
     f(a[i], i)
 }
-
+var hashes = ['sha1', 'sha256', 'sha512', 'md5', 'rmd160'].concat(Object.keys(require('browserify-sign/algos')))
 exports.getHashes = function () {
-  return ['sha1', 'sha256', 'sha512', 'md5', 'rmd160']
+  return hashes;
 }
 
 var p = require('./pbkdf2')(exports)
@@ -3608,10 +3610,11 @@ exports.pbkdf2Sync = p.pbkdf2Sync
 require('browserify-aes/inject')(exports, module.exports);
 require('browserify-sign/inject')(module.exports, exports);
 require('diffie-hellman/inject')(exports, module.exports);
+require('create-ecdh/inject')(module.exports, exports);
 
 // the least I can do is make error messages for the rest of the node.js/crypto api.
 each([
-  'createCredentials',
+  'createCredentials', 'publicEncrypt', 'privateDecrypt'
 ], function (name) {
   exports[name] = function () {
     error('sorry,', name, 'is not implemented yet')
@@ -3619,7 +3622,8 @@ each([
 })
 
 }).call(this,require("buffer").Buffer)
-},{"./create-hash":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/create-hash.js","./create-hmac":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/create-hmac.js","./pbkdf2":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/pbkdf2.js","./rng":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/rng.js","browserify-aes/inject":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/inject.js","browserify-sign/inject":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/inject.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","diffie-hellman/inject":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/diffie-hellman/inject.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/md5.js":[function(require,module,exports){
+},{"./create-hash":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/create-hash.js","./create-hmac":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/create-hmac.js","./pbkdf2":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/pbkdf2.js","./rng":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/rng.js","browserify-aes/inject":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/inject.js","browserify-sign/algos":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/algos.js","browserify-sign/inject":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/inject.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","create-ecdh/inject":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/inject.js","diffie-hellman/inject":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/diffie-hellman/inject.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/md5.js":[function(require,module,exports){
+'use strict';
 /*
  * A JavaScript implementation of the RSA Data Security, Inc. MD5 Message
  * Digest Algorithm, as defined in RFC 1321.
@@ -4035,7 +4039,111 @@ AES.prototype._doCryptBlock = function(M, keySchedule, SUB_MIX, SBOX) {
 
   exports.AES = AES;
 }).call(this,require("buffer").Buffer)
-},{"buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/cipherBase.js":[function(require,module,exports){
+},{"buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/authCipher.js":[function(require,module,exports){
+(function (Buffer){
+var aes = require('./aes');
+var Transform = require('./cipherBase');
+var inherits = require('inherits');
+var GHASH = require('./ghash');
+var xor = require('./xor');
+inherits(StreamCipher, Transform);
+module.exports = StreamCipher;
+
+function StreamCipher(mode, key, iv, decrypt) {
+  if (!(this instanceof StreamCipher)) {
+    return new StreamCipher(mode, key, iv);
+  }
+  Transform.call(this);
+  this._finID = Buffer.concat([iv, new Buffer([0, 0, 0, 1])]);
+  iv = Buffer.concat([iv, new Buffer([0, 0, 0, 2])]);
+  this._cipher = new aes.AES(key);
+  this._prev = new Buffer(iv.length);
+  this._cache = new Buffer('');
+  this._secCache = new Buffer('');
+  this._decrypt = decrypt;
+  this._alen = 0;
+  this._len = 0;
+  iv.copy(this._prev);
+  this._mode = mode;
+  var h = new Buffer(4);
+  h.fill(0);
+  this._ghash = new GHASH(this._cipher.encryptBlock(h));
+  this._authTag = null;
+  this._called = false;
+}
+StreamCipher.prototype._transform = function (chunk, _, next) {
+  if (!this._called && this._alen) {
+    var rump = 16 - (this._alen % 16);
+    if (rump <16) {
+      rump = new Buffer(rump);
+      rump.fill(0);
+      this._ghash.update(rump);
+    }
+  }
+  this._called = true;
+  var out = this._mode.encrypt(this, chunk);
+  if (this._decrypt) {
+    this._ghash.update(chunk);
+  } else {
+    this._ghash.update(out);
+  }
+  this._len += chunk.length;
+  next(null, out);
+};
+StreamCipher.prototype._flush = function (next) {
+  if (this._decrypt && !this._authTag) {
+    throw new Error('Unsupported state or unable to authenticate data');
+  }
+  var tag = xor(this._ghash.final(this._alen * 8, this._len * 8), this._cipher.encryptBlock(this._finID));
+  if (this._decrypt) {
+    if (xorTest(tag, this._authTag)) {
+      throw new Error('Unsupported state or unable to authenticate data');
+    }
+  } else {
+    this._authTag = tag;
+  }
+  this._cipher.scrub();
+  next();
+};
+StreamCipher.prototype.getAuthTag = function getAuthTag () {
+  if (!this._decrypt && Buffer.isBuffer(this._authTag)) {
+    return this._authTag;
+  } else {
+    throw new Error('Attempting to get auth tag in unsupported state');
+  }
+};
+StreamCipher.prototype.setAuthTag = function setAuthTag (tag) {
+  if (this._decrypt) {
+    this._authTag = tag;
+  } else {
+    throw new Error('Attempting to set auth tag in unsupported state');
+  }
+};
+StreamCipher.prototype.setAAD = function setAAD (buf) {
+  if (!this._called) {
+    this._ghash.update(buf);
+    this._alen += buf.length;
+  } else {
+    throw new Error('Attempting to set AAD in unsupported state');
+  }
+};
+function xorTest(a, b) {
+  var out = 0;
+  if (a.length !== b.length) {
+    out++;
+  }
+  var len = Math.min(a.length, b.length);
+  var i = -1;
+  while (++i < len) {
+    out += (a[i] ^ b[i]);
+  }
+  return out;
+}
+
+
+
+}).call(this,require("buffer").Buffer)
+},{"./aes":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/aes.js","./cipherBase":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/cipherBase.js","./ghash":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/ghash.js","./xor":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/xor.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","inherits":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/inherits/inherits_browser.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/cipherBase.js":[function(require,module,exports){
 (function (Buffer){
 var Transform = require('stream').Transform;
 var inherits = require('inherits');
@@ -4077,6 +4185,7 @@ var Transform = require('./cipherBase');
 var inherits = require('inherits');
 var modes = require('./modes');
 var StreamCipher = require('./streamCipher');
+var AuthCipher = require('./authCipher');
 var ebtk = require('./EVP_BytesToKey');
 
 inherits(Decipher, Transform);
@@ -4148,8 +4257,11 @@ var modelist = {
   ECB: require('./modes/ecb'),
   CBC: require('./modes/cbc'),
   CFB: require('./modes/cfb'),
+  CFB8: require('./modes/cfb8'),
+  CFB1: require('./modes/cfb1'),
   OFB: require('./modes/ofb'),
-  CTR: require('./modes/ctr')
+  CTR: require('./modes/ctr'),
+  GCM: require('./modes/ctr')
 };
 
 module.exports = function (crypto) {
@@ -4172,6 +4284,8 @@ module.exports = function (crypto) {
     }
     if (config.type === 'stream') {
       return new StreamCipher(modelist[config.mode], password, iv, true);
+    } else if (config.type === 'auth') {
+      return new AuthCipher(modelist[config.mode], password, iv, true);
     }
     return new Decipher(modelist[config.mode], password, iv);
   }
@@ -4191,7 +4305,7 @@ module.exports = function (crypto) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"./EVP_BytesToKey":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/EVP_BytesToKey.js","./aes":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/aes.js","./cipherBase":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/cipherBase.js","./modes":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes.js","./modes/cbc":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cbc.js","./modes/cfb":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cfb.js","./modes/ctr":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ctr.js","./modes/ecb":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ecb.js","./modes/ofb":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ofb.js","./streamCipher":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/streamCipher.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","inherits":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/inherits/inherits_browser.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/encrypter.js":[function(require,module,exports){
+},{"./EVP_BytesToKey":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/EVP_BytesToKey.js","./aes":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/aes.js","./authCipher":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/authCipher.js","./cipherBase":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/cipherBase.js","./modes":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes.js","./modes/cbc":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cbc.js","./modes/cfb":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cfb.js","./modes/cfb1":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cfb1.js","./modes/cfb8":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cfb8.js","./modes/ctr":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ctr.js","./modes/ecb":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ecb.js","./modes/ofb":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ofb.js","./streamCipher":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/streamCipher.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","inherits":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/inherits/inherits_browser.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/encrypter.js":[function(require,module,exports){
 (function (Buffer){
 var aes = require('./aes');
 var Transform = require('./cipherBase');
@@ -4199,6 +4313,7 @@ var inherits = require('inherits');
 var modes = require('./modes');
 var ebtk = require('./EVP_BytesToKey');
 var StreamCipher = require('./streamCipher');
+var AuthCipher = require('./authCipher');
 inherits(Cipher, Transform);
 function Cipher(mode, key, iv) {
   if (!(this instanceof Cipher)) {
@@ -4262,8 +4377,11 @@ var modelist = {
   ECB: require('./modes/ecb'),
   CBC: require('./modes/cbc'),
   CFB: require('./modes/cfb'),
+  CFB8: require('./modes/cfb8'),
+  CFB1: require('./modes/cfb1'),
   OFB: require('./modes/ofb'),
-  CTR: require('./modes/ctr')
+  CTR: require('./modes/ctr'),
+  GCM: require('./modes/ctr')
 };
 module.exports = function (crypto) {
   function createCipheriv(suite, password, iv) {
@@ -4285,6 +4403,8 @@ module.exports = function (crypto) {
     }
     if (config.type === 'stream') {
       return new StreamCipher(modelist[config.mode], password, iv);
+    } else if (config.type === 'auth') {
+      return new AuthCipher(modelist[config.mode], password, iv);
     }
     return new Cipher(modelist[config.mode], password, iv);
   }
@@ -4303,7 +4423,108 @@ module.exports = function (crypto) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"./EVP_BytesToKey":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/EVP_BytesToKey.js","./aes":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/aes.js","./cipherBase":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/cipherBase.js","./modes":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes.js","./modes/cbc":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cbc.js","./modes/cfb":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cfb.js","./modes/ctr":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ctr.js","./modes/ecb":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ecb.js","./modes/ofb":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ofb.js","./streamCipher":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/streamCipher.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","inherits":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/inherits/inherits_browser.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/inject.js":[function(require,module,exports){
+},{"./EVP_BytesToKey":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/EVP_BytesToKey.js","./aes":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/aes.js","./authCipher":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/authCipher.js","./cipherBase":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/cipherBase.js","./modes":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes.js","./modes/cbc":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cbc.js","./modes/cfb":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cfb.js","./modes/cfb1":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cfb1.js","./modes/cfb8":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cfb8.js","./modes/ctr":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ctr.js","./modes/ecb":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ecb.js","./modes/ofb":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ofb.js","./streamCipher":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/streamCipher.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","inherits":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/inherits/inherits_browser.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/ghash.js":[function(require,module,exports){
+(function (Buffer){
+var zeros = new Buffer(16);
+zeros.fill(0);
+module.exports = GHASH;
+function GHASH(key){
+  this.h = key;
+  this.state = new Buffer(16);
+  this.state.fill(0);
+  this.cache = new Buffer('');
+}
+// from http://bitwiseshiftleft.github.io/sjcl/doc/symbols/src/core_gcm.js.html
+// by Juho Vähä-Herttua
+GHASH.prototype.ghash = function (block) {
+  var i = -1;
+  while (++i < block.length) {
+   this.state[i] ^= 0xff & block[i];
+  }
+  this._multiply();
+};
+
+GHASH.prototype._multiply = function () {
+  var Vi = toArray(this.h);
+  var Zi = [0, 0, 0, 0];
+  var j, xi, lsb_Vi;
+  var i = -1;
+  while (++i < 128) {
+    xi = (this.state[~~(i/8)] & (1 << (7-i%8))) !== 0;
+    if (xi) {
+      // Z_i+1 = Z_i ^ V_i
+      Zi = xor(Zi, Vi);
+    }
+
+    // Store the value of LSB(V_i)
+    lsb_Vi = (Vi[3] & 1) !== 0;
+
+    // V_i+1 = V_i >> 1
+    for (j=3; j>0; j--) {
+      Vi[j] = (Vi[j] >>> 1) | ((Vi[j-1]&1) << 31);
+    }
+    Vi[0] = Vi[0] >>> 1;
+
+    // If LSB(V_i) is 1, V_i+1 = (V_i >> 1) ^ R
+    if (lsb_Vi) {
+      Vi[0] = Vi[0] ^ (0xe1 << 24);
+    }
+  }
+  this.state = fromArray(Zi);
+};
+GHASH.prototype.update = function (buf) {
+  this.cache = Buffer.concat([this.cache, buf]);
+  var chunk;
+  while (this.cache.length >= 16) {
+    chunk = this.cache.slice(0, 16);
+    this.cache = this.cache.slice(16);
+    this.ghash(chunk);
+  }
+};
+GHASH.prototype.final = function (abl, bl) {
+  if (this.cache.length) {
+    this.ghash(Buffer.concat([this.cache, zeros], 16));
+  }
+  this.ghash(fromArray([
+     0, abl,
+     0, bl
+   ]));
+  return this.state;
+};
+
+function toArray(buf) {
+  return [
+    buf.readUInt32BE(0),
+    buf.readUInt32BE(4),
+    buf.readUInt32BE(8),
+    buf.readUInt32BE(12)
+  ];
+}
+function fromArray(out) {
+  out = out.map(fixup_uint32);
+  var buf = new Buffer(16);
+  buf.writeUInt32BE(out[0], 0);
+  buf.writeUInt32BE(out[1], 4);
+  buf.writeUInt32BE(out[2], 8);
+  buf.writeUInt32BE(out[3], 12);
+  return buf;
+}
+var uint_max = Math.pow(2, 32);
+function fixup_uint32(x) {
+    var ret, x_pos;
+    ret = x > uint_max || x < 0 ? (x_pos = Math.abs(x) % uint_max, x < 0 ? uint_max - x_pos : x_pos) : x;
+    return ret;
+}
+function xor(a, b) {
+  return [
+    a[0] ^ b[0],
+    a[1] ^ b[1],
+    a[2] ^ b[2],
+    a[3] ^ b[3],
+  ];
+}
+}).call(this,require("buffer").Buffer)
+},{"buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/inject.js":[function(require,module,exports){
 module.exports = function (crypto, exports) {
   exports = exports || {};
   var ciphers = require('./encrypter')(crypto);
@@ -4387,6 +4608,48 @@ exports['aes-256-cfb'] = {
   mode: 'CFB',
   type: 'stream'
 };
+exports['aes-128-cfb8'] = {
+  cipher: 'AES',
+  key: 128,
+  iv: 16,
+  mode: 'CFB8',
+  type: 'stream'
+};
+exports['aes-192-cfb8'] = {
+  cipher: 'AES',
+  key: 192,
+  iv: 16,
+  mode: 'CFB8',
+  type: 'stream'
+};
+exports['aes-256-cfb8'] = {
+  cipher: 'AES',
+  key: 256,
+  iv: 16,
+  mode: 'CFB8',
+  type: 'stream'
+};
+exports['aes-128-cfb1'] = {
+  cipher: 'AES',
+  key: 128,
+  iv: 16,
+  mode: 'CFB1',
+  type: 'stream'
+};
+exports['aes-192-cfb1'] = {
+  cipher: 'AES',
+  key: 192,
+  iv: 16,
+  mode: 'CFB1',
+  type: 'stream'
+};
+exports['aes-256-cfb1'] = {
+  cipher: 'AES',
+  key: 256,
+  iv: 16,
+  mode: 'CFB1',
+  type: 'stream'
+};
 exports['aes-128-ofb'] = {
   cipher: 'AES',
   key: 128,
@@ -4428,6 +4691,27 @@ exports['aes-256-ctr'] = {
   iv: 16,
   mode: 'CTR',
   type: 'stream'
+};
+exports['aes-128-gcm'] = {
+  cipher: 'AES',
+  key: 128,
+  iv: 12,
+  mode: 'GCM',
+  type: 'auth'
+};
+exports['aes-192-gcm'] = {
+  cipher: 'AES',
+  key: 192,
+  iv: 12,
+  mode: 'GCM',
+  type: 'auth'
+};
+exports['aes-256-gcm'] = {
+  cipher: 'AES',
+  key: 256,
+  iv: 12,
+  mode: 'GCM',
+  type: 'auth'
 };
 },{}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cbc.js":[function(require,module,exports){
 var xor = require('../xor');
@@ -4472,7 +4756,63 @@ function encryptStart(self, data, decrypt) {
   return out;
 }
 }).call(this,require("buffer").Buffer)
-},{"../xor":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/xor.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ctr.js":[function(require,module,exports){
+},{"../xor":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/xor.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cfb1.js":[function(require,module,exports){
+(function (Buffer){
+
+function encryptByte(self, byte, decrypt) {
+  var pad;
+  var i = -1;
+  var len = 8;
+  var out = 0;
+  var bit, value;
+  while (++i < len) {
+    pad = self._cipher.encryptBlock(self._prev);
+    bit = (byte & (1 << (7-i))) ? 0x80:0;
+    value = pad[0] ^ bit;
+    out += ((value&0x80) >> (i%8));
+    self._prev = shiftIn(self._prev, decrypt?bit:value);
+  }
+  return out;
+}
+exports.encrypt = function (self, chunk, decrypt) {
+  var len = chunk.length;
+  var out = new Buffer(len);
+  var i = -1;
+  while (++i < len) {
+    out[i] = encryptByte(self, chunk[i], decrypt);
+  }
+  return out;
+};
+function shiftIn(buffer, value) {
+  var len = buffer.length;
+  var i = -1;
+  var out = new Buffer(buffer.length);
+  buffer = Buffer.concat([buffer, new Buffer([value])]);
+  while(++i < len) {
+    out[i] = buffer[i]<<1 | buffer[i+1]>>(7);
+  }
+  return out;
+}
+}).call(this,require("buffer").Buffer)
+},{"buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/cfb8.js":[function(require,module,exports){
+(function (Buffer){
+function encryptByte(self, byte, decrypt) {
+  var pad = self._cipher.encryptBlock(self._prev);
+  var out = pad[0] ^ byte;
+  self._prev = Buffer.concat([self._prev.slice(1), new Buffer([decrypt?byte:out])]);
+  return out;
+}
+exports.encrypt = function (self, chunk, decrypt) {
+  var len = chunk.length;
+  var out = new Buffer(len);
+  var i = -1;
+  while (++i < len) {
+    out[i] = encryptByte(self, chunk[i], decrypt);
+  }
+  return out;
+};
+}).call(this,require("buffer").Buffer)
+},{"buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-aes/modes/ctr.js":[function(require,module,exports){
 (function (Buffer){
 var xor = require('../xor');
 function getBlock(self) {
@@ -4569,7 +4909,7 @@ function xor(a, b) {
 }
 }).call(this,require("buffer").Buffer)
 },{"buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/aesid.json":[function(require,module,exports){
-module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports={"2.16.840.1.101.3.4.1.1": "aes-128-ecb",
+module.exports={"2.16.840.1.101.3.4.1.1": "aes-128-ecb",
 "2.16.840.1.101.3.4.1.2": "aes-128-cbc",
 "2.16.840.1.101.3.4.1.3": "aes-128-ofb",
 "2.16.840.1.101.3.4.1.4": "aes-128-cfb",
@@ -11061,8 +11401,11 @@ function EC(options) {
     return new EC(options);
 
   // Shortcut `elliptic.ec(curve-name)`
-  if (typeof options === 'string')
+  if (typeof options === 'string') {
+    assert(elliptic.curves.hasOwnProperty(options), 'Unknown curve ' + options);
+
     options = elliptic.curves[options];
+  }
 
   // Shortcut for `elliptic.ec(elliptic.curves.curveName)`
   if (options instanceof elliptic.curves.PresetCurve)
@@ -12362,9 +12705,9 @@ if (typeof Object.create === 'function') {
 }
 
 },{}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/package.json":[function(require,module,exports){
-module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports={
+module.exports={
   "name": "elliptic",
-  "version": "0.15.14",
+  "version": "0.15.15",
   "description": "EC cryptography",
   "main": "lib/elliptic.js",
   "scripts": {
@@ -12400,9 +12743,9 @@ module.exports=module.exports=module.exports=module.exports=module.exports=modul
     "hash.js": "^0.2.0",
     "inherits": "^2.0.1"
   },
-  "gitHead": "e080857a1604369909d53f2f187a3b69eba113ed",
-  "_id": "elliptic@0.15.14",
-  "_shasum": "4d8cc82f030f9c7646ac60a729f0f793e083be6e",
+  "gitHead": "4bf1f50607285bff4ae19521217dbc801c3d36af",
+  "_id": "elliptic@0.15.15",
+  "_shasum": "63269184a856d6e00871e84f37a8401ff84e4aea",
   "_from": "elliptic@>=0.15.14 <0.16.0",
   "_npmVersion": "2.1.6",
   "_nodeVersion": "0.10.33",
@@ -12417,11 +12760,11 @@ module.exports=module.exports=module.exports=module.exports=module.exports=modul
     }
   ],
   "dist": {
-    "shasum": "4d8cc82f030f9c7646ac60a729f0f793e083be6e",
-    "tarball": "http://registry.npmjs.org/elliptic/-/elliptic-0.15.14.tgz"
+    "shasum": "63269184a856d6e00871e84f37a8401ff84e4aea",
+    "tarball": "http://registry.npmjs.org/elliptic/-/elliptic-0.15.15.tgz"
   },
   "directories": {},
-  "_resolved": "https://registry.npmjs.org/elliptic/-/elliptic-0.15.14.tgz",
+  "_resolved": "https://registry.npmjs.org/elliptic/-/elliptic-0.15.15.tgz",
   "readme": "ERROR: No README data found!"
 }
 
@@ -12633,7 +12976,128 @@ function ecVerify(sig, hash, pub) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./parseKeys":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/parseKeys.js","bn.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/bn.js/lib/bn.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","elliptic":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/diffie-hellman/dh.js":[function(require,module,exports){
+},{"./parseKeys":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/parseKeys.js","bn.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/bn.js/lib/bn.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","elliptic":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/ecdh.js":[function(require,module,exports){
+(function (Buffer){
+var elliptic = require('elliptic');
+var BN = require('bn.js');
+module.exports = ECDH;
+
+function ECDH(curve, crypto) {
+	elliptic.rand = crypto.randomBytes;
+	this.curve = new elliptic.ec(curve);
+	this.keys = void 0;
+}
+ECDH.prototype.generateKeys = function (enc, format) {
+	this.keys = this.curve.genKeyPair();
+	return this.getPublicKey(enc, format);
+};
+
+ECDH.prototype.computeSecret = function (other, inenc, enc) {
+	inenc = inenc || 'utf8';
+	if (!Buffer.isBuffer(other)) {
+		other = new Buffer(other, inenc);
+	}
+	other = new BN(other);
+	other = other.toString(16);
+	var otherPub = this.curve.keyPair(other, 'hex').getPublic();
+	var out = otherPub.mul(this.keys.getPrivate()).getX();
+	return returnValue(out, enc);
+};
+ECDH.prototype.getPublicKey = function (enc, format) {
+	var key = this.keys.getPublic(format === 'compressed', true);
+	if (format === 'hybrid') {
+		if (key[key.length - 1] % 2) {
+			key[0] = 7;
+		} else {
+			key [0] = 6;
+		}
+	}
+	return returnValue(key, enc);
+};
+ECDH.prototype.getPrivateKey = function (enc) {
+	return returnValue(this.keys.getPrivate(), enc);
+};
+
+ECDH.prototype.setPublicKey = function (pub, enc) {
+	enc = enc || 'utf8';
+	if (!Buffer.isBuffer(pub)) {
+		pub = new Buffer(pub, enc);
+	}
+	var pkey = new BN(pub);
+	pkey = pkey.toArray();
+	this.keys._importPublicHex(pkey);
+};
+ECDH.prototype.setPrivateKey = function (priv, enc) {
+	enc = enc || 'utf8';
+	if (!Buffer.isBuffer(priv)) {
+		priv = new Buffer(priv, enc);
+	}
+	var _priv = new BN(priv);
+	_priv = _priv.toString(16);
+	this.keys._importPrivate(_priv);
+};
+function returnValue(bn, enc) {
+	if (!Array.isArray(bn)) {
+		bn = bn.toArray();
+	}
+	var buf = new Buffer(bn);
+	if (!enc) {
+		return buf;
+	} else {
+		return buf.toString(enc);
+	}
+}
+}).call(this,require("buffer").Buffer)
+},{"bn.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/bn.js/lib/bn.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","elliptic":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/lib/elliptic.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/inject.js":[function(require,module,exports){
+var ECDH = require('./ecdh');
+module.exports = function (crypto, exports) {
+	exports.createECDH = function (curve) {
+		return new ECDH(curve, crypto);
+	};
+};
+},{"./ecdh":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/ecdh.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/bn.js/lib/bn.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/bn.js/lib/bn.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/bn.js/lib/bn.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/bn.js/lib/bn.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/lib/elliptic.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/lib/elliptic/curve/base.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curve/base.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curve/base.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curve/base.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/lib/elliptic/curve/edwards.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curve/edwards.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curve/edwards.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curve/edwards.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/lib/elliptic/curve/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curve/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curve/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curve/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/lib/elliptic/curve/mont.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curve/mont.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curve/mont.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curve/mont.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/lib/elliptic/curve/short.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curve/short.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curve/short.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curve/short.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/lib/elliptic/curves.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curves.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curves.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/curves.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/lib/elliptic/ec/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/ec/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/ec/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/ec/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/lib/elliptic/ec/key.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/ec/key.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/ec/key.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/ec/key.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/lib/elliptic/ec/signature.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/ec/signature.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/ec/signature.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/ec/signature.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/lib/elliptic/hmac-drbg.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/hmac-drbg.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/hmac-drbg.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/hmac-drbg.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/lib/elliptic/utils.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/utils.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/utils.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/lib/elliptic/utils.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/node_modules/brorand/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/brorand/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/brorand/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/brorand/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/node_modules/hash.js/lib/hash.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/node_modules/hash.js/lib/hash/common.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash/common.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash/common.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash/common.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/node_modules/hash.js/lib/hash/hmac.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash/hmac.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash/hmac.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash/hmac.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/node_modules/hash.js/lib/hash/ripemd.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash/ripemd.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash/ripemd.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash/ripemd.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/node_modules/hash.js/lib/hash/sha.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash/sha.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash/sha.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash/sha.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/node_modules/hash.js/lib/hash/utils.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash/utils.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash/utils.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/hash.js/lib/hash/utils.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/create-ecdh/node_modules/elliptic/package.json":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/package.json")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/package.json":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/package.json"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/diffie-hellman/dh.js":[function(require,module,exports){
 (function (Buffer){
 var BN = require('bn.js');
 var MillerRabin = require('miller-rabin');
@@ -13070,7 +13534,7 @@ MillerRabin.prototype.getDivisor = function getDivisor(n, k) {
 },{"bn.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/diffie-hellman/node_modules/bn.js/lib/bn.js","brorand":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/diffie-hellman/node_modules/miller-rabin/node_modules/brorand/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/diffie-hellman/node_modules/miller-rabin/node_modules/brorand/index.js":[function(require,module,exports){
 module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/brorand/index.js")
 },{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/brorand/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/browserify-sign/node_modules/elliptic/node_modules/brorand/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/diffie-hellman/primes.json":[function(require,module,exports){
-module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports=module.exports={
+module.exports={
     "modp1": {
         "gen": "02",
         "prime": "ffffffffffffffffc90fdaa22168c234c4c6628b80dc1cd129024e088a67cc74020bbea63b139b22514a08798e3404ddef9519b3cd3a431b302b0a6df25f14374fe1356d6d51c245e485b576625e7ec6f44c42e9a63a3620ffffffffffffffff"
@@ -13402,99 +13866,101 @@ function ripemd160(message) {
 
 }).call(this,require("buffer").Buffer)
 },{"buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/hash.js":[function(require,module,exports){
-module.exports = function (Buffer) {
+(function (Buffer){
 
-  //prototype class for hash functions
-  function Hash (blockSize, finalSize) {
-    this._block = new Buffer(blockSize) //new Uint32Array(blockSize/4)
-    this._finalSize = finalSize
-    this._blockSize = blockSize
-    this._len = 0
-    this._s = 0
-  }
 
-  Hash.prototype.init = function () {
-    this._s = 0
-    this._len = 0
-  }
-
-  Hash.prototype.update = function (data, enc) {
-    if ("string" === typeof data) {
-      enc = enc || "utf8"
-      data = new Buffer(data, enc)
-    }
-
-    var l = this._len += data.length
-    var s = this._s = (this._s || 0)
-    var f = 0
-    var buffer = this._block
-
-    while (s < l) {
-      var t = Math.min(data.length, f + this._blockSize - (s % this._blockSize))
-      var ch = (t - f)
-
-      for (var i = 0; i < ch; i++) {
-        buffer[(s % this._blockSize) + i] = data[i + f]
-      }
-
-      s += ch
-      f += ch
-
-      if ((s % this._blockSize) === 0) {
-        this._update(buffer)
-      }
-    }
-    this._s = s
-
-    return this
-  }
-
-  Hash.prototype.digest = function (enc) {
-    // Suppose the length of the message M, in bits, is l
-    var l = this._len * 8
-
-    // Append the bit 1 to the end of the message
-    this._block[this._len % this._blockSize] = 0x80
-
-    // and then k zero bits, where k is the smallest non-negative solution to the equation (l + 1 + k) === finalSize mod blockSize
-    this._block.fill(0, this._len % this._blockSize + 1)
-
-    if (l % (this._blockSize * 8) >= this._finalSize * 8) {
-      this._update(this._block)
-      this._block.fill(0)
-    }
-
-    // to this append the block which is equal to the number l written in binary
-    // TODO: handle case where l is > Math.pow(2, 29)
-    this._block.writeInt32BE(l, this._blockSize - 4)
-
-    var hash = this._update(this._block) || this._hash()
-
-    return enc ? hash.toString(enc) : hash
-  }
-
-  Hash.prototype._update = function () {
-    throw new Error('_update must be implemented by subclass')
-  }
-
-  return Hash
+//prototype class for hash functions
+function Hash (blockSize, finalSize) {
+  this._block = new Buffer(blockSize) //new Uint32Array(blockSize/4)
+  this._finalSize = finalSize
+  this._blockSize = blockSize
+  this._len = 0
+  this._s = 0
 }
 
-},{}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/index.js":[function(require,module,exports){
+Hash.prototype.init = function () {
+  this._s = 0
+  this._len = 0
+}
+
+Hash.prototype.update = function (data, enc) {
+  if ("string" === typeof data) {
+    enc = enc || "utf8"
+    data = new Buffer(data, enc)
+  }
+
+  var l = this._len += data.length
+  var s = this._s = (this._s || 0)
+  var f = 0
+  var buffer = this._block
+
+  while (s < l) {
+    var t = Math.min(data.length, f + this._blockSize - (s % this._blockSize))
+    var ch = (t - f)
+
+    for (var i = 0; i < ch; i++) {
+      buffer[(s % this._blockSize) + i] = data[i + f]
+    }
+
+    s += ch
+    f += ch
+
+    if ((s % this._blockSize) === 0) {
+      this._update(buffer)
+    }
+  }
+  this._s = s
+
+  return this
+}
+
+Hash.prototype.digest = function (enc) {
+  // Suppose the length of the message M, in bits, is l
+  var l = this._len * 8
+
+  // Append the bit 1 to the end of the message
+  this._block[this._len % this._blockSize] = 0x80
+
+  // and then k zero bits, where k is the smallest non-negative solution to the equation (l + 1 + k) === finalSize mod blockSize
+  this._block.fill(0, this._len % this._blockSize + 1)
+
+  if (l % (this._blockSize * 8) >= this._finalSize * 8) {
+    this._update(this._block)
+    this._block.fill(0)
+  }
+
+  // to this append the block which is equal to the number l written in binary
+  // TODO: handle case where l is > Math.pow(2, 29)
+  this._block.writeInt32BE(l, this._blockSize - 4)
+
+  var hash = this._update(this._block) || this._hash()
+
+  return enc ? hash.toString(enc) : hash
+}
+
+Hash.prototype._update = function () {
+  throw new Error('_update must be implemented by subclass')
+}
+
+module.exports = Hash
+
+}).call(this,require("buffer").Buffer)
+},{"buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/index.js":[function(require,module,exports){
 var exports = module.exports = function (alg) {
-  var Alg = exports[alg]
+  var Alg = exports[alg.toLowerCase()]
   if(!Alg) throw new Error(alg + ' is not supported (we accept pull requests)')
   return new Alg()
 }
 
-var Buffer = require('buffer').Buffer
-var Hash   = require('./hash')(Buffer)
 
-exports.sha1 = require('./sha1')(Buffer, Hash)
-exports.sha256 = require('./sha256')(Buffer, Hash)
-exports.sha512 = require('./sha512')(Buffer, Hash)
+exports.sha1 = require('./sha1')
+exports.sha224 = require('./sha224')
+exports.sha256 = require('./sha256')
+exports.sha384 = require('./sha384')
+exports.sha512 = require('./sha512')
 
-},{"./hash":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/hash.js","./sha1":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha1.js","./sha256":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha256.js","./sha512":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha512.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha1.js":[function(require,module,exports){
+},{"./sha1":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha1.js","./sha224":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha224.js","./sha256":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha256.js","./sha384":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha384.js","./sha512":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha512.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha1.js":[function(require,module,exports){
+(function (Buffer){
 /*
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-1, as defined
  * in FIPS PUB 180-1
@@ -13506,135 +13972,198 @@ exports.sha512 = require('./sha512')(Buffer, Hash)
 
 var inherits = require('util').inherits
 
-module.exports = function (Buffer, Hash) {
+var Hash = require('./hash')
 
-  var A = 0|0
-  var B = 4|0
-  var C = 8|0
-  var D = 12|0
-  var E = 16|0
+var A = 0|0
+var B = 4|0
+var C = 8|0
+var D = 12|0
+var E = 16|0
 
-  var W = new (typeof Int32Array === 'undefined' ? Array : Int32Array)(80)
+var W = new (typeof Int32Array === 'undefined' ? Array : Int32Array)(80)
 
-  var POOL = []
+var POOL = []
 
-  function Sha1 () {
-    if(POOL.length)
-      return POOL.pop().init()
+function Sha1 () {
+  if(POOL.length)
+    return POOL.pop().init()
 
-    if(!(this instanceof Sha1)) return new Sha1()
-    this._w = W
-    Hash.call(this, 16*4, 14*4)
+  if(!(this instanceof Sha1)) return new Sha1()
+  this._w = W
+  Hash.call(this, 16*4, 14*4)
 
-    this._h = null
-    this.init()
-  }
-
-  inherits(Sha1, Hash)
-
-  Sha1.prototype.init = function () {
-    this._a = 0x67452301
-    this._b = 0xefcdab89
-    this._c = 0x98badcfe
-    this._d = 0x10325476
-    this._e = 0xc3d2e1f0
-
-    Hash.prototype.init.call(this)
-    return this
-  }
-
-  Sha1.prototype._POOL = POOL
-  Sha1.prototype._update = function (X) {
-
-    var a, b, c, d, e, _a, _b, _c, _d, _e
-
-    a = _a = this._a
-    b = _b = this._b
-    c = _c = this._c
-    d = _d = this._d
-    e = _e = this._e
-
-    var w = this._w
-
-    for(var j = 0; j < 80; j++) {
-      var W = w[j] = j < 16 ? X.readInt32BE(j*4)
-        : rol(w[j - 3] ^ w[j -  8] ^ w[j - 14] ^ w[j - 16], 1)
-
-      var t = add(
-        add(rol(a, 5), sha1_ft(j, b, c, d)),
-        add(add(e, W), sha1_kt(j))
-      )
-
-      e = d
-      d = c
-      c = rol(b, 30)
-      b = a
-      a = t
-    }
-
-    this._a = add(a, _a)
-    this._b = add(b, _b)
-    this._c = add(c, _c)
-    this._d = add(d, _d)
-    this._e = add(e, _e)
-  }
-
-  Sha1.prototype._hash = function () {
-    if(POOL.length < 100) POOL.push(this)
-    var H = new Buffer(20)
-    //console.log(this._a|0, this._b|0, this._c|0, this._d|0, this._e|0)
-    H.writeInt32BE(this._a|0, A)
-    H.writeInt32BE(this._b|0, B)
-    H.writeInt32BE(this._c|0, C)
-    H.writeInt32BE(this._d|0, D)
-    H.writeInt32BE(this._e|0, E)
-    return H
-  }
-
-  /*
-   * Perform the appropriate triplet combination function for the current
-   * iteration
-   */
-  function sha1_ft(t, b, c, d) {
-    if(t < 20) return (b & c) | ((~b) & d);
-    if(t < 40) return b ^ c ^ d;
-    if(t < 60) return (b & c) | (b & d) | (c & d);
-    return b ^ c ^ d;
-  }
-
-  /*
-   * Determine the appropriate additive constant for the current iteration
-   */
-  function sha1_kt(t) {
-    return (t < 20) ?  1518500249 : (t < 40) ?  1859775393 :
-           (t < 60) ? -1894007588 : -899497514;
-  }
-
-  /*
-   * Add integers, wrapping at 2^32. This uses 16-bit operations internally
-   * to work around bugs in some JS interpreters.
-   * //dominictarr: this is 10 years old, so maybe this can be dropped?)
-   *
-   */
-  function add(x, y) {
-    return (x + y ) | 0
-  //lets see how this goes on testling.
-  //  var lsw = (x & 0xFFFF) + (y & 0xFFFF);
-  //  var msw = (x >> 16) + (y >> 16) + (lsw >> 16);
-  //  return (msw << 16) | (lsw & 0xFFFF);
-  }
-
-  /*
-   * Bitwise rotate a 32-bit number to the left.
-   */
-  function rol(num, cnt) {
-    return (num << cnt) | (num >>> (32 - cnt));
-  }
-
-  return Sha1
+  this._h = null
+  this.init()
 }
 
-},{"util":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/util/util.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha256.js":[function(require,module,exports){
+inherits(Sha1, Hash)
+
+Sha1.prototype.init = function () {
+  this._a = 0x67452301
+  this._b = 0xefcdab89
+  this._c = 0x98badcfe
+  this._d = 0x10325476
+  this._e = 0xc3d2e1f0
+
+  Hash.prototype.init.call(this)
+  return this
+}
+
+Sha1.prototype._POOL = POOL
+Sha1.prototype._update = function (X) {
+
+  var a, b, c, d, e, _a, _b, _c, _d, _e
+
+  a = _a = this._a
+  b = _b = this._b
+  c = _c = this._c
+  d = _d = this._d
+  e = _e = this._e
+
+  var w = this._w
+
+  for(var j = 0; j < 80; j++) {
+    var W = w[j] = j < 16 ? X.readInt32BE(j*4)
+      : rol(w[j - 3] ^ w[j -  8] ^ w[j - 14] ^ w[j - 16], 1)
+
+    var t = add(
+      add(rol(a, 5), sha1_ft(j, b, c, d)),
+      add(add(e, W), sha1_kt(j))
+    )
+
+    e = d
+    d = c
+    c = rol(b, 30)
+    b = a
+    a = t
+  }
+
+  this._a = add(a, _a)
+  this._b = add(b, _b)
+  this._c = add(c, _c)
+  this._d = add(d, _d)
+  this._e = add(e, _e)
+}
+
+Sha1.prototype._hash = function () {
+  if(POOL.length < 100) POOL.push(this)
+  var H = new Buffer(20)
+  //console.log(this._a|0, this._b|0, this._c|0, this._d|0, this._e|0)
+  H.writeInt32BE(this._a|0, A)
+  H.writeInt32BE(this._b|0, B)
+  H.writeInt32BE(this._c|0, C)
+  H.writeInt32BE(this._d|0, D)
+  H.writeInt32BE(this._e|0, E)
+  return H
+}
+
+/*
+ * Perform the appropriate triplet combination function for the current
+ * iteration
+ */
+function sha1_ft(t, b, c, d) {
+  if(t < 20) return (b & c) | ((~b) & d);
+  if(t < 40) return b ^ c ^ d;
+  if(t < 60) return (b & c) | (b & d) | (c & d);
+  return b ^ c ^ d;
+}
+
+/*
+ * Determine the appropriate additive constant for the current iteration
+ */
+function sha1_kt(t) {
+  return (t < 20) ?  1518500249 : (t < 40) ?  1859775393 :
+         (t < 60) ? -1894007588 : -899497514;
+}
+
+/*
+ * Add integers, wrapping at 2^32. This uses 16-bit operations internally
+ * to work around bugs in some JS interpreters.
+ * //dominictarr: this is 10 years old, so maybe this can be dropped?)
+ *
+ */
+function add(x, y) {
+  return (x + y ) | 0
+//lets see how this goes on testling.
+//  var lsw = (x & 0xFFFF) + (y & 0xFFFF);
+//  var msw = (x >> 16) + (y >> 16) + (lsw >> 16);
+//  return (msw << 16) | (lsw & 0xFFFF);
+}
+
+/*
+ * Bitwise rotate a 32-bit number to the left.
+ */
+function rol(num, cnt) {
+  return (num << cnt) | (num >>> (32 - cnt));
+}
+
+module.exports = Sha1
+
+
+}).call(this,require("buffer").Buffer)
+},{"./hash":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/hash.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","util":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/util/util.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha224.js":[function(require,module,exports){
+(function (Buffer){
+
+/**
+ * A JavaScript implementation of the Secure Hash Algorithm, SHA-256, as defined
+ * in FIPS 180-2
+ * Version 2.2-beta Copyright Angel Marin, Paul Johnston 2000 - 2009.
+ * Other contributors: Greg Holt, Andrew Kepert, Ydnar, Lostinet
+ *
+ */
+
+var inherits = require('util').inherits
+var SHA256 = require('./sha256')
+var Hash = require('./hash')
+
+var W = new Array(64)
+
+function Sha224() {
+  this.init()
+
+  this._w = W //new Array(64)
+
+  Hash.call(this, 16*4, 14*4)
+}
+
+inherits(Sha224, SHA256)
+
+Sha224.prototype.init = function () {
+
+  this._a = 0xc1059ed8|0
+  this._b = 0x367cd507|0
+  this._c = 0x3070dd17|0
+  this._d = 0xf70e5939|0
+  this._e = 0xffc00b31|0
+  this._f = 0x68581511|0
+  this._g = 0x64f98fa7|0
+  this._h = 0xbefa4fa4|0
+
+  this._len = this._s = 0
+
+  return this
+}
+
+
+Sha224.prototype._hash = function () {
+  var H = new Buffer(28)
+
+  H.writeInt32BE(this._a,  0)
+  H.writeInt32BE(this._b,  4)
+  H.writeInt32BE(this._c,  8)
+  H.writeInt32BE(this._d, 12)
+  H.writeInt32BE(this._e, 16)
+  H.writeInt32BE(this._f, 20)
+  H.writeInt32BE(this._g, 24)
+
+  return H
+}
+
+module.exports = Sha224
+
+}).call(this,require("buffer").Buffer)
+},{"./hash":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/hash.js","./sha256":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha256.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","util":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/util/util.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha256.js":[function(require,module,exports){
+(function (Buffer){
 
 /**
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-256, as defined
@@ -13646,390 +14175,456 @@ module.exports = function (Buffer, Hash) {
 
 var inherits = require('util').inherits
 
-module.exports = function (Buffer, Hash) {
+var Hash = require('./hash')
 
-  var K = [
-      0x428A2F98, 0x71374491, 0xB5C0FBCF, 0xE9B5DBA5,
-      0x3956C25B, 0x59F111F1, 0x923F82A4, 0xAB1C5ED5,
-      0xD807AA98, 0x12835B01, 0x243185BE, 0x550C7DC3,
-      0x72BE5D74, 0x80DEB1FE, 0x9BDC06A7, 0xC19BF174,
-      0xE49B69C1, 0xEFBE4786, 0x0FC19DC6, 0x240CA1CC,
-      0x2DE92C6F, 0x4A7484AA, 0x5CB0A9DC, 0x76F988DA,
-      0x983E5152, 0xA831C66D, 0xB00327C8, 0xBF597FC7,
-      0xC6E00BF3, 0xD5A79147, 0x06CA6351, 0x14292967,
-      0x27B70A85, 0x2E1B2138, 0x4D2C6DFC, 0x53380D13,
-      0x650A7354, 0x766A0ABB, 0x81C2C92E, 0x92722C85,
-      0xA2BFE8A1, 0xA81A664B, 0xC24B8B70, 0xC76C51A3,
-      0xD192E819, 0xD6990624, 0xF40E3585, 0x106AA070,
-      0x19A4C116, 0x1E376C08, 0x2748774C, 0x34B0BCB5,
-      0x391C0CB3, 0x4ED8AA4A, 0x5B9CCA4F, 0x682E6FF3,
-      0x748F82EE, 0x78A5636F, 0x84C87814, 0x8CC70208,
-      0x90BEFFFA, 0xA4506CEB, 0xBEF9A3F7, 0xC67178F2
-    ]
-
-  var W = new Array(64)
-
-  function Sha256() {
-    this.init()
-
-    this._w = W //new Array(64)
-
-    Hash.call(this, 16*4, 14*4)
-  }
-
-  inherits(Sha256, Hash)
-
-  Sha256.prototype.init = function () {
-
-    this._a = 0x6a09e667|0
-    this._b = 0xbb67ae85|0
-    this._c = 0x3c6ef372|0
-    this._d = 0xa54ff53a|0
-    this._e = 0x510e527f|0
-    this._f = 0x9b05688c|0
-    this._g = 0x1f83d9ab|0
-    this._h = 0x5be0cd19|0
-
-    this._len = this._s = 0
-
-    return this
-  }
-
-  function S (X, n) {
-    return (X >>> n) | (X << (32 - n));
-  }
-
-  function R (X, n) {
-    return (X >>> n);
-  }
-
-  function Ch (x, y, z) {
-    return ((x & y) ^ ((~x) & z));
-  }
-
-  function Maj (x, y, z) {
-    return ((x & y) ^ (x & z) ^ (y & z));
-  }
-
-  function Sigma0256 (x) {
-    return (S(x, 2) ^ S(x, 13) ^ S(x, 22));
-  }
-
-  function Sigma1256 (x) {
-    return (S(x, 6) ^ S(x, 11) ^ S(x, 25));
-  }
-
-  function Gamma0256 (x) {
-    return (S(x, 7) ^ S(x, 18) ^ R(x, 3));
-  }
-
-  function Gamma1256 (x) {
-    return (S(x, 17) ^ S(x, 19) ^ R(x, 10));
-  }
-
-  Sha256.prototype._update = function(M) {
-
-    var W = this._w
-    var a, b, c, d, e, f, g, h
-    var T1, T2
-
-    a = this._a | 0
-    b = this._b | 0
-    c = this._c | 0
-    d = this._d | 0
-    e = this._e | 0
-    f = this._f | 0
-    g = this._g | 0
-    h = this._h | 0
-
-    for (var j = 0; j < 64; j++) {
-      var w = W[j] = j < 16
-        ? M.readInt32BE(j * 4)
-        : Gamma1256(W[j - 2]) + W[j - 7] + Gamma0256(W[j - 15]) + W[j - 16]
-
-      T1 = h + Sigma1256(e) + Ch(e, f, g) + K[j] + w
-
-      T2 = Sigma0256(a) + Maj(a, b, c);
-      h = g; g = f; f = e; e = d + T1; d = c; c = b; b = a; a = T1 + T2;
-    }
-
-    this._a = (a + this._a) | 0
-    this._b = (b + this._b) | 0
-    this._c = (c + this._c) | 0
-    this._d = (d + this._d) | 0
-    this._e = (e + this._e) | 0
-    this._f = (f + this._f) | 0
-    this._g = (g + this._g) | 0
-    this._h = (h + this._h) | 0
-
-  };
-
-  Sha256.prototype._hash = function () {
-    var H = new Buffer(32)
-
-    H.writeInt32BE(this._a,  0)
-    H.writeInt32BE(this._b,  4)
-    H.writeInt32BE(this._c,  8)
-    H.writeInt32BE(this._d, 12)
-    H.writeInt32BE(this._e, 16)
-    H.writeInt32BE(this._f, 20)
-    H.writeInt32BE(this._g, 24)
-    H.writeInt32BE(this._h, 28)
-
-    return H
-  }
-
-  return Sha256
-
-}
-
-},{"util":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/util/util.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha512.js":[function(require,module,exports){
-var inherits = require('util').inherits
-
-module.exports = function (Buffer, Hash) {
-  var K = [
-    0x428a2f98, 0xd728ae22, 0x71374491, 0x23ef65cd,
-    0xb5c0fbcf, 0xec4d3b2f, 0xe9b5dba5, 0x8189dbbc,
-    0x3956c25b, 0xf348b538, 0x59f111f1, 0xb605d019,
-    0x923f82a4, 0xaf194f9b, 0xab1c5ed5, 0xda6d8118,
-    0xd807aa98, 0xa3030242, 0x12835b01, 0x45706fbe,
-    0x243185be, 0x4ee4b28c, 0x550c7dc3, 0xd5ffb4e2,
-    0x72be5d74, 0xf27b896f, 0x80deb1fe, 0x3b1696b1,
-    0x9bdc06a7, 0x25c71235, 0xc19bf174, 0xcf692694,
-    0xe49b69c1, 0x9ef14ad2, 0xefbe4786, 0x384f25e3,
-    0x0fc19dc6, 0x8b8cd5b5, 0x240ca1cc, 0x77ac9c65,
-    0x2de92c6f, 0x592b0275, 0x4a7484aa, 0x6ea6e483,
-    0x5cb0a9dc, 0xbd41fbd4, 0x76f988da, 0x831153b5,
-    0x983e5152, 0xee66dfab, 0xa831c66d, 0x2db43210,
-    0xb00327c8, 0x98fb213f, 0xbf597fc7, 0xbeef0ee4,
-    0xc6e00bf3, 0x3da88fc2, 0xd5a79147, 0x930aa725,
-    0x06ca6351, 0xe003826f, 0x14292967, 0x0a0e6e70,
-    0x27b70a85, 0x46d22ffc, 0x2e1b2138, 0x5c26c926,
-    0x4d2c6dfc, 0x5ac42aed, 0x53380d13, 0x9d95b3df,
-    0x650a7354, 0x8baf63de, 0x766a0abb, 0x3c77b2a8,
-    0x81c2c92e, 0x47edaee6, 0x92722c85, 0x1482353b,
-    0xa2bfe8a1, 0x4cf10364, 0xa81a664b, 0xbc423001,
-    0xc24b8b70, 0xd0f89791, 0xc76c51a3, 0x0654be30,
-    0xd192e819, 0xd6ef5218, 0xd6990624, 0x5565a910,
-    0xf40e3585, 0x5771202a, 0x106aa070, 0x32bbd1b8,
-    0x19a4c116, 0xb8d2d0c8, 0x1e376c08, 0x5141ab53,
-    0x2748774c, 0xdf8eeb99, 0x34b0bcb5, 0xe19b48a8,
-    0x391c0cb3, 0xc5c95a63, 0x4ed8aa4a, 0xe3418acb,
-    0x5b9cca4f, 0x7763e373, 0x682e6ff3, 0xd6b2b8a3,
-    0x748f82ee, 0x5defb2fc, 0x78a5636f, 0x43172f60,
-    0x84c87814, 0xa1f0ab72, 0x8cc70208, 0x1a6439ec,
-    0x90befffa, 0x23631e28, 0xa4506ceb, 0xde82bde9,
-    0xbef9a3f7, 0xb2c67915, 0xc67178f2, 0xe372532b,
-    0xca273ece, 0xea26619c, 0xd186b8c7, 0x21c0c207,
-    0xeada7dd6, 0xcde0eb1e, 0xf57d4f7f, 0xee6ed178,
-    0x06f067aa, 0x72176fba, 0x0a637dc5, 0xa2c898a6,
-    0x113f9804, 0xbef90dae, 0x1b710b35, 0x131c471b,
-    0x28db77f5, 0x23047d84, 0x32caab7b, 0x40c72493,
-    0x3c9ebe0a, 0x15c9bebc, 0x431d67c4, 0x9c100d4c,
-    0x4cc5d4be, 0xcb3e42b6, 0x597f299c, 0xfc657e2a,
-    0x5fcb6fab, 0x3ad6faec, 0x6c44198c, 0x4a475817
+var K = [
+    0x428A2F98, 0x71374491, 0xB5C0FBCF, 0xE9B5DBA5,
+    0x3956C25B, 0x59F111F1, 0x923F82A4, 0xAB1C5ED5,
+    0xD807AA98, 0x12835B01, 0x243185BE, 0x550C7DC3,
+    0x72BE5D74, 0x80DEB1FE, 0x9BDC06A7, 0xC19BF174,
+    0xE49B69C1, 0xEFBE4786, 0x0FC19DC6, 0x240CA1CC,
+    0x2DE92C6F, 0x4A7484AA, 0x5CB0A9DC, 0x76F988DA,
+    0x983E5152, 0xA831C66D, 0xB00327C8, 0xBF597FC7,
+    0xC6E00BF3, 0xD5A79147, 0x06CA6351, 0x14292967,
+    0x27B70A85, 0x2E1B2138, 0x4D2C6DFC, 0x53380D13,
+    0x650A7354, 0x766A0ABB, 0x81C2C92E, 0x92722C85,
+    0xA2BFE8A1, 0xA81A664B, 0xC24B8B70, 0xC76C51A3,
+    0xD192E819, 0xD6990624, 0xF40E3585, 0x106AA070,
+    0x19A4C116, 0x1E376C08, 0x2748774C, 0x34B0BCB5,
+    0x391C0CB3, 0x4ED8AA4A, 0x5B9CCA4F, 0x682E6FF3,
+    0x748F82EE, 0x78A5636F, 0x84C87814, 0x8CC70208,
+    0x90BEFFFA, 0xA4506CEB, 0xBEF9A3F7, 0xC67178F2
   ]
 
-  var W = new Array(160)
+var W = new Array(64)
 
-  function Sha512() {
-    this.init()
-    this._w = W
+function Sha256() {
+  this.init()
 
-    Hash.call(this, 128, 112)
-  }
+  this._w = W //new Array(64)
 
-  inherits(Sha512, Hash)
-
-  Sha512.prototype.init = function () {
-
-    this._a = 0x6a09e667|0
-    this._b = 0xbb67ae85|0
-    this._c = 0x3c6ef372|0
-    this._d = 0xa54ff53a|0
-    this._e = 0x510e527f|0
-    this._f = 0x9b05688c|0
-    this._g = 0x1f83d9ab|0
-    this._h = 0x5be0cd19|0
-
-    this._al = 0xf3bcc908|0
-    this._bl = 0x84caa73b|0
-    this._cl = 0xfe94f82b|0
-    this._dl = 0x5f1d36f1|0
-    this._el = 0xade682d1|0
-    this._fl = 0x2b3e6c1f|0
-    this._gl = 0xfb41bd6b|0
-    this._hl = 0x137e2179|0
-
-    this._len = this._s = 0
-
-    return this
-  }
-
-  function S (X, Xl, n) {
-    return (X >>> n) | (Xl << (32 - n))
-  }
-
-  function Ch (x, y, z) {
-    return ((x & y) ^ ((~x) & z));
-  }
-
-  function Maj (x, y, z) {
-    return ((x & y) ^ (x & z) ^ (y & z));
-  }
-
-  Sha512.prototype._update = function(M) {
-
-    var W = this._w
-    var a, b, c, d, e, f, g, h
-    var al, bl, cl, dl, el, fl, gl, hl
-
-    a = this._a | 0
-    b = this._b | 0
-    c = this._c | 0
-    d = this._d | 0
-    e = this._e | 0
-    f = this._f | 0
-    g = this._g | 0
-    h = this._h | 0
-
-    al = this._al | 0
-    bl = this._bl | 0
-    cl = this._cl | 0
-    dl = this._dl | 0
-    el = this._el | 0
-    fl = this._fl | 0
-    gl = this._gl | 0
-    hl = this._hl | 0
-
-    for (var i = 0; i < 80; i++) {
-      var j = i * 2
-
-      var Wi, Wil
-
-      if (i < 16) {
-        Wi = W[j] = M.readInt32BE(j * 4)
-        Wil = W[j + 1] = M.readInt32BE(j * 4 + 4)
-
-      } else {
-        var x  = W[j - 15*2]
-        var xl = W[j - 15*2 + 1]
-        var gamma0  = S(x, xl, 1) ^ S(x, xl, 8) ^ (x >>> 7)
-        var gamma0l = S(xl, x, 1) ^ S(xl, x, 8) ^ S(xl, x, 7)
-
-        x  = W[j - 2*2]
-        xl = W[j - 2*2 + 1]
-        var gamma1  = S(x, xl, 19) ^ S(xl, x, 29) ^ (x >>> 6)
-        var gamma1l = S(xl, x, 19) ^ S(x, xl, 29) ^ S(xl, x, 6)
-
-        // W[i] = gamma0 + W[i - 7] + gamma1 + W[i - 16]
-        var Wi7  = W[j - 7*2]
-        var Wi7l = W[j - 7*2 + 1]
-
-        var Wi16  = W[j - 16*2]
-        var Wi16l = W[j - 16*2 + 1]
-
-        Wil = gamma0l + Wi7l
-        Wi  = gamma0  + Wi7 + ((Wil >>> 0) < (gamma0l >>> 0) ? 1 : 0)
-        Wil = Wil + gamma1l
-        Wi  = Wi  + gamma1  + ((Wil >>> 0) < (gamma1l >>> 0) ? 1 : 0)
-        Wil = Wil + Wi16l
-        Wi  = Wi  + Wi16 + ((Wil >>> 0) < (Wi16l >>> 0) ? 1 : 0)
-
-        W[j] = Wi
-        W[j + 1] = Wil
-      }
-
-      var maj = Maj(a, b, c)
-      var majl = Maj(al, bl, cl)
-
-      var sigma0h = S(a, al, 28) ^ S(al, a, 2) ^ S(al, a, 7)
-      var sigma0l = S(al, a, 28) ^ S(a, al, 2) ^ S(a, al, 7)
-      var sigma1h = S(e, el, 14) ^ S(e, el, 18) ^ S(el, e, 9)
-      var sigma1l = S(el, e, 14) ^ S(el, e, 18) ^ S(e, el, 9)
-
-      // t1 = h + sigma1 + ch + K[i] + W[i]
-      var Ki = K[j]
-      var Kil = K[j + 1]
-
-      var ch = Ch(e, f, g)
-      var chl = Ch(el, fl, gl)
-
-      var t1l = hl + sigma1l
-      var t1 = h + sigma1h + ((t1l >>> 0) < (hl >>> 0) ? 1 : 0)
-      t1l = t1l + chl
-      t1 = t1 + ch + ((t1l >>> 0) < (chl >>> 0) ? 1 : 0)
-      t1l = t1l + Kil
-      t1 = t1 + Ki + ((t1l >>> 0) < (Kil >>> 0) ? 1 : 0)
-      t1l = t1l + Wil
-      t1 = t1 + Wi + ((t1l >>> 0) < (Wil >>> 0) ? 1 : 0)
-
-      // t2 = sigma0 + maj
-      var t2l = sigma0l + majl
-      var t2 = sigma0h + maj + ((t2l >>> 0) < (sigma0l >>> 0) ? 1 : 0)
-
-      h  = g
-      hl = gl
-      g  = f
-      gl = fl
-      f  = e
-      fl = el
-      el = (dl + t1l) | 0
-      e  = (d + t1 + ((el >>> 0) < (dl >>> 0) ? 1 : 0)) | 0
-      d  = c
-      dl = cl
-      c  = b
-      cl = bl
-      b  = a
-      bl = al
-      al = (t1l + t2l) | 0
-      a  = (t1 + t2 + ((al >>> 0) < (t1l >>> 0) ? 1 : 0)) | 0
-    }
-
-    this._al = (this._al + al) | 0
-    this._bl = (this._bl + bl) | 0
-    this._cl = (this._cl + cl) | 0
-    this._dl = (this._dl + dl) | 0
-    this._el = (this._el + el) | 0
-    this._fl = (this._fl + fl) | 0
-    this._gl = (this._gl + gl) | 0
-    this._hl = (this._hl + hl) | 0
-
-    this._a = (this._a + a + ((this._al >>> 0) < (al >>> 0) ? 1 : 0)) | 0
-    this._b = (this._b + b + ((this._bl >>> 0) < (bl >>> 0) ? 1 : 0)) | 0
-    this._c = (this._c + c + ((this._cl >>> 0) < (cl >>> 0) ? 1 : 0)) | 0
-    this._d = (this._d + d + ((this._dl >>> 0) < (dl >>> 0) ? 1 : 0)) | 0
-    this._e = (this._e + e + ((this._el >>> 0) < (el >>> 0) ? 1 : 0)) | 0
-    this._f = (this._f + f + ((this._fl >>> 0) < (fl >>> 0) ? 1 : 0)) | 0
-    this._g = (this._g + g + ((this._gl >>> 0) < (gl >>> 0) ? 1 : 0)) | 0
-    this._h = (this._h + h + ((this._hl >>> 0) < (hl >>> 0) ? 1 : 0)) | 0
-  }
-
-  Sha512.prototype._hash = function () {
-    var H = new Buffer(64)
-
-    function writeInt64BE(h, l, offset) {
-      H.writeInt32BE(h, offset)
-      H.writeInt32BE(l, offset + 4)
-    }
-
-    writeInt64BE(this._a, this._al, 0)
-    writeInt64BE(this._b, this._bl, 8)
-    writeInt64BE(this._c, this._cl, 16)
-    writeInt64BE(this._d, this._dl, 24)
-    writeInt64BE(this._e, this._el, 32)
-    writeInt64BE(this._f, this._fl, 40)
-    writeInt64BE(this._g, this._gl, 48)
-    writeInt64BE(this._h, this._hl, 56)
-
-    return H
-  }
-
-  return Sha512
-
+  Hash.call(this, 16*4, 14*4)
 }
 
-},{"util":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/util/util.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/pbkdf2.js":[function(require,module,exports){
+inherits(Sha256, Hash)
+
+Sha256.prototype.init = function () {
+
+  this._a = 0x6a09e667|0
+  this._b = 0xbb67ae85|0
+  this._c = 0x3c6ef372|0
+  this._d = 0xa54ff53a|0
+  this._e = 0x510e527f|0
+  this._f = 0x9b05688c|0
+  this._g = 0x1f83d9ab|0
+  this._h = 0x5be0cd19|0
+
+  this._len = this._s = 0
+
+  return this
+}
+
+function S (X, n) {
+  return (X >>> n) | (X << (32 - n));
+}
+
+function R (X, n) {
+  return (X >>> n);
+}
+
+function Ch (x, y, z) {
+  return ((x & y) ^ ((~x) & z));
+}
+
+function Maj (x, y, z) {
+  return ((x & y) ^ (x & z) ^ (y & z));
+}
+
+function Sigma0256 (x) {
+  return (S(x, 2) ^ S(x, 13) ^ S(x, 22));
+}
+
+function Sigma1256 (x) {
+  return (S(x, 6) ^ S(x, 11) ^ S(x, 25));
+}
+
+function Gamma0256 (x) {
+  return (S(x, 7) ^ S(x, 18) ^ R(x, 3));
+}
+
+function Gamma1256 (x) {
+  return (S(x, 17) ^ S(x, 19) ^ R(x, 10));
+}
+
+Sha256.prototype._update = function(M) {
+
+  var W = this._w
+  var a, b, c, d, e, f, g, h
+  var T1, T2
+
+  a = this._a | 0
+  b = this._b | 0
+  c = this._c | 0
+  d = this._d | 0
+  e = this._e | 0
+  f = this._f | 0
+  g = this._g | 0
+  h = this._h | 0
+
+  for (var j = 0; j < 64; j++) {
+    var w = W[j] = j < 16
+      ? M.readInt32BE(j * 4)
+      : Gamma1256(W[j - 2]) + W[j - 7] + Gamma0256(W[j - 15]) + W[j - 16]
+
+    T1 = h + Sigma1256(e) + Ch(e, f, g) + K[j] + w
+
+    T2 = Sigma0256(a) + Maj(a, b, c);
+    h = g; g = f; f = e; e = d + T1; d = c; c = b; b = a; a = T1 + T2;
+  }
+
+  this._a = (a + this._a) | 0
+  this._b = (b + this._b) | 0
+  this._c = (c + this._c) | 0
+  this._d = (d + this._d) | 0
+  this._e = (e + this._e) | 0
+  this._f = (f + this._f) | 0
+  this._g = (g + this._g) | 0
+  this._h = (h + this._h) | 0
+
+};
+
+Sha256.prototype._hash = function () {
+  var H = new Buffer(32)
+
+  H.writeInt32BE(this._a,  0)
+  H.writeInt32BE(this._b,  4)
+  H.writeInt32BE(this._c,  8)
+  H.writeInt32BE(this._d, 12)
+  H.writeInt32BE(this._e, 16)
+  H.writeInt32BE(this._f, 20)
+  H.writeInt32BE(this._g, 24)
+  H.writeInt32BE(this._h, 28)
+
+  return H
+}
+
+module.exports = Sha256
+
+}).call(this,require("buffer").Buffer)
+},{"./hash":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/hash.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","util":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/util/util.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha384.js":[function(require,module,exports){
+(function (Buffer){
+var inherits = require('util').inherits
+var SHA512 = require('./sha512');
+var Hash = require('./hash')
+
+var W = new Array(160)
+
+function Sha384() {
+  this.init()
+  this._w = W
+
+  Hash.call(this, 128, 112)
+}
+
+inherits(Sha384, SHA512)
+
+Sha384.prototype.init = function () {
+
+  this._a = 0xcbbb9d5d|0
+  this._b = 0x629a292a|0
+  this._c = 0x9159015a|0
+  this._d = 0x152fecd8|0
+  this._e = 0x67332667|0
+  this._f = 0x8eb44a87|0
+  this._g = 0xdb0c2e0d|0
+  this._h = 0x47b5481d|0
+
+  this._al = 0xc1059ed8|0
+  this._bl = 0x367cd507|0
+  this._cl = 0x3070dd17|0
+  this._dl = 0xf70e5939|0
+  this._el = 0xffc00b31|0
+  this._fl = 0x68581511|0
+  this._gl = 0x64f98fa7|0
+  this._hl = 0xbefa4fa4|0
+
+  this._len = this._s = 0
+
+  return this
+}
+
+
+
+Sha384.prototype._hash = function () {
+  var H = new Buffer(48)
+
+  function writeInt64BE(h, l, offset) {
+    H.writeInt32BE(h, offset)
+    H.writeInt32BE(l, offset + 4)
+  }
+
+  writeInt64BE(this._a, this._al, 0)
+  writeInt64BE(this._b, this._bl, 8)
+  writeInt64BE(this._c, this._cl, 16)
+  writeInt64BE(this._d, this._dl, 24)
+  writeInt64BE(this._e, this._el, 32)
+  writeInt64BE(this._f, this._fl, 40)
+
+  return H
+}
+
+module.exports = Sha384
+
+}).call(this,require("buffer").Buffer)
+},{"./hash":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/hash.js","./sha512":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha512.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","util":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/util/util.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/sha512.js":[function(require,module,exports){
+(function (Buffer){
+var inherits = require('util').inherits
+
+var Hash = require('./hash')
+
+var K = [
+  0x428a2f98, 0xd728ae22, 0x71374491, 0x23ef65cd,
+  0xb5c0fbcf, 0xec4d3b2f, 0xe9b5dba5, 0x8189dbbc,
+  0x3956c25b, 0xf348b538, 0x59f111f1, 0xb605d019,
+  0x923f82a4, 0xaf194f9b, 0xab1c5ed5, 0xda6d8118,
+  0xd807aa98, 0xa3030242, 0x12835b01, 0x45706fbe,
+  0x243185be, 0x4ee4b28c, 0x550c7dc3, 0xd5ffb4e2,
+  0x72be5d74, 0xf27b896f, 0x80deb1fe, 0x3b1696b1,
+  0x9bdc06a7, 0x25c71235, 0xc19bf174, 0xcf692694,
+  0xe49b69c1, 0x9ef14ad2, 0xefbe4786, 0x384f25e3,
+  0x0fc19dc6, 0x8b8cd5b5, 0x240ca1cc, 0x77ac9c65,
+  0x2de92c6f, 0x592b0275, 0x4a7484aa, 0x6ea6e483,
+  0x5cb0a9dc, 0xbd41fbd4, 0x76f988da, 0x831153b5,
+  0x983e5152, 0xee66dfab, 0xa831c66d, 0x2db43210,
+  0xb00327c8, 0x98fb213f, 0xbf597fc7, 0xbeef0ee4,
+  0xc6e00bf3, 0x3da88fc2, 0xd5a79147, 0x930aa725,
+  0x06ca6351, 0xe003826f, 0x14292967, 0x0a0e6e70,
+  0x27b70a85, 0x46d22ffc, 0x2e1b2138, 0x5c26c926,
+  0x4d2c6dfc, 0x5ac42aed, 0x53380d13, 0x9d95b3df,
+  0x650a7354, 0x8baf63de, 0x766a0abb, 0x3c77b2a8,
+  0x81c2c92e, 0x47edaee6, 0x92722c85, 0x1482353b,
+  0xa2bfe8a1, 0x4cf10364, 0xa81a664b, 0xbc423001,
+  0xc24b8b70, 0xd0f89791, 0xc76c51a3, 0x0654be30,
+  0xd192e819, 0xd6ef5218, 0xd6990624, 0x5565a910,
+  0xf40e3585, 0x5771202a, 0x106aa070, 0x32bbd1b8,
+  0x19a4c116, 0xb8d2d0c8, 0x1e376c08, 0x5141ab53,
+  0x2748774c, 0xdf8eeb99, 0x34b0bcb5, 0xe19b48a8,
+  0x391c0cb3, 0xc5c95a63, 0x4ed8aa4a, 0xe3418acb,
+  0x5b9cca4f, 0x7763e373, 0x682e6ff3, 0xd6b2b8a3,
+  0x748f82ee, 0x5defb2fc, 0x78a5636f, 0x43172f60,
+  0x84c87814, 0xa1f0ab72, 0x8cc70208, 0x1a6439ec,
+  0x90befffa, 0x23631e28, 0xa4506ceb, 0xde82bde9,
+  0xbef9a3f7, 0xb2c67915, 0xc67178f2, 0xe372532b,
+  0xca273ece, 0xea26619c, 0xd186b8c7, 0x21c0c207,
+  0xeada7dd6, 0xcde0eb1e, 0xf57d4f7f, 0xee6ed178,
+  0x06f067aa, 0x72176fba, 0x0a637dc5, 0xa2c898a6,
+  0x113f9804, 0xbef90dae, 0x1b710b35, 0x131c471b,
+  0x28db77f5, 0x23047d84, 0x32caab7b, 0x40c72493,
+  0x3c9ebe0a, 0x15c9bebc, 0x431d67c4, 0x9c100d4c,
+  0x4cc5d4be, 0xcb3e42b6, 0x597f299c, 0xfc657e2a,
+  0x5fcb6fab, 0x3ad6faec, 0x6c44198c, 0x4a475817
+]
+
+var W = new Array(160)
+
+function Sha512() {
+  this.init()
+  this._w = W
+
+  Hash.call(this, 128, 112)
+}
+
+inherits(Sha512, Hash)
+
+Sha512.prototype.init = function () {
+
+  this._a = 0x6a09e667|0
+  this._b = 0xbb67ae85|0
+  this._c = 0x3c6ef372|0
+  this._d = 0xa54ff53a|0
+  this._e = 0x510e527f|0
+  this._f = 0x9b05688c|0
+  this._g = 0x1f83d9ab|0
+  this._h = 0x5be0cd19|0
+
+  this._al = 0xf3bcc908|0
+  this._bl = 0x84caa73b|0
+  this._cl = 0xfe94f82b|0
+  this._dl = 0x5f1d36f1|0
+  this._el = 0xade682d1|0
+  this._fl = 0x2b3e6c1f|0
+  this._gl = 0xfb41bd6b|0
+  this._hl = 0x137e2179|0
+
+  this._len = this._s = 0
+
+  return this
+}
+
+function S (X, Xl, n) {
+  return (X >>> n) | (Xl << (32 - n))
+}
+
+function Ch (x, y, z) {
+  return ((x & y) ^ ((~x) & z));
+}
+
+function Maj (x, y, z) {
+  return ((x & y) ^ (x & z) ^ (y & z));
+}
+
+Sha512.prototype._update = function(M) {
+
+  var W = this._w
+  var a, b, c, d, e, f, g, h
+  var al, bl, cl, dl, el, fl, gl, hl
+
+  a = this._a | 0
+  b = this._b | 0
+  c = this._c | 0
+  d = this._d | 0
+  e = this._e | 0
+  f = this._f | 0
+  g = this._g | 0
+  h = this._h | 0
+
+  al = this._al | 0
+  bl = this._bl | 0
+  cl = this._cl | 0
+  dl = this._dl | 0
+  el = this._el | 0
+  fl = this._fl | 0
+  gl = this._gl | 0
+  hl = this._hl | 0
+
+  for (var i = 0; i < 80; i++) {
+    var j = i * 2
+
+    var Wi, Wil
+
+    if (i < 16) {
+      Wi = W[j] = M.readInt32BE(j * 4)
+      Wil = W[j + 1] = M.readInt32BE(j * 4 + 4)
+
+    } else {
+      var x  = W[j - 15*2]
+      var xl = W[j - 15*2 + 1]
+      var gamma0  = S(x, xl, 1) ^ S(x, xl, 8) ^ (x >>> 7)
+      var gamma0l = S(xl, x, 1) ^ S(xl, x, 8) ^ S(xl, x, 7)
+
+      x  = W[j - 2*2]
+      xl = W[j - 2*2 + 1]
+      var gamma1  = S(x, xl, 19) ^ S(xl, x, 29) ^ (x >>> 6)
+      var gamma1l = S(xl, x, 19) ^ S(x, xl, 29) ^ S(xl, x, 6)
+
+      // W[i] = gamma0 + W[i - 7] + gamma1 + W[i - 16]
+      var Wi7  = W[j - 7*2]
+      var Wi7l = W[j - 7*2 + 1]
+
+      var Wi16  = W[j - 16*2]
+      var Wi16l = W[j - 16*2 + 1]
+
+      Wil = gamma0l + Wi7l
+      Wi  = gamma0  + Wi7 + ((Wil >>> 0) < (gamma0l >>> 0) ? 1 : 0)
+      Wil = Wil + gamma1l
+      Wi  = Wi  + gamma1  + ((Wil >>> 0) < (gamma1l >>> 0) ? 1 : 0)
+      Wil = Wil + Wi16l
+      Wi  = Wi  + Wi16 + ((Wil >>> 0) < (Wi16l >>> 0) ? 1 : 0)
+
+      W[j] = Wi
+      W[j + 1] = Wil
+    }
+
+    var maj = Maj(a, b, c)
+    var majl = Maj(al, bl, cl)
+
+    var sigma0h = S(a, al, 28) ^ S(al, a, 2) ^ S(al, a, 7)
+    var sigma0l = S(al, a, 28) ^ S(a, al, 2) ^ S(a, al, 7)
+    var sigma1h = S(e, el, 14) ^ S(e, el, 18) ^ S(el, e, 9)
+    var sigma1l = S(el, e, 14) ^ S(el, e, 18) ^ S(e, el, 9)
+
+    // t1 = h + sigma1 + ch + K[i] + W[i]
+    var Ki = K[j]
+    var Kil = K[j + 1]
+
+    var ch = Ch(e, f, g)
+    var chl = Ch(el, fl, gl)
+
+    var t1l = hl + sigma1l
+    var t1 = h + sigma1h + ((t1l >>> 0) < (hl >>> 0) ? 1 : 0)
+    t1l = t1l + chl
+    t1 = t1 + ch + ((t1l >>> 0) < (chl >>> 0) ? 1 : 0)
+    t1l = t1l + Kil
+    t1 = t1 + Ki + ((t1l >>> 0) < (Kil >>> 0) ? 1 : 0)
+    t1l = t1l + Wil
+    t1 = t1 + Wi + ((t1l >>> 0) < (Wil >>> 0) ? 1 : 0)
+
+    // t2 = sigma0 + maj
+    var t2l = sigma0l + majl
+    var t2 = sigma0h + maj + ((t2l >>> 0) < (sigma0l >>> 0) ? 1 : 0)
+
+    h  = g
+    hl = gl
+    g  = f
+    gl = fl
+    f  = e
+    fl = el
+    el = (dl + t1l) | 0
+    e  = (d + t1 + ((el >>> 0) < (dl >>> 0) ? 1 : 0)) | 0
+    d  = c
+    dl = cl
+    c  = b
+    cl = bl
+    b  = a
+    bl = al
+    al = (t1l + t2l) | 0
+    a  = (t1 + t2 + ((al >>> 0) < (t1l >>> 0) ? 1 : 0)) | 0
+  }
+
+  this._al = (this._al + al) | 0
+  this._bl = (this._bl + bl) | 0
+  this._cl = (this._cl + cl) | 0
+  this._dl = (this._dl + dl) | 0
+  this._el = (this._el + el) | 0
+  this._fl = (this._fl + fl) | 0
+  this._gl = (this._gl + gl) | 0
+  this._hl = (this._hl + hl) | 0
+
+  this._a = (this._a + a + ((this._al >>> 0) < (al >>> 0) ? 1 : 0)) | 0
+  this._b = (this._b + b + ((this._bl >>> 0) < (bl >>> 0) ? 1 : 0)) | 0
+  this._c = (this._c + c + ((this._cl >>> 0) < (cl >>> 0) ? 1 : 0)) | 0
+  this._d = (this._d + d + ((this._dl >>> 0) < (dl >>> 0) ? 1 : 0)) | 0
+  this._e = (this._e + e + ((this._el >>> 0) < (el >>> 0) ? 1 : 0)) | 0
+  this._f = (this._f + f + ((this._fl >>> 0) < (fl >>> 0) ? 1 : 0)) | 0
+  this._g = (this._g + g + ((this._gl >>> 0) < (gl >>> 0) ? 1 : 0)) | 0
+  this._h = (this._h + h + ((this._hl >>> 0) < (hl >>> 0) ? 1 : 0)) | 0
+}
+
+Sha512.prototype._hash = function () {
+  var H = new Buffer(64)
+
+  function writeInt64BE(h, l, offset) {
+    H.writeInt32BE(h, offset)
+    H.writeInt32BE(l, offset + 4)
+  }
+
+  writeInt64BE(this._a, this._al, 0)
+  writeInt64BE(this._b, this._bl, 8)
+  writeInt64BE(this._c, this._cl, 16)
+  writeInt64BE(this._d, this._dl, 24)
+  writeInt64BE(this._e, this._el, 32)
+  writeInt64BE(this._f, this._fl, 40)
+  writeInt64BE(this._g, this._gl, 48)
+  writeInt64BE(this._h, this._hl, 56)
+
+  return H
+}
+
+module.exports = Sha512
+
+}).call(this,require("buffer").Buffer)
+},{"./hash":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/sha.js/hash.js","buffer":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/buffer/index.js","util":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/util/util.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/pbkdf2.js":[function(require,module,exports){
+'use strict';
 var pbkdf2Export = require('pbkdf2-compat/pbkdf2')
 
 module.exports = function (crypto, exports) {
@@ -14045,9 +14640,10 @@ module.exports = function (crypto, exports) {
 
 },{"pbkdf2-compat/pbkdf2":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/node_modules/pbkdf2-compat/pbkdf2.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/browserify/node_modules/crypto-browserify/rng.js":[function(require,module,exports){
 (function (global,Buffer){
+'use strict';
 (function() {
   var g = ('undefined' === typeof window ? global : window) || {}
-  _crypto = (
+  var _crypto = (
     g.crypto || g.msCrypto || require('crypto')
   )
   module.exports = function(size) {
@@ -14057,7 +14653,7 @@ module.exports = function (crypto, exports) {
       /* This will not work in older browsers.
        * See https://developer.mozilla.org/en-US/docs/Web/API/window.crypto.getRandomValues
        */
-    
+
       _crypto.getRandomValues(bytes);
       return bytes;
     }
@@ -18082,7 +18678,11 @@ module.exports = baseCreateWrapper;
 
 },{"lodash._basecreate":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/index.js","lodash._setbinddata":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js","lodash._slice":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js","lodash.isobject":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
 module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js":[function(require,module,exports){
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js":[function(require,module,exports){
 module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js")
 },{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js":[function(require,module,exports){
 /**
@@ -18228,8 +18828,8 @@ module.exports = support;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"lodash._isnative":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -18290,8 +18890,8 @@ var keys = !nativeKeys ? shimKeys : function(object) {
 module.exports = keys;
 
 },{"lodash._isnative":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._isnative/index.js","lodash._shimkeys":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js","lodash.isobject":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -18332,8 +18932,8 @@ var shimKeys = function(object) {
 module.exports = shimKeys;
 
 },{"lodash._objecttypes":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -18482,7 +19082,41 @@ module.exports = forEach;
 
 },{"lodash._basecreatecallback":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/index.js","lodash.forown":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/index.js":[function(require,module,exports){
 module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/index.js":[function(require,module,exports){
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -18538,7 +19172,11 @@ module.exports = forOwn;
 module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js")
 },{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash.keys/index.js":[function(require,module,exports){
 module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/index.js":[function(require,module,exports){
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash.keys/node_modules/lodash._isnative/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -18634,14 +19272,50 @@ var forIn = function(collection, callback, thisArg) {
 module.exports = forIn;
 
 },{"lodash._basecreatecallback":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/index.js","lodash._objecttypes":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._objecttypes/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash._objecttypes/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash._objecttypes/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash._objecttypes/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.isfunction/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.isfunction/index.js":[function(require,module,exports){
 module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js")
 },{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.isobject/index.js":[function(require,module,exports){
-module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js")
-},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/node-uuid/uuid.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.mixin/node_modules/lodash.isobject/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
+module.exports=require("/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js")
+},{"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js"}],"/Users/michaelreinstein/wwwroot/basic-platform/node_modules/node-uuid/uuid.js":[function(require,module,exports){
 (function (Buffer){
 //     uuid.js
 //

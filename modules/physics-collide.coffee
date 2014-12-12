@@ -60,7 +60,8 @@ module.exports.levelCollideY = (entity, level, ynew) ->
     ytilenew = level.pixelToTile (ynew + entity.height - 1)
   else
     ytileold = ytilenew = null
-               
+           
+  hitFloor = false    
   if ytileold != ytilenew
     # leftmost and rightmost x tiles to check
     xtileleft = level.pixelToTile xold
@@ -74,10 +75,11 @@ module.exports.levelCollideY = (entity, level, ynew) ->
           entity.y = tentity.y + tentity.height
         else
           entity.y = tentity.y - entity.height
-          entity.onfloor = true
           entity.ytile = ytilenew
           entity.jumpcount = 0
+          hitFloor = true
         break 
+  entity.onfloor = hitFloor
 
 
 # check if the player an monster collided and handle (currently in a
