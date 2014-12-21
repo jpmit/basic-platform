@@ -194,7 +194,7 @@ class PlatformGraph
 
     # draw the transition points between platforms
     # array of arrays (one array for each platform)
-    tpoints = []#@transitionPoints
+    tpoints = @transitionPoints
     for i in [0..tpoints.length - 1]
       # array of points for each platform
       tp = tpoints[i]

@@ -1350,7 +1350,7 @@ PlatformGraph = (function() {
       yt = platforms[i].y;
       ctx.fillText(i, xt * c.TILE, yt * c.TILE);
     }
-    tpoints = [];
+    tpoints = this.transitionPoints;
     for (i = _j = 0, _ref1 = tpoints.length - 1; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; i = 0 <= _ref1 ? ++_j : --_j) {
       tp = tpoints[i];
       seen = {};
