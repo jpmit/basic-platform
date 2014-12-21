@@ -1,7 +1,6 @@
 c     = require './constants'
 astar = require './astar'
 
-
 # types of transition points
 _TYPE_JUMP = "jump"
 _TYPE_FALL = "fall"
@@ -82,6 +81,14 @@ class Platform
   xMax: ->
     [Math.max(0, @xleft - _physics.xmax), Math.max(0, @xright + _physics.xmax)]
 
+  # is other platform (p2) 'enclosed' inside this platform? E.g.:
+  # ------
+  #   --
+  # or
+  #   --
+  # ------
+  isEnclosed: (p2) ->
+    return (p2.xleft >= @xleft and p2.xright <= @xright)
 
 class TransitionPoint
   constructor: (type, dir, tx, p1, p2, njump) ->
@@ -98,13 +105,34 @@ class TransitionPoint
   getXCoord: ->
     @tx * c.TILE
 
+# is a potential platform obscured by the rest of the level?
+# if it is obscured, we won't count it in the platform graph
+# level is Level instance, plat is Platform instance
+_platformIsObscured = (level, plat) ->
+  # no part of the platform is obscured initially
+  obscured = []
+  for x in [plat.xleft..plat.xright]
+    obscured.push false
+  # check each x co-ord in turn
+  index = 0
+  for x in [plat.xleft..plat.xright]
+    # only the three rows above can obscure the platform
+    for y in [plat.y - 3..plat.y - 1]
+      t = level.tileToValue x, y
+      if t in c.COLTILES
+        obscured[index] = true
+    index = index + 1
+  # every single tile in the potential platform must be obscured
+  for i in [0..obscured.length - 1]
+    if (obscured[i] == false)
+      return false
+  true
 
 # platform graph stores information on the platform linkage, including
 # 'transition points' between platforms.
 class PlatformGraph
   constructor: (level) ->
     @update level
-
 
   # find path from entity1 to destination given a particular platform graph
   findpath: (entity, destination) ->
@@ -166,7 +194,7 @@ class PlatformGraph
 
     # draw the transition points between platforms
     # array of arrays (one array for each platform)
-    tpoints = @transitionPoints
+    tpoints = []#@transitionPoints
     for i in [0..tpoints.length - 1]
       # array of points for each platform
       tp = tpoints[i]
@@ -224,7 +252,6 @@ class PlatformGraph
     # create 'transition points' for pairs of connected platforms
     @transitionPoints = @_getTransitionPoints()
 
-
   # return list of all platforms in level
   _getAllPlatforms: (level) ->
     # compute all platforms from the level data
@@ -245,20 +272,21 @@ class PlatformGraph
         else # not a collision tile
           if (xstart != null)
             xend = col - 1
-            # should check if this platform is fully or partially
-            # 'covered' by other platforms before push
-            platforms.push(new Platform(platforms.length, xstart, xend, y))
+            newp = new Platform(platforms.length, xstart, xend, y)
             # reset for next platform
             xstart = null
+            if (_platformIsObscured(level, newp) == false)
+              platforms.push(newp)
             
       # reached right hand side of screen, end platform if necessary
       if (xstart != null)
         xend = level.cols - 2
-        platforms.push(new Platform(platforms.length, xstart, xend, y))
+        newp = new Platform(platforms.length, xstart, xend, y)
         xstart = null
-        
+        if (_PlatformIsObscured(level, newp) == false)
+          platforms.push(plat)
+         
     platforms
-
 
   _getTransitionPoints: ->
     # first create an empty transitionPoints 'matrix', where
@@ -330,4 +358,3 @@ module.exports.PlatformGraph = PlatformGraph
 # these constants are needed by the ai module
 module.exports.DIR_LEFT = _DIR_LEFT
 module.exports.DIR_RIGHT = _DIR_RIGHT
-
