@@ -315,6 +315,160 @@ module.exports = AiFollowController;
 
 
 
+},{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-pathfinder.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai-waypoint-controller.coffee":[function(require,module,exports){
+var AiWaypointController, PathController, c, pathfinder;
+
+pathfinder = require('./physics-pathfinder');
+
+c = require('./constants');
+
+PathController = (function() {
+  function PathController(entity, tPoint) {
+    this.entity = entity;
+    this.tPoint = tPoint;
+    this.njumps = 0;
+    this.justJumped = false;
+    this.njumpsNeeded = this.tPoint.njump;
+    if (this.tPoint.dir === pathfinder.DIR_LEFT) {
+      this.xTo = this.tPoint.p2.xright * c.TILE;
+    } else if (this.tPoint.dir === pathfinder.DIR_RIGHT) {
+      this.xTo = this.tPoint.p2.xleft * c.TILE;
+    }
+    this.yTo = this.tPoint.p2.y * c.TILE;
+  }
+
+  PathController.prototype.step = function() {
+    if (this.justJumped) {
+      this.entity.jump = false;
+    }
+    if (!this.entity.jumping) {
+      if (this.njumps < this.njumpsNeeded) {
+        this.makeJump();
+      }
+    }
+    if (this.xTo < this.entity.x) {
+      if ((this.entity.y < this.yTo) || (this.xTo + 100 < this.entity.x)) {
+        return this.entity.left = true;
+      }
+    } else {
+      if ((this.entity.y < this.yTo) || (this.xTo + 100 > this.entity.x)) {
+        return this.entity.right = true;
+      }
+    }
+  };
+
+  PathController.prototype.makeJump = function() {
+    this.entity.jump = true;
+    this.justJumped = true;
+    return this.njumps += 1;
+  };
+
+  return PathController;
+
+})();
+
+AiWaypointController = (function() {
+  function AiWaypointController(entity, pointList) {
+    this.entity = entity;
+    this.pointList = pointList;
+    this.pIndex = null;
+    this.path = null;
+    this.reachedTransitionPoint = false;
+    this.transPoint = null;
+    this.transX = null;
+    this.currPoint = this.pointList[0];
+    this.currPointIndex = 0;
+  }
+
+  AiWaypointController.prototype.setNavigationOnPlatform = function() {
+    if (currPoint.x > this.entity.x) {
+      this.entity.right = true;
+      return this.entity.left = false;
+    } else {
+      this.entity.left = true;
+      return this.entity.right = false;
+    }
+  };
+
+  AiWaypointController.prototype.toTransitionPoint = function(transX) {
+    if (transX > this.entity.x) {
+      return this.entity.right = true;
+    } else if (transX < this.entity.x) {
+      return this.entity.left = true;
+    }
+  };
+
+  AiWaypointController.prototype.atTransitionPoint = function(transX) {
+    return (this.entity.x > transX - 3) && (this.entity.x < transX + 3);
+  };
+
+  AiWaypointController.prototype.atWayPoint = function(wayX) {
+    return this.atTransitionPoint(wayX);
+  };
+
+  AiWaypointController.prototype.setNavigationToPlatform = function() {
+    if (!this.reachedTransitionPoint) {
+      if (this.atTransitionPoint(this.transX)) {
+        this.entity.x = this.transX;
+        this.entity.dx = 0;
+        this.entity.right = false;
+        this.entity.left = false;
+        this.reachedTransitionPoint = true;
+        return this.pController = new PathController(this.entity, this.transPoint);
+      } else {
+        return this.toTransitionPoint(this.transX);
+      }
+    } else {
+      return this.pController.step();
+    }
+  };
+
+  AiWaypointController.prototype.step = function(pgraph) {
+    var nextPlatform, pIndex, thisPlatform, wIndex;
+    if (this.atWayPoint(this.currPoint.x)) {
+      if (this.currPointIndex === this.pointList.length - 1) {
+        return;
+      } else {
+        this.currPointIndex = this.currPointIndex + 1;
+        this.currPoint = this.pointList[this.currPointIndex];
+      }
+    }
+    pIndex = pgraph.getPlatformIndexForEntity(this.entity);
+    wIndex = pgraph.getPlatformIndexForPosition(this.currPoint);
+    if ((pIndex !== this.pIndex) || (wIndex !== this.wIndex)) {
+      if (pIndex !== null && wIndex !== null) {
+        this.path = pgraph.findpath(this.entity, this.currPoint);
+        this.reachedTransitionPoint = false;
+        this.pIndex = pIndex;
+        this.wIndex = wIndex;
+        if (this.path.length > 1) {
+          thisPlatform = this.path[0];
+          nextPlatform = this.path[1];
+          this.transPoint = pgraph.getTransitionPoint(thisPlatform.key(), nextPlatform.key());
+          this.transX = this.transPoint.getXCoord();
+        }
+      }
+    }
+    this.entity.left = false;
+    this.entity.right = false;
+    this.entity.jump = false;
+    if (this.path !== null) {
+      if (this.path.length === 1) {
+        return this.setNavigationOnPlatform();
+      } else {
+        return this.setNavigationToPlatform();
+      }
+    }
+  };
+
+  return AiWaypointController;
+
+})();
+
+module.exports = AiWaypointController;
+
+
+
 },{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-pathfinder.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/astar.coffee":[function(require,module,exports){
 var AStar;
 
@@ -2410,11 +2564,7 @@ module.exports = baseCreateWrapper;
 
 },{"lodash._basecreate":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/index.js","lodash._setbinddata":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js","lodash._slice":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js","lodash.isobject":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
 module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js":[function(require,module,exports){
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js":[function(require,module,exports){
 module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js")
 },{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js":[function(require,module,exports){
 /**
@@ -2560,8 +2710,8 @@ module.exports = support;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"lodash._isnative":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
+module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js")
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2622,8 +2772,8 @@ var keys = !nativeKeys ? shimKeys : function(object) {
 module.exports = keys;
 
 },{"lodash._isnative":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._isnative/index.js","lodash._shimkeys":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js","lodash.isobject":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js":[function(require,module,exports){
+module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js")
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2664,8 +2814,8 @@ var shimKeys = function(object) {
 module.exports = shimKeys;
 
 },{"lodash._objecttypes":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/index.js":[function(require,module,exports){
+module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js")
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2814,41 +2964,7 @@ module.exports = forEach;
 
 },{"lodash._basecreatecallback":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/index.js","lodash.forown":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/index.js":[function(require,module,exports){
 module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/index.js":[function(require,module,exports){
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2904,11 +3020,7 @@ module.exports = forOwn;
 module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js")
 },{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash.keys/index.js":[function(require,module,exports){
 module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash.keys/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/index.js":[function(require,module,exports){
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -3004,50 +3116,14 @@ var forIn = function(collection, callback, thisArg) {
 module.exports = forIn;
 
 },{"lodash._basecreatecallback":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/index.js","lodash._objecttypes":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._objecttypes/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash._basecreate/node_modules/lodash.noop/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash.noop/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._slice/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.identity/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash._setbinddata/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.isfunction/index.js":[function(require,module,exports){
+module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/index.js")
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash._basecreatecallback/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.functions/node_modules/lodash.forin/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
+module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash._objecttypes/index.js")
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash._objecttypes/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash._objecttypes/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.isfunction/index.js":[function(require,module,exports){
 module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js")
 },{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.isobject/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash.isobject/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.isobject/node_modules/lodash._objecttypes/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._objecttypes/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/node-uuid/uuid.js":[function(require,module,exports){
+module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js")
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/node-uuid/uuid.js":[function(require,module,exports){
 (function (Buffer){
 //     uuid.js
 //
@@ -7008,9 +7084,11 @@ function hasOwnProperty(obj, prop) {
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./support/isBuffer":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/watchify/node_modules/browserify/node_modules/util/support/isBufferBrowser.js","_process":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/watchify/node_modules/browserify/node_modules/process/browser.js","inherits":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/watchify/node_modules/browserify/node_modules/inherits/inherits_browser.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/platformer.coffee":[function(require,module,exports){
-var AiFollowController, Entity, Level, PlatformGraph, RigidBody, aicontrollers, assign, bullet, bulletPhysics, bulletUpdates, c, canvas, collide, createEntity, ctx, dt, frame, fs, graph, gun, last, level, mixin, monster, monsters, now, onkey, player, raf, render, setup, time, unitVector;
+var AiFollowController, AiWaypointController, Entity, Level, PlatformGraph, RigidBody, aicontrollers, assign, bullet, bulletPhysics, bulletUpdates, c, canvas, collide, createEntity, ctx, dt, frame, fs, graph, gun, last, level, mixin, monster, monsters, now, onkey, player, raf, render, setup, time, unitVector;
 
 AiFollowController = require('./modules/ai-follow-controller');
+
+AiWaypointController = require('./modules/ai-waypoint-controller');
 
 Entity = require('./modules/entity');
 
@@ -7139,7 +7217,17 @@ setup = function() {
   };
   graph = new PlatformGraph(level);
   monsters = [monster];
-  return aicontrollers = [new AiFollowController(monster, player)];
+  return aicontrollers = [
+    new AiWaypointController(monster, [
+      {
+        x: 5,
+        y: 10
+      }, {
+        x: 7,
+        y: 12
+      }
+    ])
+  ];
 };
 
 frame = function() {
@@ -7208,4 +7296,4 @@ frame();
 
 
 
-},{"./modules/ai-follow-controller":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai-follow-controller.coffee","./modules/constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./modules/entity":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/entity.coffee","./modules/level":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/level.coffee","./modules/mixin-rigid-body":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/mixin-rigid-body.coffee","./modules/physics-bullet":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-bullet.coffee","./modules/physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./modules/physics-pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-pathfinder.coffee","./modules/renderer":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/renderer.coffee","./modules/time":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/time.coffee","./modules/v2-unit":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/v2-unit.coffee","lodash.assign":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/index.js","lodash.mixin":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/index.js","raf":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/raf/index.js"}]},{},["/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/platformer.coffee"]);
+},{"./modules/ai-follow-controller":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai-follow-controller.coffee","./modules/ai-waypoint-controller":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai-waypoint-controller.coffee","./modules/constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./modules/entity":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/entity.coffee","./modules/level":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/level.coffee","./modules/mixin-rigid-body":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/mixin-rigid-body.coffee","./modules/physics-bullet":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-bullet.coffee","./modules/physics-collide":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-collide.coffee","./modules/physics-pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-pathfinder.coffee","./modules/renderer":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/renderer.coffee","./modules/time":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/time.coffee","./modules/v2-unit":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/v2-unit.coffee","lodash.assign":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/index.js","lodash.mixin":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/index.js","raf":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/raf/index.js"}]},{},["/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/platformer.coffee"]);

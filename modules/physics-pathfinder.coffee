@@ -90,6 +90,7 @@ class Platform
   isEnclosed: (p2) ->
     return (p2.xleft >= @xleft and p2.xright <= @xright)
 
+# a transition point between platforms
 class TransitionPoint
   constructor: (type, dir, tx, p1, p2, njump) ->
     @type = type
