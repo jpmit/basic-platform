@@ -124,4 +124,4 @@ class AiController
       else
         @setNavigationToPlatform()
 
-module.exports = AiController
+module.exports = WaypointController

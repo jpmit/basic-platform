@@ -1,4 +1,4 @@
-AiController  = require './modules/ai-controller'
+AiFollowController  = require './modules/ai-follow-controller'
 Entity        = require './modules/entity'
 Level         = require './modules/level'
 PlatformGraph = require('./modules/physics-pathfinder').PlatformGraph
@@ -106,7 +106,7 @@ setup = ->
   monsters = [ monster ]
 
   # each non-player entity (monster) has an 'AiController'
-  aicontrollers = [ new AiController(monster, player) ]
+  aicontrollers = [ new AiFollowController(monster, player) ]
 
 frame = ->
   now = time()
