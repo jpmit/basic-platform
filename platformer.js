@@ -1267,7 +1267,7 @@ TransitionPoint = (function() {
 })();
 
 _platformIsObscured = function(level, plat) {
-  var i, index, obscured, t, x, y, _i, _j, _k, _l, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
+  var i, index, nob, obscured, rightpad, t, x, y, _i, _j, _k, _l, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
   obscured = [];
   for (x = _i = _ref = plat.xleft, _ref1 = plat.xright; _ref <= _ref1 ? _i <= _ref1 : _i >= _ref1; x = _ref <= _ref1 ? ++_i : --_i) {
     obscured.push(false);
@@ -1282,12 +1282,27 @@ _platformIsObscured = function(level, plat) {
     }
     index = index + 1;
   }
+  nob = 0;
   for (i = _l = 0, _ref6 = obscured.length - 1; 0 <= _ref6 ? _l <= _ref6 : _l >= _ref6; i = 0 <= _ref6 ? ++_l : --_l) {
-    if (obscured[i] === false) {
-      return false;
+    if (obscured[i] === true) {
+      nob = nob + 1;
     }
   }
-  return true;
+  if (nob === obscured.length) {
+    return true;
+  }
+  i = 0;
+  while (obscured[i] === true) {
+    i = i + 1;
+  }
+  plat.xleft = plat.xleft + i;
+  i = obscured.length - 1;
+  while (obscured[i] === true) {
+    i = i - 1;
+  }
+  rightpad = obscured.length - 1 - i;
+  plat.xright = plat.xright - rightpad;
+  return false;
 };
 
 PlatformGraph = (function() {

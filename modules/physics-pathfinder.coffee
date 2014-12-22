@@ -122,11 +122,32 @@ _platformIsObscured = (level, plat) ->
       if t in c.COLTILES
         obscured[index] = true
     index = index + 1
-  # every single tile in the potential platform must be obscured
+
+  # if every single tile on the platform is obscured, return true
+  nob = 0
   for i in [0..obscured.length - 1]
-    if (obscured[i] == false)
-      return false
-  true
+    if (obscured[i] == true)
+      nob = nob + 1
+  if (nob == obscured.length)
+    return true
+
+  # if we are here, at least one tile in the platform is not obscured
+  # from above.
+
+  # if left and/or right edges of platform are obscured, change the
+  # platform left and right positions accordingly
+  i = 0
+  while (obscured[i] == true)
+    i = i + 1
+  plat.xleft = plat.xleft + i
+  i = obscured.length - 1
+  while (obscured[i] == true)
+    i = i - 1
+  rightpad = obscured.length - 1 - i
+  plat.xright = plat.xright - rightpad
+
+  # return false (the platform isn't completely obscured)
+  false
 
 # platform graph stores information on the platform linkage, including
 # 'transition points' between platforms.
