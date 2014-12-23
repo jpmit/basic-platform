@@ -1,42 +1,9 @@
 pathfinder = require './physics-pathfinder'
 c          = require './constants'
+PlatformTransitionController = require './ai-platform-transition-controller'
 
-# class to control an entity moving between two platforms
-class PathController
-  constructor: (@entity, @tPoint) ->
-    @njumps = 0
-    @justJumped = false;
-    @njumpsNeeded = @tPoint.njump
-    # co-ords to: always target the 'corner' of the platform
-    if (@tPoint.dir == pathfinder.DIR_LEFT)
-      @xTo = @tPoint.p2.xright * c.TILE
-    else if (@tPoint.dir == pathfinder.DIR_RIGHT)
-      @xTo = @tPoint.p2.xleft * c.TILE
-    @yTo = @tPoint.p2.y * c.TILE
-
-  step: ->
-    # vertical motion
-    if (@justJumped)
-      @entity.jump = false
-    if (!@entity.jumping) # on the way down
-      if (@njumps < @njumpsNeeded) # jump again
-        @makeJump()
-
-    # horizontal motion: the + 100 here means that we don't hit the
-    # platform from underneath
-    if (@xTo < @entity.x)
-      if (@entity.y < @yTo) or (@xTo + 100 < @entity.x)
-        @entity.left = true
-    else
-      if (@entity.y < @yTo) or (@xTo + 100 > @entity.x)            
-        @entity.right = true
-
-  makeJump: ->
-    @entity.jump = true
-    @justJumped = true
-    @njumps += 1
-
-# ai controller for entity following a set of waypoints
+# ai controller for entity (typically monster) following a set of
+# waypoints
 class AiWaypointController
   constructor: (@entity, pointList) ->
     # platform indices that tell us which platform entity
@@ -90,7 +57,7 @@ class AiWaypointController
         @entity.left = false
         @reachedTransitionPoint = true;
         # set up the platform controller to jump to next platform!
-        @pController = new PathController(@entity, @transPoint)
+        @pController = new PlatformTransitionController(@entity, @transPoint)
       else
         # move towards the transition point
         @toTransitionPoint(@transX)

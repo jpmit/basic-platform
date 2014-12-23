@@ -174,56 +174,13 @@ module.exports = pointInAABB = function(point, box) {
 
 
 },{}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai-follow-controller.coffee":[function(require,module,exports){
-var AiFollowController, PathController, c, pathfinder;
+var AiFollowController, PlatformTransitionController, c, pathfinder;
 
 pathfinder = require('./physics-pathfinder');
 
 c = require('./constants');
 
-PathController = (function() {
-  function PathController(entity, tPoint) {
-    this.entity = entity;
-    this.tPoint = tPoint;
-    this.njumps = 0;
-    this.justJumped = false;
-    this.njumpsNeeded = this.tPoint.njump;
-    if (this.tPoint.dir === pathfinder.DIR_LEFT) {
-      this.xTo = this.tPoint.p2.xright * c.TILE;
-    } else if (this.tPoint.dir === pathfinder.DIR_RIGHT) {
-      this.xTo = this.tPoint.p2.xleft * c.TILE;
-    }
-    this.yTo = this.tPoint.p2.y * c.TILE;
-  }
-
-  PathController.prototype.step = function() {
-    if (this.justJumped) {
-      this.entity.jump = false;
-    }
-    if (!this.entity.jumping) {
-      if (this.njumps < this.njumpsNeeded) {
-        this.makeJump();
-      }
-    }
-    if (this.xTo < this.entity.x) {
-      if ((this.entity.y < this.yTo) || (this.xTo + 100 < this.entity.x)) {
-        return this.entity.left = true;
-      }
-    } else {
-      if ((this.entity.y < this.yTo) || (this.xTo + 100 > this.entity.x)) {
-        return this.entity.right = true;
-      }
-    }
-  };
-
-  PathController.prototype.makeJump = function() {
-    this.entity.jump = true;
-    this.justJumped = true;
-    return this.njumps += 1;
-  };
-
-  return PathController;
-
-})();
+PlatformTransitionController = require('./ai-platform-transition-controller');
 
 AiFollowController = (function() {
   function AiFollowController(entity1, entity2) {
@@ -267,7 +224,7 @@ AiFollowController = (function() {
         this.entity1.right = false;
         this.entity1.left = false;
         this.reachedTransitionPoint = true;
-        return this.pController = new PathController(this.entity1, this.transPoint);
+        return this.pController = new PlatformTransitionController(this.entity1, this.transPoint);
       } else {
         return this.toTransitionPoint(this.transX);
       }
@@ -315,15 +272,15 @@ module.exports = AiFollowController;
 
 
 
-},{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-pathfinder.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai-waypoint-controller.coffee":[function(require,module,exports){
-var AiWaypointController, PathController, c, pathfinder;
+},{"./ai-platform-transition-controller":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai-platform-transition-controller.coffee","./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-pathfinder.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai-platform-transition-controller.coffee":[function(require,module,exports){
+var PlatformTransitionController, c, pathfinder;
 
 pathfinder = require('./physics-pathfinder');
 
 c = require('./constants');
 
-PathController = (function() {
-  function PathController(entity, tPoint) {
+PlatformTransitionController = (function() {
+  function PlatformTransitionController(entity, tPoint) {
     this.entity = entity;
     this.tPoint = tPoint;
     this.njumps = 0;
@@ -337,7 +294,7 @@ PathController = (function() {
     this.yTo = this.tPoint.p2.y * c.TILE;
   }
 
-  PathController.prototype.step = function() {
+  PlatformTransitionController.prototype.step = function() {
     if (this.justJumped) {
       this.entity.jump = false;
     }
@@ -357,15 +314,28 @@ PathController = (function() {
     }
   };
 
-  PathController.prototype.makeJump = function() {
+  PlatformTransitionController.prototype.makeJump = function() {
     this.entity.jump = true;
     this.justJumped = true;
     return this.njumps += 1;
   };
 
-  return PathController;
+  return PlatformTransitionController;
 
 })();
+
+module.exports = PlatformTransitionController;
+
+
+
+},{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-pathfinder.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai-waypoint-controller.coffee":[function(require,module,exports){
+var AiWaypointController, PlatformTransitionController, c, pathfinder;
+
+pathfinder = require('./physics-pathfinder');
+
+c = require('./constants');
+
+PlatformTransitionController = require('./ai-platform-transition-controller');
 
 AiWaypointController = (function() {
   function AiWaypointController(entity, pointList) {
@@ -423,7 +393,7 @@ AiWaypointController = (function() {
         this.entity.right = false;
         this.entity.left = false;
         this.reachedTransitionPoint = true;
-        return this.pController = new PathController(this.entity, this.transPoint);
+        return this.pController = new PlatformTransitionController(this.entity, this.transPoint);
       } else {
         return this.toTransitionPoint(this.transX);
       }
@@ -481,7 +451,7 @@ module.exports = AiWaypointController;
 
 
 
-},{"./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-pathfinder.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/astar.coffee":[function(require,module,exports){
+},{"./ai-platform-transition-controller":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/ai-platform-transition-controller.coffee","./constants":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/constants.coffee","./physics-pathfinder":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/physics-pathfinder.coffee"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/modules/astar.coffee":[function(require,module,exports){
 var AStar;
 
 module.exports.Astar = AStar = (function() {
@@ -2798,8 +2768,8 @@ var keys = !nativeKeys ? shimKeys : function(object) {
 module.exports = keys;
 
 },{"lodash._isnative":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._isnative/index.js","lodash._shimkeys":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js","lodash.isobject":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._isnative/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.support/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js":[function(require,module,exports){
+module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js")
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basebind/node_modules/lodash._basecreate/node_modules/lodash._isnative/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash._shimkeys/index.js":[function(require,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -3148,8 +3118,8 @@ module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/bas
 },{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash._objecttypes/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.foreach/node_modules/lodash.forown/node_modules/lodash._objecttypes/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.isfunction/index.js":[function(require,module,exports){
 module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js")
 },{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash.isfunction/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.mixin/node_modules/lodash.isobject/index.js":[function(require,module,exports){
-module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js")
-},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash.keys/node_modules/lodash.isobject/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/node-uuid/uuid.js":[function(require,module,exports){
+module.exports=require("/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js")
+},{"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js":"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/lodash.assign/node_modules/lodash._basecreatecallback/node_modules/lodash.bind/node_modules/lodash._createwrapper/node_modules/lodash._basecreatewrapper/node_modules/lodash.isobject/index.js"}],"/home/jm0037/webdev/elance/javascriptgame/collisions/basic-platform/node_modules/node-uuid/uuid.js":[function(require,module,exports){
 (function (Buffer){
 //     uuid.js
 //
