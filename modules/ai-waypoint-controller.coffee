@@ -38,7 +38,7 @@ class PathController
 
 # ai controller for entity following a set of waypoints
 class AiWaypointController
-  constructor: (@entity, @pointList) ->
+  constructor: (@entity, pointList) ->
     # platform indices that tell us which platform entity
     # *was last seen on* (may not actually be currently on these
     # platforms, since one entity may be e.g. mid jump)
@@ -48,14 +48,17 @@ class AiWaypointController
     @reachedTransitionPoint = false
     @transPoint = null
     @transX = null
-    # current waypoint
+    # waypoints: convert tile co-ords to actual coords
+    plist = []
+    for p in pointList
+        plist.push {x: p.x * c.TILE, y: p.y * c.TILE}
+    @pointList = plist
     @currPoint = @pointList[0]
-    console.log @currPoint
     @currPointIndex = 0
 
   # set navigation of entity1 when on same platform as entity2
   setNavigationOnPlatform: ->
-    if (currPoint.x > @entity.x)
+    if (@currPoint.x > @entity.x)
       @entity.right = true
       @entity.left = false
     else
@@ -99,6 +102,10 @@ class AiWaypointController
     if (@atWayPoint(@currPoint.x))
       if (@currPointIndex == @pointList.length - 1)
         # we reached the end of the waypoint sequence
+        # reverse direction!
+        @pointList = @pointList.reverse()
+        @currPointIndex = 0
+        @currPoint = @pointList[@currPointIndex]
         return
       else
         # head to the next transition point

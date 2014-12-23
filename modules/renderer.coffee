@@ -25,7 +25,7 @@ drawAngle = (ctx, sprite) ->
   ctx.restore();
 
 
-module.exports = (ctx, me, enemies, gun, bullet, level, pgraph) ->
+module.exports = (ctx, me, enemies, gun, bullet, level, pgraph, waypoints) ->
   ctx.clearRect 0, 0, level.width, level.height
 
   renderLevel ctx, level
@@ -53,5 +53,10 @@ module.exports = (ctx, me, enemies, gun, bullet, level, pgraph) ->
 
   # draw the bullet (if there is one)
   drawAngle ctx, bullet
+
+  # draw the waypoints
+  for wp in waypoints
+    ctx.fillStyle = c.COLOR.WHITE
+    ctx.fillRect wp.x * c.TILE, wp.y * c.TILE, c.TILE, c.TILE
 
   pgraph.render ctx

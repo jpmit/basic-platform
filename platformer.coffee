@@ -30,6 +30,7 @@ bullet = null
 bulletUpdates = 3
 aicontrollers = []
 graph = null
+waypoints = []
 
 onkey = (ev, key, down) ->
   switch key
@@ -106,8 +107,16 @@ setup = ->
   # list of all entities other than the player entity
   monsters = [ monster ]
 
-  # each non-player entity (monster) has an 'AiController'
-  aicontrollers = [ new AiWaypointController(monster, [{x: 5, y: 10}, {x: 7, y: 12}]) ]
+  # each non-player entity (monster) has an AiController: currently
+  # either AiWaypointController or AiFollowController.
+
+  # these waypoints (in tile co-ordinates) are for the test level:
+  # platform4, platform 11, platform 12, platform 5, platform 0,
+  # platform 1.  Note that in any case the waypoints must reference a
+  # collision tile (e.g. the co-ords must refer to a platform).
+  waypoints = [{x: 9, y:10}, {x: 14, y:13}, {x: 20, y:15}, {x: 29, y:10},
+               {x: 35, y:7}, {x: 43, y:7}]
+  aicontrollers = [ new AiWaypointController(monster, waypoints) ]
 
 frame = ->
   now = time()
@@ -144,7 +153,7 @@ frame = ->
     # detect (and handle) collision between player and other entities
     collide.entityCollide(player, monster) for monster in monsters
 
-  render ctx, player, monsters, gun, bullet, level, graph
+  render ctx, player, monsters, gun, bullet, level, graph, waypoints
 
   
   last = now

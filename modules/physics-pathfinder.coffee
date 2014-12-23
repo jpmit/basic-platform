@@ -182,10 +182,7 @@ class PlatformGraph
       return null
     return @getPlatformIndexForPosition(@getEntityPosForPlatform(entity))
 
-
-  getPlatformIndexForPosition: (pos) ->
-    ty = Math.floor(pos.y / c.TILE)
-    tx = Math.floor(pos.x / c.TILE)
+  getPlatformIndexForTilePosition: (tx, ty) ->
     # figure out which platform this tile co-ord is on.  note it might
     # be better to integrate this into the collision routine and store
     # the platform index for use here.
@@ -197,6 +194,11 @@ class PlatformGraph
     # we didn't find the platform
     null
 
+  getPlatformIndexForPosition: (pos) ->
+    # convert position to a tile co-ord
+    ty = Math.floor(pos.y / c.TILE)
+    tx = Math.floor(pos.x / c.TILE)
+    return @getPlatformIndexForTilePosition(tx, ty)
 
   getTransitionPoint: (k1, k2) -> @transitionPoints[k1][k2]
 
@@ -307,6 +309,11 @@ class PlatformGraph
         xstart = null
         if (_PlatformIsObscured(level, newp) == false)
           platforms.push(plat)
+
+    # for debug: print all platforms
+    for i in [0..platforms.length - 1]
+      plat = platforms[i]
+      console.log plat.id, plat.xleft, plat.xright, plat.y
          
     platforms
 
