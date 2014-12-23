@@ -50,6 +50,7 @@ class AiWaypointController
     @transX = null
     # current waypoint
     @currPoint = @pointList[0]
+    console.log @currPoint
     @currPointIndex = 0
 
   # set navigation of entity1 when on same platform as entity2
