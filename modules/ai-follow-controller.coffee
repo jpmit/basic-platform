@@ -59,7 +59,6 @@ class AiFollowController
     # figure out which platforms entity1 and entity2 are on
     p1Index = pgraph.getPlatformIndexForEntity @entity1
     p2Index = pgraph.getPlatformIndexForEntity @entity2
-    #console.log p1Index, p2Index
     # only perform pathfinding if at least one platform has changed
     if (p1Index != @p1Index) or (p2Index != @p2Index)
       # indices can be null if entity not on platform

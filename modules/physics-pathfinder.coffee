@@ -310,7 +310,8 @@ class PlatformGraph
         if (_PlatformIsObscured(level, newp) == false)
           platforms.push(plat)
 
-    # for debug: print all platforms
+    # for debug: print all platforms (to help with waypoint placing,
+    # since waypoints must be 'inside' a platform.
     for i in [0..platforms.length - 1]
       plat = platforms[i]
       console.log plat.id, plat.xleft, plat.xright, plat.y
