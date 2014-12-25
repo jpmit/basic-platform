@@ -1,7 +1,6 @@
 c     = require './constants'
 astar = require './astar'
 
-
 # types of transition points
 _TYPE_JUMP = "jump"
 _TYPE_FALL = "fall"
@@ -82,7 +81,16 @@ class Platform
   xMax: ->
     [Math.max(0, @xleft - _physics.xmax), Math.max(0, @xright + _physics.xmax)]
 
+  # is other platform (p2) 'enclosed' inside this platform? E.g.:
+  # ------
+  #   --
+  # or
+  #   --
+  # ------
+  isEnclosed: (p2) ->
+    return (p2.xleft >= @xleft and p2.xright <= @xright)
 
+# a transition point between platforms
 class TransitionPoint
   constructor: (type, dir, tx, p1, p2, njump) ->
     @type = type
@@ -98,13 +106,55 @@ class TransitionPoint
   getXCoord: ->
     @tx * c.TILE
 
+# is a potential platform obscured by the rest of the level?
+# if it is obscured, we won't count it in the platform graph
+# level is Level instance, plat is Platform instance
+_platformIsObscured = (level, plat) ->
+  # no part of the platform is obscured initially
+  obscured = []
+  for x in [plat.xleft..plat.xright]
+    obscured.push false
+  # check each x co-ord in turn
+  index = 0
+  for x in [plat.xleft..plat.xright]
+    # only the three rows above can obscure the platform
+    for y in [plat.y - 3..plat.y - 1]
+      t = level.tileToValue x, y
+      if t in c.COLTILES
+        obscured[index] = true
+    index = index + 1
+
+  # if every single tile on the platform is obscured, return true
+  nob = 0
+  for i in [0..obscured.length - 1]
+    if (obscured[i] == true)
+      nob = nob + 1
+  if (nob == obscured.length)
+    return true
+
+  # if we are here, at least one tile in the platform is not obscured
+  # from above.
+
+  # if left and/or right edges of platform are obscured, change the
+  # platform left and right positions accordingly
+  i = 0
+  while (obscured[i] == true)
+    i = i + 1
+  plat.xleft = plat.xleft + i
+  i = obscured.length - 1
+  while (obscured[i] == true)
+    i = i - 1
+  rightpad = obscured.length - 1 - i
+  plat.xright = plat.xright - rightpad
+
+  # return false (the platform isn't completely obscured)
+  false
 
 # platform graph stores information on the platform linkage, including
 # 'transition points' between platforms.
 class PlatformGraph
   constructor: (level) ->
     @update level
-
 
   # find path from entity1 to destination given a particular platform graph
   findpath: (entity, destination) ->
@@ -132,10 +182,7 @@ class PlatformGraph
       return null
     return @getPlatformIndexForPosition(@getEntityPosForPlatform(entity))
 
-
-  getPlatformIndexForPosition: (pos) ->
-    ty = Math.floor(pos.y / c.TILE)
-    tx = Math.floor(pos.x / c.TILE)
+  getPlatformIndexForTilePosition: (tx, ty) ->
     # figure out which platform this tile co-ord is on.  note it might
     # be better to integrate this into the collision routine and store
     # the platform index for use here.
@@ -147,6 +194,11 @@ class PlatformGraph
     # we didn't find the platform
     null
 
+  getPlatformIndexForPosition: (pos) ->
+    # convert position to a tile co-ord
+    ty = Math.floor(pos.y / c.TILE)
+    tx = Math.floor(pos.x / c.TILE)
+    return @getPlatformIndexForTilePosition(tx, ty)
 
   getTransitionPoint: (k1, k2) -> @transitionPoints[k1][k2]
 
@@ -224,7 +276,6 @@ class PlatformGraph
     # create 'transition points' for pairs of connected platforms
     @transitionPoints = @_getTransitionPoints()
 
-
   # return list of all platforms in level
   _getAllPlatforms: (level) ->
     # compute all platforms from the level data
@@ -245,20 +296,27 @@ class PlatformGraph
         else # not a collision tile
           if (xstart != null)
             xend = col - 1
-            # should check if this platform is fully or partially
-            # 'covered' by other platforms before push
-            platforms.push(new Platform(platforms.length, xstart, xend, y))
+            newp = new Platform(platforms.length, xstart, xend, y)
             # reset for next platform
             xstart = null
+            if (_platformIsObscured(level, newp) == false)
+              platforms.push(newp)
             
       # reached right hand side of screen, end platform if necessary
       if (xstart != null)
         xend = level.cols - 2
-        platforms.push(new Platform(platforms.length, xstart, xend, y))
+        newp = new Platform(platforms.length, xstart, xend, y)
         xstart = null
-        
-    platforms
+        if (_PlatformIsObscured(level, newp) == false)
+          platforms.push(plat)
 
+    # for debug: print all platforms (to help with waypoint placing,
+    # since waypoints must be 'inside' a platform.
+    for i in [0..platforms.length - 1]
+      plat = platforms[i]
+      console.log plat.id, plat.xleft, plat.xright, plat.y
+         
+    platforms
 
   _getTransitionPoints: ->
     # first create an empty transitionPoints 'matrix', where
@@ -330,4 +388,3 @@ module.exports.PlatformGraph = PlatformGraph
 # these constants are needed by the ai module
 module.exports.DIR_LEFT = _DIR_LEFT
 module.exports.DIR_RIGHT = _DIR_RIGHT
-
