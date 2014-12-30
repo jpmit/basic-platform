@@ -7,7 +7,7 @@ c          = require './constants'
 class PlatformTransitionController
   constructor: (@entity, @tPoint) ->
     @njumps = 0
-    @justJumped = false;
+    @justJumped = false
     @njumpsNeeded = @tPoint.njump
     # co-ords to: always target the 'corner' of the platform
     if (@tPoint.dir == pathfinder.DIR_LEFT)

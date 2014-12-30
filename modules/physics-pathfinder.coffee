@@ -90,6 +90,7 @@ class Platform
   isEnclosed: (p2) ->
     return (p2.xleft >= @xleft and p2.xright <= @xright)
 
+
 # a transition point between platforms
 class TransitionPoint
   constructor: (type, dir, tx, p1, p2, njump) ->
@@ -105,6 +106,7 @@ class TransitionPoint
 
   getXCoord: ->
     @tx * c.TILE
+
 
 # is a potential platform obscured by the rest of the level?
 # if it is obscured, we won't count it in the platform graph
@@ -156,6 +158,7 @@ class PlatformGraph
   constructor: (level) ->
     @update level
 
+
   # find path from entity1 to destination given a particular platform graph
   findpath: (entity, destination) ->
     pnum1 = @getPlatformIndexForEntity entity
@@ -182,6 +185,7 @@ class PlatformGraph
       return null
     return @getPlatformIndexForPosition(@getEntityPosForPlatform(entity))
 
+
   getPlatformIndexForTilePosition: (tx, ty) ->
     # figure out which platform this tile co-ord is on.  note it might
     # be better to integrate this into the collision routine and store
@@ -194,11 +198,13 @@ class PlatformGraph
     # we didn't find the platform
     null
 
+
   getPlatformIndexForPosition: (pos) ->
     # convert position to a tile co-ord
     ty = Math.floor(pos.y / c.TILE)
     tx = Math.floor(pos.x / c.TILE)
     return @getPlatformIndexForTilePosition(tx, ty)
+
 
   getTransitionPoint: (k1, k2) -> @transitionPoints[k1][k2]
 
@@ -276,6 +282,7 @@ class PlatformGraph
     # create 'transition points' for pairs of connected platforms
     @transitionPoints = @_getTransitionPoints()
 
+
   # return list of all platforms in level
   _getAllPlatforms: (level) ->
     # compute all platforms from the level data
@@ -308,15 +315,9 @@ class PlatformGraph
         newp = new Platform(platforms.length, xstart, xend, y)
         xstart = null
         if (_PlatformIsObscured(level, newp) == false)
-          platforms.push(plat)
-
-    # for debug: print all platforms (to help with waypoint placing,
-    # since waypoints must be 'inside' a platform.
-    for i in [0..platforms.length - 1]
-      plat = platforms[i]
-      console.log plat.id, plat.xleft, plat.xright, plat.y
-         
+          platforms.push(plat)         
     platforms
+
 
   _getTransitionPoints: ->
     # first create an empty transitionPoints 'matrix', where
