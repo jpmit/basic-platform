@@ -1,5 +1,6 @@
-pathfinder = require './physics-pathfinder'
 c          = require './constants'
+pathfinder = require './physics-pathfinder'
+
 
 # class to control an entity moving from it's current position to a
 # 'transition point' on another platform.  This class basically

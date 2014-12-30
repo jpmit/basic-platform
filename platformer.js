@@ -176,11 +176,11 @@ module.exports = pointInAABB = function(point, box) {
 },{}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/ai-follow-controller.coffee":[function(require,module,exports){
 var AiFollowController, PlatformTransitionController, c, pathfinder;
 
-pathfinder = require('./physics-pathfinder');
+PlatformTransitionController = require('./ai-platform-transition-controller');
 
 c = require('./constants');
 
-PlatformTransitionController = require('./ai-platform-transition-controller');
+pathfinder = require('./physics-pathfinder');
 
 AiFollowController = (function() {
   function AiFollowController(entity1, entity2) {
@@ -275,9 +275,9 @@ module.exports = AiFollowController;
 },{"./ai-platform-transition-controller":"/Users/michaelreinstein/wwwroot/basic-platform/modules/ai-platform-transition-controller.coffee","./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee","./physics-pathfinder":"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics-pathfinder.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/ai-platform-transition-controller.coffee":[function(require,module,exports){
 var PlatformTransitionController, c, pathfinder;
 
-pathfinder = require('./physics-pathfinder');
-
 c = require('./constants');
+
+pathfinder = require('./physics-pathfinder');
 
 PlatformTransitionController = (function() {
   function PlatformTransitionController(entity, tPoint) {
@@ -331,11 +331,11 @@ module.exports = PlatformTransitionController;
 },{"./constants":"/Users/michaelreinstein/wwwroot/basic-platform/modules/constants.coffee","./physics-pathfinder":"/Users/michaelreinstein/wwwroot/basic-platform/modules/physics-pathfinder.coffee"}],"/Users/michaelreinstein/wwwroot/basic-platform/modules/ai-waypoint-controller.coffee":[function(require,module,exports){
 var AiWaypointController, PlatformTransitionController, c, pathfinder;
 
-pathfinder = require('./physics-pathfinder');
+PlatformTransitionController = require('./ai-platform-transition-controller');
 
 c = require('./constants');
 
-PlatformTransitionController = require('./ai-platform-transition-controller');
+pathfinder = require('./physics-pathfinder');
 
 AiWaypointController = (function() {
   function AiWaypointController(entity, pointList) {
@@ -1292,9 +1292,9 @@ module.exports.stepY = function(entity, level, dt) {
 var PhysicsFinder, Platform, PlatformGraph, TransitionPoint, astar, c, _DIR_LEFT, _DIR_RIGHT, _TYPE_FALL, _TYPE_JUMP, _path, _physics, _platformIsObscured,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
-c = require('./constants');
-
 astar = require('./astar');
+
+c = require('./constants');
 
 _TYPE_JUMP = "jump";
 

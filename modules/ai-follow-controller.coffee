@@ -1,6 +1,7 @@
-pathfinder = require './physics-pathfinder'
-c          = require './constants'
 PlatformTransitionController = require './ai-platform-transition-controller'
+c          = require './constants'
+pathfinder = require './physics-pathfinder'
+
 
 # ai controller for entity1 (typically monster) following entity2
 # (typically player)

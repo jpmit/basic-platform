@@ -1,5 +1,6 @@
-c     = require './constants'
 astar = require './astar'
+c     = require './constants'
+
 
 # types of transition points
 _TYPE_JUMP = "jump"
