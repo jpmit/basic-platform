@@ -10,6 +10,7 @@ class PlatformTransitionController
     @njumps = 0
     @justJumped = false
     @njumpsNeeded = @tPoint.njump
+    console.log @njumpsNeeded, @tPoint.type
     # co-ords to: always target the 'corner' of the platform
     if (@tPoint.dir == pathfinder.DIR_LEFT)
       @xTo = @tPoint.p2.xright * c.TILE

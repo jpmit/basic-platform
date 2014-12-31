@@ -44,7 +44,7 @@ class AiFollowController
     if (!@reachedTransitionPoint)
       if @atTransitionPoint(@transX)
         @entity1.x = @transX
-        @entity1.dx = 0
+        #@entity1.dx = 0
         @entity1.right = false
         @entity1.left = false
         @reachedTransitionPoint = true;

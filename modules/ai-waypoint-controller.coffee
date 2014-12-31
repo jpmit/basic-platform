@@ -53,7 +53,7 @@ class AiWaypointController
     if (!@reachedTransitionPoint)
       if @atTransitionPoint(@transX)
         @entity.x = @transX
-        @entity.dx = 0
+        #@entity.dx = 0
         @entity.right = false
         @entity.left = false
         @reachedTransitionPoint = true;

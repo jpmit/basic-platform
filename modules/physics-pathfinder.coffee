@@ -336,6 +336,9 @@ class PlatformGraph
         # if neighbouring platform is lower it is a fall point
         if p2.y > p1.y
           ptype = _TYPE_FALL
+          # may need to change this later in case we have platforms that
+          # are horizontally spaced by a long way.
+          njumps = 0
           if p2.xleft < p1.xleft or p2.xInPlatform(p1.xleft)
             # can fall left (might also be able to fall right, but let's fall left)
             pdir = _DIR_LEFT
@@ -349,7 +352,7 @@ class PlatformGraph
         else # neighbouring platform is either level or above
           ptype = _TYPE_JUMP
 
-          # how many jumps are needed? (either 1 or 2 currently)
+          # how many jumps are needed? (0, 1, 2 or 3 currently)
           if p1.y > p2.y + 2 * _physics.ymaxSingle
             njumps = 3
           else if p1.y > p2.y + _physics.ymaxSingle
